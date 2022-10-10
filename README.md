@@ -24,3 +24,101 @@
 * Still in the terminal, execute `sudo systemctl enable tacserial_service.service`.
 * Finally execute `raspi-config` and go to `System Options -> Boot / Auto Login -> Console Autologin` then press `Finish` and reboot.
 * Once booted you should see the tacserial program producing output on the screen.
+
+# API
+
+## Endpoints for making GET request to the database
+
+#### Get latest sensor data:
+>`https://kits.teleagriculture.org/api/sensors/[KIT_ID]/data`
+>
+>`[KIT_ID]`: the kit id you are targeting.
+
+return body example:
+
+	{
+	    "id": "35154",
+	    "kit_id": "9999",
+	    "timestamp": "2022-08-11 15:19:03",
+	    "ftTemp": "2.00",
+	    "gbHum": "0.00",
+	    "gbTemp": "0.00",
+	    "Moist": "0.00",
+	    "co": "0.00",
+	    "no2": "0.00",
+	    "nh3": "0.0000",
+	    "c3h8": "0.00",
+	    "c4h10": "0.00",
+	    "ch4": "0.00",
+	    "h2": "0.00",
+	    "c2h5oh": "0.00",
+	    "pH": "0.00",
+	    "no3": "2",
+	    "no2_aq": "0",
+	    "kh": "0",
+	    "cl2": "0",
+	    "nh4": "0",
+	    "nh3_aq": "0",
+	    "po4": "0",
+	    "cu": "0",
+	    "salinity": "0"
+	}
+
+#### Get latest strip data:
+>`https://kits.teleagriculture.org/api/strip/[KIT_ID]/data`
+>
+>`[KIT_ID]`: the kit id you are targeting.
+
+return body example:
+
+	{
+	    "id": "13",
+	    "kit_id": "9999",
+	    "timestamp": "2022-08-12 14:42:55",
+	    "no3": "0.00",
+	    "no2_strip": "0.00",
+	    "gh": "-1.00",
+	    "kh": "-1.00",
+	    "ph_strip": "-1.00",
+	    "cl2": "0.00"
+	}
+
+#### Get sensor history:
+>`https://kits.teleagriculture.org/api/history/[KIT_ID]/[SENSOR_NAME]`
+>
+>Gets the gets the latest year of data.
+>
+>`[KIT_ID]`: the kit id you are targeting.
+>`[SENSOR_NAME]`: the name of the sensor you want the history for.
+
+return body example:
+
+	[
+	    {
+	        "timestamp": "2021-08-26 09:51:56",
+	        "ftTemp": "27.521250"
+	    },
+	    {
+	        "timestamp": "2021-08-26 10:00:08",
+	        "ftTemp": "28.406949"
+	    },
+	    {
+	        "timestamp": "2021-08-26 11:00:40",
+	        "ftTemp": "28.411379"
+	    },
+	    {
+	        "timestamp": "2021-08-26 12:00:21",
+	        "ftTemp": "28.072069"
+	    },
+
+	    ...
+
+	]
+
+#### Get my kit:
+>`https://kits.teleagriculture.org/api/kits/mykits`
+
+return body example:
+
+*still need a proper example of this*
+

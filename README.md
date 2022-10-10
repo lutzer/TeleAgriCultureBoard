@@ -118,10 +118,3 @@ return body example:
 
 	]
 
-#### Get my kit:
->`https://kits.teleagriculture.org/api/kits/mykits`
-
-return body example:
-
-*still need a proper example of this*
-

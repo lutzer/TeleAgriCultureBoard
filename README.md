@@ -3,8 +3,9 @@
 ## Arduino
 
 * Download and install the [Arduino IDE](https://www.arduino.cc/en/software).
+* Open `teleagriculture_v2.ino`.
 * On line 11 where it says: `#define TAC_ID 1001` change `1001` for the kit id number you have been supplied with.
-* Open `teleagriculture_v2.ino` and flash the arduino by pressing the **Upload** button.
+* flash the arduino by pressing the **Upload** button.
 
 
 ## Rasperry Pi

@@ -14,18 +14,27 @@
 
 * Download and install the [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
 * Insert SD card (min. 8GB) in to card reader.
-* Open the Raspberry Pi Imager and install the latest Raspberry Pi OS on the SD card.
+* Open the Raspberry Pi Imager and install the latest Raspberry Pi OS on the SD card. First select the Raspberry pi
+* Desktop Operating System, then select you SD card from the storage options, finally press `write`.
+![rpi imager](https://gitlab.com/teleagriculture/community/-/raw/main/doc/images/rpi_imager.png)
 * Insert SD card into the slot on the Raspberry Pi and powerup the Raspberry Pi.
 * Once started make sure you have a wifi connection, you can follow [this guide to set it up](https://www.raspberrypi.com/documentation/computers/configuration.html#using-the-desktop).
 * Open the terminal and type `sudo apt update && sudo apt upgrade && sudo apt install python3-pip`
+![install pip](https://gitlab.com/teleagriculture/community/-/raw/main/doc/images/rpi_install_pip.png)
 * Then followed up by `pip3 install requests`
-* Open a browser and browse to [here](https://gitlab.com/teleagriculture/iot-v2) and download the repository as a zipfile.
+* Open a browser and browse to [here](https://gitlab.com/teleagriculture/community) and download the repository as a zipfile.
+![download repo](https://gitlab.com/teleagriculture/community/-/raw/main/doc/images/download_community_repo.png)
 * Unpack the zipfile and put the files in a place where you know the path of.
 * Connect the Arduino to the USB port of the Raspberry Pi.
 * Open `tacserial_service.service` and and enter the correct path to `tacserial.py` where it says `[ENTER/CORRECT/ADDRESS/HERE]`.
+![set path](https://gitlab.com/teleagriculture/community/-/raw/main/doc/images/set_path_in_service_file.png)
 * In the terminal `cd` to the path where the `tacserial_service.service` file is and execute `sudo cp tacserial_service.service /lib/systemd/system/`.
+![copy service file](https://gitlab.com/teleagriculture/community/-/raw/main/doc/images/copy_service_file.png)
 * Still in the terminal, execute `sudo systemctl enable tacserial_service.service`.
+![enable service](https://gitlab.com/teleagriculture/community/-/raw/main/doc/images/enable_service.png)
 * Finally execute `raspi-config` and go to `System Options -> Boot / Auto Login -> Console Autologin` then press `Finish` and reboot.
+![start raspi-config](https://gitlab.com/teleagriculture/community/-/raw/main/doc/images/start_raspi_config.png)
+![raspi-config menu's](https://gitlab.com/teleagriculture/community/-/raw/main/doc/images/raspi_config_consoleboot.png)
 * Once booted you should see the tacserial program producing output on the screen.
 
 # API

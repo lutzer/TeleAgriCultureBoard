@@ -7,7 +7,8 @@ import sys
 
 START_MSG = bytearray([0x02, 0x00, 0x00, 0x00])
 RET_SIZE = 28
-API_URL = 'https://kits.teleagriculture.org/api/sensors/'
+#API_URL = 'https://kits.teleagriculture.org/api/sensors/'
+API_URL = 'https://dev.teleagriculture.org/api/kits/'
 
 if __name__ == '__main__':
     light_server = lightserver.LightServer()
@@ -35,14 +36,17 @@ if __name__ == '__main__':
 
         data_dict = {}
         if len(data) == RET_SIZE:
+            headers = {}
             for i in range(0, len(data), 2):
                 if data[i] == 'id':
                     kid = data[i + 1]
+                elif data[i] == 'apiKey':
+                    headers = {'Authorization': 'Bearer ' + data[i + 1]}
                 else:
                     data_dict[data[i]] = float(data[i + 1])
 
-            url = '{0}{1}/data'.format(API_URL, kid)
-            r = requests.post(url, json=data_dict)
+            url = '{0}{1}/measurements'.format(API_URL, kid)
+            r = requests.post(url, json=data_dict, headers=headers)
             print(url)
             print(json.dumps(data_dict, indent=4))
             print(r.status_code)

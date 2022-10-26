@@ -8,6 +8,7 @@
 #include <Servo.h>
 
 #define TAC_ID 1001
+#define TAC_API_KEY "CHANGEME"
 #define ONE_WIRE_BUS 3
 #define DHT_PIN 4
 #define DHTTYPE DHT22
@@ -172,6 +173,8 @@ void sendData(){
   Serial.print("\t");
   Serial.print(TAC_ID);
   Serial.print("\t");
+  Serial.print("apiKey");
+  Serial.print(TAC_API_KEY);
   Serial.print("ftTemp");
   Serial.print("\t");
   Serial.print(sensors.getTempCByIndex(0));

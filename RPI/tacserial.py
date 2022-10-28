@@ -6,7 +6,7 @@ import lightserver
 import sys
 
 START_MSG = bytearray([0x02, 0x00, 0x00, 0x00])
-RET_SIZE = 28
+RET_SIZE = 30
 API_URL_OLD = 'https://kits.teleagriculture.org/api/sensors/'
 API_URL = 'https://dev.teleagriculture.org/api/kits/'
 

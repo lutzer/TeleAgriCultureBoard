@@ -174,7 +174,9 @@ void sendData(){
   Serial.print(TAC_ID);
   Serial.print("\t");
   Serial.print("apiKey");
+  Serial.print("\t");
   Serial.print(TAC_API_KEY);
+  Serial.print("\t");
   Serial.print("ftTemp");
   Serial.print("\t");
   Serial.print(sensors.getTempCByIndex(0));

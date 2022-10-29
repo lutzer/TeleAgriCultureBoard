@@ -48,7 +48,113 @@ Once the kit is assigned to you, you can view its details and retrieve its API K
 
 ## Endpoints for making GET request to the database
 
-All API endpoints require the API Key as a bearer token, i.e. a header with name `Authorization` and value `Bearer [API_KEY]`, where `[API_KEY]` is the API Key for the kit. Most http clients have an easy way to set this header.
+For now these GET endpoints do not require authentication.
+~~All API endpoints require the API Key as a bearer token, i.e. a header with name `Authorization` and value `Bearer [API_KEY]`, where `[API_KEY]` is the API Key for the kit. Most http clients have an easy way to set this header.~~
+
+The output is always JSON formatted with the primary results in the top-level `data` key. Additional metadata like pagination is also available top-level. See below for examples.
+
+Note that each sensor has its own history of measurements, so there is no concept of a set of latest measurements per kit. The latest_measurement on the kit level is just the last recorded measurment on any of its sensors.
+
+### Get kit info including latest measurement per sensor
+
+This includes all sensors that are configured on the kit, so including strip testing measurements.
+
+> `https://dev.teleagriculture.org/api/kits/[KIT_ID]`
+>
+> `[KIT_ID]`: the kit id you are targeting.
+
+Example output:
+
+```json
+{
+  "data": {
+    "id": 1001,
+    "name": "V2_Lab",
+    "location": "Rotterdam, NL",
+    "latest_measurement": {
+      "created_at": "2019-09-25T16:00:00.000000Z",
+      "value": 22.31
+    },
+    "sensors": [
+      {
+        "id": 56,
+        "name": "ftTemp",
+        "group": "Water",
+        "unit": "celcius",
+        "latest_measurement": {
+          "created_at": "2019-09-25T16:00:00.000000Z",
+          "value": 22.31
+        }
+      },
+      {
+        "id": 57,
+        "name": "gbHum",
+        "group": "Air",
+        "unit": null,
+        "latest_measurement": {
+          "created_at": "2019-09-25T16:00:00.000000Z",
+          "value": 52.2
+        }
+      }
+      // etcetera
+    ]
+  }
+}
+```
+
+### GET history of sensor measurements
+
+> `https://dev.teleagriculture.org/api/kits/[KIT_ID]/[SENSOR_NAME]/measurements`
+>
+> `[KIT_ID]`: the kit id you are targeting.
+> `[SENSOR_NAME]`: the name of the sensor, e.g. co or ftTemp (case insensitive)
+
+This outputs the latest 30 measurements by default. To change the amount add a query parameter of the form `page[size]=50`.
+
+To go to the next page we use cursor pagination. In the output there is a `meta` object on the top-level, in it there is a value for `next_cursor` and `prev_cursor` (only if there are results after or before the current page). Add this cursor as a query parameter as well, e.g. `page[cursor]=eyJj...LONGSTRING`.
+
+Example output for kit `1001` and sensor `co`, i.e. URL: `https://dev.teleagriculture.org/api/kits/1001/co/measurements`
+
+```json
+{
+  "data": [
+    {
+      "created_at": "2019-09-25T16:00:00.000000Z",
+      "value": 4.34
+    },
+    {
+      "created_at": "2019-09-25T15:00:00.000000Z",
+      "value": 4.34
+    },
+    {
+      "created_at": "2019-09-25T14:00:00.000000Z",
+      "value": 4.34
+    },
+    // etcetera
+    {
+      "created_at": "2019-09-24T11:00:00.000000Z",
+      "value": 4.34
+    }
+  ],
+  // instead of the cursor you can also directly use the links
+  "links": {
+    "first": null,
+    "last": null,
+    "prev": null,
+    "next": "http://localhost:8005/api/kits/1001/co/measurements?page%5Bcursor%5D=eyJjcmVhdGVkX2F0IjoiMjAxOS0wOS0yNCAxMTowMDowMCIsImlkIjoxNTM1NywiX3BvaW50c1RvTmV4dEl0ZW1zIjp0cnVlfQ"
+  },
+  "meta": {
+    "path": "http://localhost:8005/api/kits/1001/co/measurements",
+    "per_page": 30,
+    "next_cursor": "eyJjcmVhdGVkX2F0IjoiMjAxOS0wOS0yNCAxMTowMDowMCIsImlkIjoxNTM1NywiX3BvaW50c1RvTmV4dEl0ZW1zIjp0cnVlfQ",
+    "prev_cursor": null
+  }
+}
+```
+
+In this example the next page or results could be retrieved on this URL: `https://dev.teleagriculture.org/api/kits/1001/co/measurements?page[cursor]=eyJjcmVhdGVkX2F0IjoiMjAxOS0wOS0yNCAxMTowMDowMCIsImlkIjoxNTM1NywiX3BvaW50c1RvTmV4dEl0ZW1zIjp0cnVlfQ`
+
+## OLD SYSTEM
 
 ### Get latest sensor data:
 

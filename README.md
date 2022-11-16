@@ -2,7 +2,7 @@
 
 ## Authorization
 
-In order to get access, you will first need to create an account at [https://dev.teleagriculture.org/](https://dev.teleagriculture.org). After signing up contact an admin to assign the kit to your account.
+In order to get access, you will first need to create an account at [https://kits.teleagriculture.org/](https://kits.teleagriculture.org). After signing up contact an admin to assign the kit to your account.
 
 Once the kit is assigned to you, you can view its details and retrieve its API Key. The API Key gives access to exactly one kit, so if you have multiple kits you will have multiple API Keys. You can always get the current API Key in the settings of each kit.
 
@@ -59,7 +59,7 @@ Note that each sensor has its own history of measurements, so there is no concep
 
 This includes all sensors that are configured on the kit, so including strip testing measurements.
 
-> `https://dev.teleagriculture.org/api/kits/[KIT_ID]`
+> `https://kits.teleagriculture.org/api/kits/[KIT_ID]`
 >
 > `[KIT_ID]`: the kit id you are targeting.
 
@@ -104,7 +104,7 @@ Example output:
 
 ### GET history of sensor measurements
 
-> `https://dev.teleagriculture.org/api/kits/[KIT_ID]/[SENSOR_NAME]/measurements`
+> `https://kits.teleagriculture.org/api/kits/[KIT_ID]/[SENSOR_NAME]/measurements`
 >
 > `[KIT_ID]`: the kit id you are targeting.
 > `[SENSOR_NAME]`: the name of the sensor, e.g. co or ftTemp (case insensitive)
@@ -113,7 +113,7 @@ This outputs the latest 30 measurements by default. To change the amount add a q
 
 To go to the next page we use cursor pagination. In the output there is a `meta` object on the top-level, in it there is a value for `next_cursor` and `prev_cursor` (only if there are results after or before the current page). Add this cursor as a query parameter as well, e.g. `page[cursor]=eyJj...LONGSTRING`.
 
-Example output for kit `1001` and sensor `co`, i.e. URL: `https://dev.teleagriculture.org/api/kits/1001/co/measurements`
+Example output for kit `1001` and sensor `co`, i.e. URL: `https://kits.teleagriculture.org/api/kits/1001/co/measurements`
 
 ```json
 {
@@ -152,7 +152,68 @@ Example output for kit `1001` and sensor `co`, i.e. URL: `https://dev.teleagricu
 }
 ```
 
-In this example the next page or results could be retrieved on this URL: `https://dev.teleagriculture.org/api/kits/1001/co/measurements?page[cursor]=eyJjcmVhdGVkX2F0IjoiMjAxOS0wOS0yNCAxMTowMDowMCIsImlkIjoxNTM1NywiX3BvaW50c1RvTmV4dEl0ZW1zIjp0cnVlfQ`
+In this example the next page or results could be retrieved on this URL: `https://kits.teleagriculture.org/api/kits/1001/co/measurements?page[cursor]=eyJjcmVhdGVkX2F0IjoiMjAxOS0wOS0yNCAxMTowMDowMCIsImlkIjoxNTM1NywiX3BvaW50c1RvTmV4dEl0ZW1zIjp0cnVlfQ`
+
+### GET daily average, minimum, maximum per week or month
+
+> `https://kits.teleagriculture.org/api/kits/[KIT_ID]/[SENSOR_NAME]/measurements/[PERIOD]?page[cursor]=[DATE]`
+>
+> `[KIT_ID]`: the kit id you are targeting.
+> `[SENSOR_NAME]`: the name of the sensor, e.g. co or ftTemp (case insensitive)
+> `[PERIOD]`: week, month or year, where month is actually 4 weeks.
+> `[DATE]`: till when
+
+This outputs the latest 30 measurements by default. To change the amount add a query parameter of the form `page[size]=50`.
+
+To go to the next page we use cursor pagination. In the output there is a `meta` object on the top-level, in it there is a value for `next_cursor` and `prev_cursor` (only if there are results after or before the current page). Add this cursor as a query parameter as well, e.g. `page[cursor]=eyJj...LONGSTRING`.
+
+Example output for kit `1001`, sensor `co`, period of a `month` up to `2019-08-29` so the URL: `https://kits.teleagriculture.org/api/kits/1001/co/measurements/month?page[cursor]=2019-08-29`
+
+Note that if there are no measurements on a day, the value `null` is returned for `avg`, `min`, and `max`.
+
+```json
+{
+  "data": [
+    {
+      "date": "2019-08-02",
+      "weekday": 5,
+      "avg": null,
+      "min": null,
+      "max": null
+    },
+    {
+      "date": "2019-08-03",
+      "weekday": 6,
+      "avg": null,
+      "min": null,
+      "max": null
+    },
+    // etcetera
+    {
+      "date": "2019-08-28",
+      "avg": 4.41068333,
+      "min": 4.3468,
+      "max": 4.5595,
+      "weekday": 3
+    },
+    {
+      "date": "2019-08-29",
+      "avg": 4.4368625,
+      "min": 4.2442,
+      "max": 4.5697,
+      "weekday": 4
+    }
+  ],
+  "meta": {
+    "to": "2019-08-29",
+    "from": "2019-08-02",
+    "next_cursor": "2019-09-26",
+    "prev_cursor": "2019-08-01"
+  }
+}
+```
+
+The `meta` at the bottom holds the next and previous cursor.
 
 ## OLD SYSTEM
 

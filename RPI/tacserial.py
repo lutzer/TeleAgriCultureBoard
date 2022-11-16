@@ -7,8 +7,7 @@ import sys
 
 START_MSG = bytearray([0x02, 0x00, 0x00, 0x00])
 RET_SIZE = 30
-API_URL_OLD = 'https://kits.teleagriculture.org/api/sensors/'
-API_URL = 'https://dev.teleagriculture.org/api/kits/'
+API_URL = 'https://kits.teleagriculture.org/api/kits/'
 
 if __name__ == '__main__':
     light_server = lightserver.LightServer()
@@ -50,10 +49,5 @@ if __name__ == '__main__':
             r = requests.post(url, json=data_dict, headers=headers)
             print(url)
             print(r.status_code)
-            # take this out if no need for sending to old server
-            url_old = '{0}{1}/data'.format(API_URL_OLD, kid)
-            r_old = requests.post(url_old, json=data_dict)
-            print(url_old)
-            print(r_old.status_code)
 
         sleep(55)

@@ -23,6 +23,7 @@ If a sensor name can not be found on the kit it will be (silently) ignored.
 
 All kits get a default set of sensors associated to them on the database. However if you have the admin rights on a kit you can configure additional custom sensors, on the configuration page of your kit. Note that the **name** of the sensor is used to match, so make sure to use the same name when adding the sensor on the website and when posting the measurements.
 For example you can add a sensor with the name C2H6O:
+
 ![Adding a sensor](doc/images/web_add_sensor.png)
 
 Then `POST` this as json payload to send a measurement for it

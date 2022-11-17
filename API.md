@@ -1,5 +1,7 @@
 # API docs
 
+This document describes the HTTP API that can be used to [send measurements](#sending-measurements-to-the-database) to the database and how to [retrieve them](#retrieving-measurment-data-from-the-database).
+
 ## Sending measurements to the database
 
 The `tacserial.py` python script connects to the Arduino to forward the data, but if you want you can also create your own client.
@@ -151,7 +153,7 @@ In this example the next page or results could be retrieved on this URL: `https:
 > `[KIT_ID]`: the kit id you are targeting.
 > `[SENSOR_NAME]`: the name of the sensor, e.g. co or ftTemp (case insensitive)
 > `[PERIOD]`: week, month or year, where month is actually 4 weeks.
-> `[DATE]`: till when
+> `[DATE]`: till what date to search
 
 This outputs the latest 30 measurements by default. To change the amount add a query parameter of the form `page[size]=50`.
 
@@ -160,6 +162,8 @@ To go to the next page we use cursor pagination. In the output there is a `meta`
 Example output for kit `1001`, sensor `co`, period of a `month` up to `2019-08-29` so the URL: `https://kits.teleagriculture.org/api/kits/1001/co/measurements/month?page[cursor]=2019-08-29`
 
 Note that if there are no measurements on a day, the value `null` is returned for `avg`, `min`, and `max`.
+
+If there are no measurements at all before the given `[DATE]` then no data will be returned and the response status code will be `404 Not Found`.
 
 ```json
 {

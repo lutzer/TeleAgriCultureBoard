@@ -33,7 +33,9 @@ Then `POST` this as json payload to send a measurement for it
 }
 ```
 
-## Endpoints for making GET request to the database
+## Retrieving measurment data from the database
+
+There are a couple of ways to retrieve sensor measurement data from the database through the API.
 
 For now these GET endpoints do not require authentication.
 ~~All API endpoints require the API Key as a bearer token, i.e. a header with name `Authorization` and value `Bearer [API_KEY]`, where `[API_KEY]` is the API Key for the kit. Most http clients have an easy way to set this header.~~
@@ -44,7 +46,7 @@ Note that each sensor has its own history of measurements, so there is no concep
 
 ### Get kit info including latest measurement per sensor
 
-This includes all sensors that are configured on the kit, so including strip testing measurements.
+This includes all sensors that are configured on the kit, so including strip testing measurements. Note that it is possible that no measurements were ever recorded for a sensor, in that case the `latest_measurement` for the sensor will be omitted or set to `null`.
 
 > `https://kits.teleagriculture.org/api/kits/[KIT_ID]`
 >

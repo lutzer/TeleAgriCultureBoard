@@ -2,7 +2,9 @@
 
 ## Authorization
 
-In order to get access, you will first need to create an account at [https://kits.teleagriculture.org/](https://kits.teleagriculture.org). After signing up contact an admin to assign the kit to your account.
+In order to get access, you will first need to create an account at [https://kits.teleagriculture.org/](https://kits.teleagriculture.org). After signing up contact an admin to assign the kit to your account. 
+
+The admin assigns the kit by going to the configuration screen of the kit where a user can be added.
 
 Once the kit is assigned to you, you can view its details and retrieve its API Key. The API Key gives access to exactly one kit, so if you have multiple kits you will have multiple API Keys. You can always get the current API Key in the settings of each kit.
 

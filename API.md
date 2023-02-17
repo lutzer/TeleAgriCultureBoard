@@ -101,6 +101,7 @@ Example output:
 > `https://kits.teleagriculture.org/api/kits/[KIT_ID]/[SENSOR_NAME]/measurements`
 >
 > `[KIT_ID]`: the kit id you are targeting.
+>
 > `[SENSOR_NAME]`: the name of the sensor, e.g. co or ftTemp (case insensitive)
 
 This outputs the latest 30 measurements by default. To change the amount add a query parameter of the form `page[size]=50`.
@@ -153,19 +154,20 @@ In this example the next page or results could be retrieved on this URL: `https:
 > `https://kits.teleagriculture.org/api/kits/[KIT_ID]/[SENSOR_NAME]/measurements/[PERIOD]?page[cursor]=[DATE]`
 >
 > `[KIT_ID]`: the kit id you are targeting.
+>
 > `[SENSOR_NAME]`: the name of the sensor, e.g. co or ftTemp (case insensitive)
+>
 > `[PERIOD]`: week, month or year, where month is actually 4 weeks.
+>
 > `[DATE]`: till what date to search
 
-This outputs the latest 30 measurements by default. To change the amount add a query parameter of the form `page[size]=50`.
-
-To go to the next page we use cursor pagination. In the output there is a `meta` object on the top-level, in it there is a value for `next_cursor` and `prev_cursor` (only if there are results after or before the current page). Add this cursor as a query parameter as well, e.g. `page[cursor]=eyJj...LONGSTRING`.
-
-Example output for kit `1001`, sensor `co`, period of a `month` up to `2019-08-29` so the URL: `https://kits.teleagriculture.org/api/kits/1001/co/measurements/month?page[cursor]=2019-08-29`
+To go to the next period we use cursor pagination. In the output there is a `meta` object on the top-level, in it there is a value for `next_cursor` and `prev_cursor` (only if there are results after or before the current page). Add this cursor as a query parameter as well, e.g. `page[cursor]=DATE`.
 
 Note that if there are no measurements on a day, the value `null` is returned for `avg`, `min`, and `max`.
 
 If there are no measurements at all before the given `[DATE]` then no data will be returned and the response status code will be `404 Not Found`.
+
+Example output for kit `1001`, sensor `co`, period of a `month` up to `2019-08-29`; so the URL is: `https://kits.teleagriculture.org/api/kits/1001/co/measurements/month?page[cursor]=2019-08-29`
 
 ```json
 {
@@ -209,4 +211,4 @@ If there are no measurements at all before the given `[DATE]` then no data will 
 }
 ```
 
-The `meta` at the bottom holds the next and previous cursor.
+The `meta` at the bottom holds the next and previous cursor (date).

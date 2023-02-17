@@ -2,6 +2,8 @@
 
 This document describes the HTTP API that can be used to [send measurements](#sending-measurements-to-the-database) to the database and how to [retrieve them](#retrieving-measurment-data-from-the-database).
 
+Make sure that you are added as a user on the kit you want to use. [An admin can do this for you](README.md#authorization).
+
 ## Sending measurements to the database
 
 The `tacserial.py` python script connects to the Arduino to forward the data, but if you want you can also create your own client.

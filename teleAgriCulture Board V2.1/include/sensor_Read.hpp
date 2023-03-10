@@ -39,6 +39,14 @@
 
 // ----- Sensor section ----- //
 
+/*
+
+        TODO: optimizing the read process ... mostly timing stuff
+
+        TODO: implementing sensor_Calibrate ... just a few have to be calibrated
+
+*/
+
 Sensor allSensors[SENSORS_NUM];
 Measurement measurements[MEASURMENT_NUM];
 

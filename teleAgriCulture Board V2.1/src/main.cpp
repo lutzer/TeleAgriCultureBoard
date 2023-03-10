@@ -25,6 +25,16 @@
  * For Board ID, GPIOs and implemented Sensors see sensor_Board.h
 \*/
 
+
+/*
+      First UPLOAD: create Connectors Table, after this it can be commented out (loads from SPIFF)
+
+      TODO: change CA handling than both errors are gone (MBEDTLS is configured in espressif IDE and precompiled)
+      two errors show up: httpClient.cpp : (if _cacert==NULL) --> comment out .... wc.insecure()  .... just the else path is used
+                          ssl_client.cpp : comment out ---> #ifndef MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED #endif
+
+*/
+
 #include <Arduino.h>
 #include <FS.h>
 #include "SPIFFS.h"
@@ -998,7 +1008,7 @@ void wifi_sendData(void)
 
       https.addHeader("Content-Type", "application/json");
       https.addHeader("Authorization", api_Bearer);
-      // https.addHeader("Authorization", "Bearer 8i8nRED12XgHb3vBjIXCf0rXMedI8NTB");
+
       int httpResponseCode = https.POST(output);
 
       Serial.print("\nHTTP Response code: ");
@@ -1037,11 +1047,11 @@ void lora_sendData(void)
          encoder.writeUint8(j);
       }
 
-      encoder.writeRawFloat(pair.second); // todo: switch case to change type
+      encoder.writeRawFloat(pair.second); // TODO: switch case to change type
    }
    Serial.println();
    Serial.print(sizeof(message));
    Serial.println();
 
-   // lora send message
+   // TODO: lora send message
 }

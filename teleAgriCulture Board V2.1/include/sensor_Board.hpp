@@ -28,17 +28,14 @@
 #include <WString.h>
 
 int boardID = 1003;
-String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB";
+String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB";  // TODO: after all the testing has to be masked in the gitlab and changed in the app
 
 String version = "Firmware Version 0.8";
 String hostname = "TeleAgriCulture Board";
 String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
 String api_Bearer = "Bearer " + API_KEY;
 
-// 2 s:C = US, O = Internet Security Research Group, CN = ISRG Root X1
-//   i:O = Digital Signature Trust Co., CN = DST Root CA X3
-
-// Server certificate subject=CN = teleagriculture.org
+// TODO: have to change the POST to insecure ... no checking the Server CA
 
 const char *kits_ca =
     "-----BEGIN CERTIFICATE-----\n"

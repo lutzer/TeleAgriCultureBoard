@@ -31,6 +31,7 @@ int boardID = 1003;
 String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB";
 
 String version = "Firmware Version 0.8";
+String hostname = "TeleAgriCulture Board";
 String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
 String api_Bearer = "Bearer " + API_KEY;
 
@@ -285,7 +286,7 @@ const char *proto_sensors = R"([
       {
         "value": 300,
         "unit": ".",
-        "data_name": "moisture"
+        "data_name": "mois"
       }
     ]
   },
@@ -298,7 +299,7 @@ const char *proto_sensors = R"([
       {
         "value": 300,
         "unit": ".",
-        "data_name": "moisture"
+        "data_name": "mois"
       }
     ]
   },
@@ -448,7 +449,7 @@ const char *proto_sensors = R"([
       {
         "value": 3.7,
         "unit": "V",
-        "data_name": "Voltage"
+        "data_name": "Volt"
       }
     ]
   },

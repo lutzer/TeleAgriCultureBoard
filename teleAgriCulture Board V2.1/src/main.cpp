@@ -99,7 +99,7 @@ bool display_state = true; // Display is awake when true and sleeping when false
 // ----- WiFiManager section ---- //
 #define WM_NOHELP 0
 
-String hostname = "TeleAgriCulture Board";
+
 char test_input[6];
 bool portalRunning = false;
 bool _enteredConfigMode = false;

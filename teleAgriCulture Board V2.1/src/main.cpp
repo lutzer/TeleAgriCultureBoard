@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * For Board ID, GPIOs and implemented Sensors see sensor_Board.h
+ * For Board ID, API KEY, GPIOs and implemented Sensors see sensor_Board.h
 \*/
 
 

@@ -25,7 +25,6 @@
  * For Board ID, API KEY, GPIOs and implemented Sensors see sensor_Board.h
 \*/
 
-
 /*
       First UPLOAD: create Connectors Table, after this it can be commented out (loads from SPIFF)
 
@@ -107,8 +106,7 @@ bool display_state = true; // Display is awake when true and sleeping when false
 // ----- Initialize TFT ----- //
 
 // ----- WiFiManager section ---- //
-#define WM_NOHELP 0
-
+#define WM_NOHELP 1
 
 char test_input[6];
 bool portalRunning = false;
@@ -218,6 +216,11 @@ void setup()
 
    //  load_WiFiConfig();
 
+   // reset settings - wipe stored credentials for testing
+   // these are stored by the esp library
+   // wifiManager.resetSettings();
+   // wifiManager.setDebugOutput(false);
+
    // optionally attach external RTC update callback
    WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
 
@@ -225,12 +228,13 @@ void setup()
    WiFiManagerNS::init(&wifiManager);
 
    wifiManager.setHostname(hostname.c_str());
+   wifiManager.setTitle("Board Config");
    wifiManager.setCustomHeadElement(custom_Title_Html.c_str());
 
    // wifiManager.setDebugOutput(false);
    wifiManager.setCleanConnect(true);
 
-   // /!\ make sure "custom" is listed there as it's required to pull the "Setup Clock" button
+   // /!\ make sure "custom" is listed there as it's required to pull the "Board Setup" button
    std::vector<const char *> menu = {"custom", "wifi", "info", "update", "restart", "exit"};
    wifiManager.setMenu(menu);
 
@@ -978,7 +982,7 @@ void wifi_sendData(void)
       // WiFiClient client;
       WiFiClientSecure client;
       client.setCACert(kits_ca);
-      
+
       HTTPClient https;
 
       StaticJsonDocument<32> doc;

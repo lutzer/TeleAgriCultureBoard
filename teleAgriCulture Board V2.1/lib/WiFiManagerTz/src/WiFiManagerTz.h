@@ -147,7 +147,7 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<h2>Connectors:</h2>";
 
-    TimeConfHTML += "I2C Connectors<BR>";
+    TimeConfHTML += "<h3>I2C Connectors</h3>";
 
     TimeConfHTML += "<label for='i2c_1'>I2C_1</label>";
 
@@ -188,7 +188,7 @@ namespace WiFiManagerNS
     Serial.println(dropdown_i2c);
     dropdown_i2c = String();
 
-    TimeConfHTML += "ADC Connectors<BR>";
+    TimeConfHTML += "<h3>ADC Connectors</h3>";
 
     TimeConfHTML += "<label for='adc_1'>ADC_1</label>";
 
@@ -219,6 +219,41 @@ namespace WiFiManagerNS
     TimeConfHTML += "<select id='ADC_3' name='adc_3'>";
 
     TimeConfHTML += dropdown_adc;
+
+    dropdown_adc = String();
+
+     TimeConfHTML += "<h3>1-Wire Connectors</h3>";
+
+    TimeConfHTML += "<label for='onewire_1'>1-Wire_1</label>";
+
+    TimeConfHTML += "<select id='onewire_1' name='onewire_1'>";
+
+    String dropdown_1wire = "<option value='NO'>NO</option>";
+
+    for (int i = 0; i < SENSORS_NUM; i++)
+    {
+      if (allSensors[i].con_typ == "ADC")
+      {
+        dropdown_1wire += "<option value='" + allSensors[i].sensor_name + "'>" + allSensors[i].sensor_name + "</option>";
+      }
+    }
+
+    dropdown_1wire += "</select>";
+    dropdown_1wire += "<BR>";
+
+    TimeConfHTML += dropdown_1wire;
+    TimeConfHTML += "<label for='onewire_2'>1-Wire_2</label>";
+
+    TimeConfHTML += "<select id='onewire_2' name='onewire_2'>";
+
+    TimeConfHTML += dropdown_adc;
+
+    TimeConfHTML += "<label for='onewire_3'>1-Wire_3</label>";
+
+    TimeConfHTML += "<select id='onewire_3' name='onewire_3'>";
+
+    TimeConfHTML += dropdown_adc;
+    dropdown_1wire = String();
 
     TimeConfHTML += "<h2>Time Settings</h2>";
 

@@ -1,4 +1,4 @@
-#HTML Page - Setup Board
+# HTML Page - Setup Board
 
 HTML Page is generated on the Microcontroller using and based of:
 

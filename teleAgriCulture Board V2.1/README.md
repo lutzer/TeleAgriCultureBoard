@@ -1,4 +1,4 @@
-This is how it looks in markdown:
+
 
 # TeleAgriCulture Board V2.1
 
@@ -34,8 +34,8 @@ Follow these steps:
 - power the board ( via Micro USB or Waveshare Solar Power Manager board)
 - the board creates a WiFi Access Point ( SSID: TeleAgriCulture Board )
 - connect to this Wifi Network with your mobilephone or laptop
-- you will be redirected in your browser to the Confip Portal of the board ( IP: 192.168.4.1 )
+- you will be redirected in your browser to the Config Portal of the board ( IP: 192.168.4.1 )
 - go through all setup pages and choose your settings
 - save the settings
 
-For more information on how to use the board, please refer to  or join our community at .
+For more information on how to use the board, please refer to  or join our community at https://www.teleagriculture.org

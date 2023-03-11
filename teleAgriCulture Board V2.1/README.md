@@ -2,7 +2,7 @@ This is how it looks in markdown:
 
 # TeleAgriCulture Board V2.1
 
-![TeleAgriCulture Board V2.1](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/tac_board_V2_1_02.JPG =800x)
+![TeleAgriCulture Board V2.1](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/tac_board_V2_1_02.JPG){width=50% height=50%}
 
 This is a repository for the TeleAgriCulture Board V2.1, a modular and open-source hardware platform for urban agriculture and ecology projects.
 

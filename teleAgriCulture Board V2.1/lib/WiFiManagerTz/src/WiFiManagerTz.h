@@ -232,7 +232,7 @@ namespace WiFiManagerNS
 
     for (int i = 0; i < SENSORS_NUM; i++)
     {
-      if (allSensors[i].con_typ == "ADC")
+      if (allSensors[i].con_typ == "ONE_WIRE")
       {
         dropdown_1wire += "<option value='" + allSensors[i].sensor_name + "'>" + allSensors[i].sensor_name + "</option>";
       }
@@ -246,13 +246,13 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<select id='onewire_2' name='onewire_2'>";
 
-    TimeConfHTML += dropdown_adc;
+    TimeConfHTML += dropdown_1wire;
 
     TimeConfHTML += "<label for='onewire_3'>1-Wire_3</label>";
 
     TimeConfHTML += "<select id='onewire_3' name='onewire_3'>";
 
-    TimeConfHTML += dropdown_adc;
+    TimeConfHTML += dropdown_1wire;
     dropdown_1wire = String();
 
     TimeConfHTML += "<h2>Time Settings</h2>";

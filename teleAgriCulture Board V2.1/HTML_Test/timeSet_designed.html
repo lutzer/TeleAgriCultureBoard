@@ -243,19 +243,30 @@
 <body class='invert'>
     <div class='wrap'>
         <h2>Board Setup</h2>
-        <form>
-            <fieldset>
-                <legend>Please select your data upload method:</legend>
-                <div><input type='radio' id='wificheck' name='upload' value='wifi' /><label
-                        for='upload1'>WiFi</label><input type='radio' id='loracheck' name='upload' value='lora' /><label
-                        for='upload2'>LoRa</label></div>
-                <div><label for='BoardID'>Board ID:</label><input type='number' size=4 id='BoardID'
-                        name='boardID'><label for='API_KEY'>API KEY:</label><input type='text' size=10 id='API_KEY'
-                        name='api_key'></div>
-            </fieldset>
-        </form>
+        <div>
+            <form>
+                <fieldset>
+                    <legend>Please select your data upload method:</legend>
+                    <table style='width:100%'>
+                        <tr>
+                            <td><input type='radio' id='wificheck' name='upload' value='wifi' /><label
+                                    for='upload1'>WiFi</label></td>
+                            <td><input type='radio' id='loracheck' name='upload' value='lora' /><label
+                                    for='upload2'>LoRa</label></td>
+                        </tr>
+                    </table>
+        </div><BR><b>WiFi Data</b>
+        <div><label for='BoardID'>Board ID:</label><input type='number' size=4 id='BoardID' name='boardID'><label
+                for='API_KEY'>API KEY:</label><input type='text' size=10 id='API_KEY' name='api_key'></div><b>LoRa
+            Data</b>
+        <div><label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type='text' size=15 id='OTAA_DEVEUI'
+                name='otaa_DEVEUI'><label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type='text' size=10
+                id='OTAA_APPEUI' name='otaa_APPEUI'><label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type='text'
+                size=10 id='OTAA_APPKEY' name='otaa_APPKEY'></div>
+        </fieldset>
+        </form><BR>
         <h2>Connectors:</h2>
-        <table>
+        <table style='width:100%'>
             <tbody>
                 <tr>
                     <td colspan='2'>
@@ -269,14 +280,14 @@
                             <option value='Level'>Level</option>
                             <option value='VELM7700'>VELM7700</option>
                             <option value='RTC DS3231'>RTC DS3231</option>
-                        </select></td><BR>
+                        </select></td>
                     <td><label for='i2c_3'>I2C_3</label><select id='I2C_3' name='i2c_3'>
                             <option value='NO'>NO</option>
                             <option value='BM280'>BM280</option>
                             <option value='Level'>Level</option>
                             <option value='VELM7700'>VELM7700</option>
                             <option value='RTC DS3231'>RTC DS3231</option>
-                        </select></td><BR>
+                        </select></td>
                 </tr>
                 <tr>
                     <td><label for='i2c_2'>I2C_2</label><select id='I2C_2' name='i2c_2'>
@@ -285,18 +296,18 @@
                             <option value='Level'>Level</option>
                             <option value='VELM7700'>VELM7700</option>
                             <option value='RTC DS3231'>RTC DS3231</option>
-                        </select></td><BR>
+                        </select></td>
                     <td><label for='i2c_4'>I2C_4</label><select id='I2C_4' name='i2c_4'>
                             <option value='NO'>NO</option>
                             <option value='BM280'>BM280</option>
                             <option value='Level'>Level</option>
                             <option value='VELM7700'>VELM7700</option>
                             <option value='RTC DS3231'>RTC DS3231</option>
-                        </select></td><BR>
+                        </select></td>
                 </tr>
             </tbody>
         </table>
-        <table>
+        <table style='width:100%'>
             <tbody>
                 <tr>
                     <td>
@@ -346,9 +357,9 @@
                         </select></td>
                 </tr>
             </tbody>
-        </table>
+        </table><BR>
         <h2>Time Settings</h2><label for='ntp-server'>System Time <input readonly style=width:auto name='system-time'
-                type='datetime-local' value='1970-01-01T00:21'> <button onclick=location.reload() style=width:auto
+                type='datetime-local' value='1970-01-01T02:17'> <button onclick=location.reload() style=width:auto
                 type=button> Refresh </button></label><br><iframe name='dummyframe' id='dummyframe'
             style='display: none;'></iframe>
         <form action='/save-tz' target='dummyframe' method='POST'><label for='timezone'>Time Zone</label><select
@@ -817,7 +828,7 @@
             </select><br><label for='use-ntp-server'>Enable NTP Client</label> <input value='1' type=checkbox
                 name='use-ntp-server' id='use-ntp-server'><br>
             <div class='collapsed'><label for='set-time'>Set Time <input style=width:auto name='set-time' id='set-time'
-                        type='datetime-local' value='1970-01-01T00:21'></div>
+                        type='datetime-local' value='1970-01-01T02:17'></div>
             <div class='collapsable'>
                 <h2>NTP Client Setup</h2><label for='enable-dst'>Auto-adjust clock for DST</label> <input value='1'
                     type=checkbox name='enable-dst' id='enable-dst' checked><br><label

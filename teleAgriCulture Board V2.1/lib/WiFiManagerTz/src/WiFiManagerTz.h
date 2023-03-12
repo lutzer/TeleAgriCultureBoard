@@ -148,19 +148,25 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<h2>Board Setup</h2>";
 
-    TimeConfHTML += "<form><fieldset><legend>Please select your data upload method:</legend><div>";
-    TimeConfHTML += "<input type='radio' id='wificheck' name='upload' value='wifi'/><label for='upload1'>WiFi</label>";
-    TimeConfHTML += "<input type='radio' id='loracheck' name='upload' value='lora' /><label for='upload2'>LoRa</label>";
-    TimeConfHTML += "</div>";
+    TimeConfHTML += "<div><form><fieldset><legend>Please select your data upload method:</legend>";
+    TimeConfHTML += "<table style='width:100%'><tr>";
+    TimeConfHTML += "<td><input type='radio' id='wificheck' name='upload' value='wifi'/><label for='upload1'>WiFi</label></td>";
+    TimeConfHTML += "<td><input type='radio' id='loracheck' name='upload' value='lora' /><label for='upload2'>LoRa</label></td>";
+    TimeConfHTML += "</tr></table></div>";
+    TimeConfHTML += "<BR><b>WiFi Data</b>";
     TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type='number' size=4 id='BoardID' name='boardID'>";
     TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type='text' size=10 id='API_KEY' name='api_key'></div>";
+    TimeConfHTML += "<b>LoRa Data</b>";
+    TimeConfHTML += "<div><label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type='text' size=15 id='OTAA_DEVEUI' name='otaa_DEVEUI'>";
+    TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type='text' size=10 id='OTAA_APPEUI' name='otaa_APPEUI'>";
+    TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type='text' size=10 id='OTAA_APPKEY' name='otaa_APPKEY'></div>";
     TimeConfHTML += "</fieldset></form>";
 
     //------------- Start Connectors ------- //
 
-    TimeConfHTML += "<h2>Connectors:</h2>";
+    TimeConfHTML += "<BR><h2>Connectors:</h2>";
 
-    TimeConfHTML += "<table><tbody><tr><td colspan='2'><h3>I2C Connectors</h3></td></tr><tr>";
+    TimeConfHTML += "<table style='width:100%'><tbody><tr><td colspan='2'><h3>I2C Connectors</h3></td></tr><tr>";
 
     TimeConfHTML += "<td><label for='i2c_1'>I2C_1</label>";
 
@@ -177,7 +183,7 @@ namespace WiFiManagerNS
     }
 
     dropdown_i2c += "</select></td>";
-    dropdown_i2c += "<BR>";
+
     TimeConfHTML += dropdown_i2c;
 
     TimeConfHTML += "<td><label for='i2c_3'>I2C_3</label>";
@@ -203,7 +209,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "</tr></tbody></table>";
     dropdown_i2c = String();
 
-    TimeConfHTML += "<table><tbody><tr><td><h3>ADC Connectors</h3></td>";
+    TimeConfHTML += "<table style='width:100%'><tbody><tr><td><h3>ADC Connectors</h3></td>";
     TimeConfHTML += "<td><h3>1-Wire Connectors</h3></td></tr><tr>";
 
     TimeConfHTML += "<td><label for='adc_1'>ADC_1</label>";
@@ -271,7 +277,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "</tr></tbody></table>";
     dropdown_1wire = String();
 
-    TimeConfHTML += "<h2>Time Settings</h2>";
+    TimeConfHTML += "<BR><h2>Time Settings</h2>";
 
     String systimeStr = getSystimeStr();
 

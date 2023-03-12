@@ -147,9 +147,9 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<h2>Connectors:</h2>";
 
-    TimeConfHTML += "<h3>I2C Connectors</h3>";
+    TimeConfHTML += "<table><tbody><tr><td colspan='2'><h3>I2C Connectors</h3></td></tr><tr>";
 
-    TimeConfHTML += "<label for='i2c_1'>I2C_1</label>";
+    TimeConfHTML += "<td><label for='i2c_1'>I2C_1</label>";
 
     TimeConfHTML += "<select id='I2C_1' name='i2c_1'>";
 
@@ -163,34 +163,37 @@ namespace WiFiManagerNS
       }
     }
 
-    dropdown_i2c += "</select>";
+    dropdown_i2c += "</select></td>";
     dropdown_i2c += "<BR>";
-
-    TimeConfHTML += dropdown_i2c;
-    TimeConfHTML += "<label for='i2c_2'>I2C_2</label>";
-
-    TimeConfHTML += "<select id='I2C_2' name='i2c_2'>";
-
     TimeConfHTML += dropdown_i2c;
 
-    TimeConfHTML += "<label for='i2c_3'>I2C_3</label>";
+    TimeConfHTML += "<td><label for='i2c_3'>I2C_3</label>";
 
     TimeConfHTML += "<select id='I2C_3' name='i2c_3'>";
 
     TimeConfHTML += dropdown_i2c;
 
-    TimeConfHTML += "<label for='i2c_4'>I2C_4</label>";
+    TimeConfHTML += "</tr><tr>";
+
+    TimeConfHTML += "<td><label for='i2c_2'>I2C_2</label>";
+
+    TimeConfHTML += "<select id='I2C_2' name='i2c_2'>";
+
+    TimeConfHTML += dropdown_i2c;
+
+    TimeConfHTML += "<td><label for='i2c_4'>I2C_4</label>";
 
     TimeConfHTML += "<select id='I2C_4' name='i2c_4'>";
 
     TimeConfHTML += dropdown_i2c;
 
-    Serial.println(dropdown_i2c);
+    TimeConfHTML += "</tr></tbody></table>";
     dropdown_i2c = String();
 
-    TimeConfHTML += "<h3>ADC Connectors</h3>";
+    TimeConfHTML += "<table><tbody><tr><td><h3>ADC Connectors</h3></td>";
+    TimeConfHTML += "<td><h3>1-Wire Connectors</h3></td></tr><tr>";
 
-    TimeConfHTML += "<label for='adc_1'>ADC_1</label>";
+    TimeConfHTML += "<td><label for='adc_1'>ADC_1</label>";
 
     TimeConfHTML += "<select id='ADC_1' name='adc_1'>";
 
@@ -204,27 +207,11 @@ namespace WiFiManagerNS
       }
     }
 
-    dropdown_adc += "</select>";
-    dropdown_adc += "<BR>";
-
-    TimeConfHTML += dropdown_adc;
-    TimeConfHTML += "<label for='adc_2'>ADC_2</label>";
-
-    TimeConfHTML += "<select id='ADC_2' name='adc_2'>";
+    dropdown_adc += "</select></td>";
 
     TimeConfHTML += dropdown_adc;
 
-    TimeConfHTML += "<label for='adc_3'>ADC_3</label>";
-
-    TimeConfHTML += "<select id='ADC_3' name='adc_3'>";
-
-    TimeConfHTML += dropdown_adc;
-
-    dropdown_adc = String();
-
-     TimeConfHTML += "<h3>1-Wire Connectors</h3>";
-
-    TimeConfHTML += "<label for='onewire_1'>1-Wire_1</label>";
+    TimeConfHTML += "<td><label for='onewire_1'>1-Wire_1</label>";
 
     TimeConfHTML += "<select id='onewire_1' name='onewire_1'>";
 
@@ -239,20 +226,36 @@ namespace WiFiManagerNS
     }
 
     dropdown_1wire += "</select>";
-    dropdown_1wire += "<BR>";
+    dropdown_1wire += "</td>";
 
     TimeConfHTML += dropdown_1wire;
-    TimeConfHTML += "<label for='onewire_2'>1-Wire_2</label>";
+
+    TimeConfHTML += "</tr><tr><td><label for='adc_2'>ADC_2</label>";
+
+    TimeConfHTML += "<select id='ADC_2' name='adc_2'>";
+
+    TimeConfHTML += dropdown_adc;
+
+    TimeConfHTML += "<td><label for='onewire_2'>1-Wire_2</label>";
 
     TimeConfHTML += "<select id='onewire_2' name='onewire_2'>";
 
     TimeConfHTML += dropdown_1wire;
 
-    TimeConfHTML += "<label for='onewire_3'>1-Wire_3</label>";
+    TimeConfHTML += "</tr><tr><td><label for='adc_3'>ADC_3</label>";
+
+    TimeConfHTML += "<select id='ADC_3' name='adc_3'>";
+
+    TimeConfHTML += dropdown_adc;
+
+    dropdown_adc = String();
+
+    TimeConfHTML += "<td><label for='onewire_3'>1-Wire_3</label>";
 
     TimeConfHTML += "<select id='onewire_3' name='onewire_3'>";
 
     TimeConfHTML += dropdown_1wire;
+    TimeConfHTML += "</tr></tbody></table>";
     dropdown_1wire = String();
 
     TimeConfHTML += "<h2>Time Settings</h2>";

@@ -50,6 +50,9 @@
 Sensor allSensors[SENSORS_NUM];
 Measurement measurements[MEASURMENT_NUM];
 
+// Global vector to store name-value pairs
+std::vector<std::pair<std::string, float>> measuredVector;
+
 // flag for saving Connector data
 bool shouldSaveConfig = false;
 
@@ -96,7 +99,7 @@ void sensorRead()
     digitalWrite(SW_3V3, HIGH);
     digitalWrite(SW_5V, HIGH);
 
-    measurements.clear();   // reset vector
+       measuredVector.clear();   // reset vector
 
     if (I2C_5V_con_table[0] == MULTIGAS_V1)
     {

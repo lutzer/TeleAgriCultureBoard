@@ -121,11 +121,6 @@ WiFiManagerParameter p_wifi("wifi", "wifi", "T", 2, "type=\"checkbox\" ", WFM_LA
 WiFiManagerParameter p_lora("lora", "lora", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
 // ----- WiFiManager section ---- //
 
-// ----- measured data vector ----- //
-
-// Global vector to store name-value pairs
-std::vector<std::pair<std::string, float>> measuredVector;
-
 void setup()
 {
    Serial.begin(115200);
@@ -337,13 +332,15 @@ void readFile(fs::FS &fs, const char *path)
    }
 }
 
+// Optional callback function, fired when NTP gets updated.
+// Used to print the updated time or adjust an external RTC module.
 void on_time_available(struct timeval *t)
 {
-   Serial.println("Received time adjustment from NTP");
-   struct tm timeInfo;
-   getLocalTime(&timeInfo, 1000);
-   Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-   // RTC.adjust( &timeInfo );
+  Serial.println("Received time adjustment from NTP");
+  struct tm timeInfo;
+  getLocalTime(&timeInfo, 1000);
+  Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+  // RTC.adjust( &timeInfo );
 }
 
 void checkButton()

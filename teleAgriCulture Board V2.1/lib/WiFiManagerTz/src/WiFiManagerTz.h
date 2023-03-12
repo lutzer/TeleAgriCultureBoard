@@ -143,7 +143,20 @@ namespace WiFiManagerNS
     TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:checked       ~.collapsed   { display:none; }</style>";
     TimeConfHTML += getTemplate(HTML_HEAD_END);
     TimeConfHTML.replace(FPSTR(T_c), "invert"); // add class str
-                                                //------------- Start Connectors ------- //
+
+    //------------- HTML Body start ------- //
+
+    TimeConfHTML += "<h2>Board Setup</h2>";
+
+    TimeConfHTML += "<form><fieldset><legend>Please select your data upload method:</legend><div>";
+    TimeConfHTML += "<input type='radio' id='wificheck' name='upload' value='wifi'/><label for='upload1'>WiFi</label>";
+    TimeConfHTML += "<input type='radio' id='upload2' name='upload' value='LoRA' /><label for='upload2'>LoRa</label>";
+    TimeConfHTML += "</div><br>";
+    TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type='number' size=4 id='BoardID' name='boardID><br>";
+    TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type='text' size=10 id='API_KEY' name='api_key></div><br>";
+    TimeConfHTML += "</fieldset></form>";
+
+    //------------- Start Connectors ------- //
 
     TimeConfHTML += "<h2>Connectors:</h2>";
 

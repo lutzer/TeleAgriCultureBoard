@@ -150,10 +150,10 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<form><fieldset><legend>Please select your data upload method:</legend><div>";
     TimeConfHTML += "<input type='radio' id='wificheck' name='upload' value='wifi'/><label for='upload1'>WiFi</label>";
-    TimeConfHTML += "<input type='radio' id='upload2' name='upload' value='LoRA' /><label for='upload2'>LoRa</label>";
-    TimeConfHTML += "</div><br>";
-    TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type='number' size=4 id='BoardID' name='boardID><br>";
-    TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type='text' size=10 id='API_KEY' name='api_key></div><br>";
+    TimeConfHTML += "<input type='radio' id='loracheck' name='upload' value='lora' /><label for='upload2'>LoRa</label>";
+    TimeConfHTML += "</div>";
+    TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type='number' size=4 id='BoardID' name='boardID'>";
+    TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type='text' size=10 id='API_KEY' name='api_key'></div>";
     TimeConfHTML += "</fieldset></form>";
 
     //------------- Start Connectors ------- //

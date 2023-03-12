@@ -96,6 +96,8 @@ void sensorRead()
     digitalWrite(SW_3V3, HIGH);
     digitalWrite(SW_5V, HIGH);
 
+    measurements.clear();   // reset vector
+
     if (I2C_5V_con_table[0] == MULTIGAS_V1)
     {
         MiCS6814 multiGasV1;

@@ -84,6 +84,7 @@ void save_Connectors(void);
 void checkLoadedStuff(void);
 void printConnectors(ConnectorType typ);
 void printProtoSensors(void);
+void showSensors(ConnectorType type);
 void load_WiFiConfig(void);
 void save_WiFIConfig(void);
 void addMeassurments(String name, float value);
@@ -251,6 +252,8 @@ void setup()
    Serial.println(WiFi.localIP());
 
    wifi_sendData();
+
+   showSensors(ConnectorType::I2C);
 }
 
 void loop()
@@ -832,30 +835,29 @@ void printProtoSensors(void)
    Serial.println();
 }
 
-/*
-void show_sensors(String sensor_type)
+void showSensors(ConnectorType sensor_type)
 {
    tft.fillScreen(ST7735_BLACK);
    tft.setTextSize(1);
 
-      int cursor_y = 0;
+      int cursor_y = 5;
 
    for (int i = 0; i < SENSORS_NUM; i++)
    {
       Sensor sensor = allSensors[i];
-      if (sensor_type == "i2c" && !sensor.i2c)
+      if (sensor_type == ConnectorType::I2C && !(sensor.con_typ=="I2C"))
       {
          continue;
       }
-      if (sensor_type == "onewire" && !sensor.onewire)
+      if (sensor_type == ConnectorType::ONE_WIRE && !(sensor.con_typ=="ONE_WIRE"))
       {
          continue;
       }
-      if (sensor_type == "analog" && !sensor.analog)
+      if (sensor_type == ConnectorType::ADC && !(sensor.con_typ=="ADC"))
       {
          continue;
       }
-      if (sensor_type == "spi" && !sensor.spi)
+      if (sensor_type == ConnectorType::SPI_CON && !(sensor.con_typ=="SPI"))
       {
          continue;
       }
@@ -863,11 +865,11 @@ void show_sensors(String sensor_type)
       tft.setCursor(5, cursor_y);
       tft.setTextColor(ST7735_YELLOW);
 
-      tft.print(sensor.name);
+      tft.print(sensor.sensor_name);
       tft.setCursor(80, cursor_y);
       tft.setTextColor(ST7735_GREEN);
 
-      tft.print(sensor.con);
+      tft.print(sensor.con_typ);
       cursor_y += 10;
 
       for (int j = 0; j < MEASURMENT_NUM; j++)
@@ -905,7 +907,7 @@ void show_sensors(String sensor_type)
       }
    }
 }
-*/
+
 
 void checkLoadedStuff(void)
 {

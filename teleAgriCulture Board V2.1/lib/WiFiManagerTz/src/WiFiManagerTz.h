@@ -147,6 +147,8 @@ namespace WiFiManagerNS
     //------------- HTML Body start ------- //
 
     TimeConfHTML += "<h2>Board Setup</h2>";
+    TimeConfHTML += version;
+    TimeConfHTML += "<BR><BR>";
 
     TimeConfHTML += "<div><form><fieldset><legend>Please select your data upload method:</legend>";
     TimeConfHTML += "<table style='width:100%'><tr>";

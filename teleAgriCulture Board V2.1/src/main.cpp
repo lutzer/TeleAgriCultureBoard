@@ -151,7 +151,9 @@ void setup()
    digitalWrite(LED, HIGH);
 
    // ----- Initiate the TFT display and Start Image----- //
-   tft.initR(INITR_BLACKTAB);
+   tft.initR(INITR_GREENTAB);          // work around to set protected offset values
+   tft.initR(INITR_BLACKTAB);          // change the colormode back, offset values stay as "green display"
+
    tft.cp437(true);
    tft.setCursor(0, 0);
    tft.setRotation(3);
@@ -174,34 +176,34 @@ void setup()
    // ---  Test DATA for connected Sensors ---> comes from Web Config normaly or out of SPIFF
    // commented out after first upload
 
-   I2C_con_table[0] = BM280;
-   I2C_con_table[1] = VEML7700;
-   I2C_con_table[2] = NO;
-   I2C_con_table[3] = VEML7700;
+   // I2C_con_table[0] = BM280;
+   // I2C_con_table[1] = VEML7700;
+   // I2C_con_table[2] = NO;
+   // I2C_con_table[3] = VEML7700;
 
-   ADC_con_table[0] = CAP_SOIL;
-   ADC_con_table[1] = TDS;
-   ADC_con_table[2] = NO;
+   // ADC_con_table[0] = CAP_SOIL;
+   // ADC_con_table[1] = TDS;
+   // ADC_con_table[2] = NO;
 
-   OneWire_con_table[0] = DHT_22;
-   OneWire_con_table[1] = DS18B20;
-   OneWire_con_table[2] = NO;
+   // OneWire_con_table[0] = DHT_22;
+   // OneWire_con_table[1] = DS18B20;
+   // OneWire_con_table[2] = NO;
 
-   SPI_con_table[0] = NO;
+   // SPI_con_table[0] = NO;
 
-   I2C_5V_con_table[0] = NO;
+   // I2C_5V_con_table[0] = NO;
 
-   EXTRA_con_table[0] = NO;
-   EXTRA_con_table[1] = NO;
+   // EXTRA_con_table[0] = NO;
+   // EXTRA_con_table[1] = NO;
 
-   save_Connectors(); // <------------------ called normaly after Web Config
+   // save_Connectors(); // <------------------ called normaly after Web Config
 
    // Test DATA for connected Sensors ---> come from Web Config normaly
 
    load_Connectors(); // Connectors lookup table
    Serial.println();
 
-   checkLoadedStuff();
+   // checkLoadedStuff();
    Serial.println();
 
    sensorRead();
@@ -244,7 +246,7 @@ void setup()
    wifiManager.addParameter(&p_lineBreak_notext); // linebreak
    wifiManager.addParameter(&p_Test_Input);
 
-   wifiManager.autoConnect("TeleAgriCulture Board");
+   // wifiManager.autoConnect("TeleAgriCulture Board");
 
    Serial.println("");
    Serial.println("WiFi connected");
@@ -339,11 +341,11 @@ void readFile(fs::FS &fs, const char *path)
 // Used to print the updated time or adjust an external RTC module.
 void on_time_available(struct timeval *t)
 {
-  Serial.println("Received time adjustment from NTP");
-  struct tm timeInfo;
-  getLocalTime(&timeInfo, 1000);
-  Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-  // RTC.adjust( &timeInfo );
+   Serial.println("Received time adjustment from NTP");
+   struct tm timeInfo;
+   getLocalTime(&timeInfo, 1000);
+   Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+   // RTC.adjust( &timeInfo );
 }
 
 void checkButton()
@@ -840,24 +842,23 @@ void showSensors(ConnectorType sensor_type)
    tft.fillScreen(ST7735_BLACK);
    tft.setTextSize(1);
 
-      int cursor_y = 5;
+   int cursor_y = 5;
 
    for (int i = 0; i < SENSORS_NUM; i++)
    {
-      Sensor sensor = allSensors[i];
-      if (sensor_type == ConnectorType::I2C && !(sensor.con_typ=="I2C"))
+      if (sensor_type == ConnectorType::I2C && !(allSensors[i].con_typ == "I2C"))
       {
          continue;
       }
-      if (sensor_type == ConnectorType::ONE_WIRE && !(sensor.con_typ=="ONE_WIRE"))
+      if (sensor_type == ConnectorType::ONE_WIRE && !(allSensors[i].con_typ == "ONE_WIRE"))
       {
          continue;
       }
-      if (sensor_type == ConnectorType::ADC && !(sensor.con_typ=="ADC"))
+      if (sensor_type == ConnectorType::ADC && !(allSensors[i].con_typ == "ADC"))
       {
          continue;
       }
-      if (sensor_type == ConnectorType::SPI_CON && !(sensor.con_typ=="SPI"))
+      if (sensor_type == ConnectorType::SPI_CON && !(allSensors[i].con_typ == "SPI"))
       {
          continue;
       }
@@ -865,49 +866,46 @@ void showSensors(ConnectorType sensor_type)
       tft.setCursor(5, cursor_y);
       tft.setTextColor(ST7735_YELLOW);
 
-      tft.print(sensor.sensor_name);
+      tft.print(allSensors[i].sensor_name);
       tft.setCursor(80, cursor_y);
       tft.setTextColor(ST7735_GREEN);
 
-      tft.print(sensor.con_typ);
+      tft.print(allSensors[i].con_typ);
       cursor_y += 10;
 
       for (int j = 0; j < MEASURMENT_NUM; j++)
       {
-         Measurement measurement = sensor.measurements[j];
-         if (measurement.data_name == "")
+         if (allSensors[i].measurements[j].data_name == "")
          {
             continue;
          }
          tft.setCursor(30, cursor_y);
          tft.setTextColor(ST7735_BLUE);
 
-         tft.print(measurement.data_name);
+         tft.print(allSensors[i].measurements[j].data_name);
          tft.setCursor(80, cursor_y);
          tft.setTextColor(ST7735_WHITE);
 
-         tft.print(measurement.value);
+         tft.print(allSensors[i].measurements[j].value);
          tft.print(" ");
-         if(measurement.unit=="°C")
+         if (allSensors[i].measurements[j].unit == "°C")
          {
-            tft.drawChar(114, cursor_y-4, 9, ST7735_WHITE, ST7735_BLACK, 1);
+            tft.drawChar(114, cursor_y - 4, 9, ST7735_WHITE, ST7735_BLACK, 1);
             tft.print(" C");
          }
-         if(measurement.unit=="°F")
+         if (allSensors[i].measurements[j].unit == "°F")
          {
-            tft.drawChar(114, cursor_y-4, 9, ST7735_WHITE, ST7735_BLACK, 1);
+            tft.drawChar(114, cursor_y - 4, 9, ST7735_WHITE, ST7735_BLACK, 1);
             tft.print(" F");
          }
-         if(!(measurement.unit=="°C" || measurement.unit=="°F"))
+         if (!(allSensors[i].measurements[j].unit == "°C" || allSensors[i].measurements[j].unit == "°F"))
          {
-            tft.print(measurement.unit);
+            tft.print(allSensors[i].measurements[j].unit);
          }
-
          cursor_y += 10;
       }
    }
 }
-
 
 void checkLoadedStuff(void)
 {

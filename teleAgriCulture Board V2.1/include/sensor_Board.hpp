@@ -30,7 +30,7 @@
 int boardID = 1003;
 String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB";  // TODO: after all the testing has to be masked in the gitlab and changed in the app
 
-String version = "Firmware Version 0.8";
+String version = "Firmware Version 0.82";
 String hostname = "TeleAgriCulture Board";
 String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
 String api_Bearer = "Bearer " + API_KEY;

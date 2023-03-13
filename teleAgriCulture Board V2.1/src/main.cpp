@@ -42,7 +42,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <ESPmDNS.h>
-#include <ESP32Time.h>
+#include <time.h>
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -151,8 +151,8 @@ void setup()
    digitalWrite(LED, HIGH);
 
    // ----- Initiate the TFT display and Start Image----- //
-   tft.initR(INITR_GREENTAB);          // work around to set protected offset values
-   tft.initR(INITR_BLACKTAB);          // change the colormode back, offset values stay as "green display"
+   tft.initR(INITR_GREENTAB); // work around to set protected offset values
+   tft.initR(INITR_BLACKTAB); // change the colormode back, offset values stay as "green display"
 
    tft.cp437(true);
    tft.setCursor(0, 0);
@@ -246,12 +246,17 @@ void setup()
    wifiManager.addParameter(&p_lineBreak_notext); // linebreak
    wifiManager.addParameter(&p_Test_Input);
 
-   wifiManager.autoConnect("TeleAgriCulture Board");
+   wifiManager.autoConnect("TeleAgriCulture Board", "concesso");
 
    Serial.println("");
    Serial.println("WiFi connected");
    Serial.println("IP address: ");
    Serial.println(WiFi.localIP());
+
+   if (WiFi.status() == WL_CONNECTED)
+   {
+      WiFiManagerNS::configTime();
+   }
 
    wifi_sendData();
 

@@ -39,7 +39,7 @@
 #include "SPIFFS.h"
 #include <vector>
 
-// #include <WiFi.h>
+#include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <ESPmDNS.h>
 #include <ESP32Time.h>
@@ -246,7 +246,7 @@ void setup()
    wifiManager.addParameter(&p_lineBreak_notext); // linebreak
    wifiManager.addParameter(&p_Test_Input);
 
-   // wifiManager.autoConnect("TeleAgriCulture Board");
+   wifiManager.autoConnect("TeleAgriCulture Board");
 
    Serial.println("");
    Serial.println("WiFi connected");

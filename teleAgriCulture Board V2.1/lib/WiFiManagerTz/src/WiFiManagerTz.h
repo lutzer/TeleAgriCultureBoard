@@ -158,7 +158,10 @@ namespace WiFiManagerNS
     TimeConfHTML += "<BR><b>WiFi Data</b>";
     TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type='number' size=4 id='BoardID' name='boardID'>";
     TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type='text' size=10 id='API_KEY' name='api_key'></div>";
-    TimeConfHTML += "<b>LoRa Data</b>";
+    TimeConfHTML += "<BR><b>LoRa Data</b><BR>";
+    TimeConfHTML += "<label for='lora_fqz'>Lora Frequency</label><select id='lora_fqz' name='lora_fqz'><option value='EU'>EU 868 MHz</option>";
+    TimeConfHTML += "<option value='US'>US/CD/AUS  915 MHz</option>";
+    TimeConfHTML += "<option value='ASIA'>Asia 923 MHz</option></select>";
     TimeConfHTML += "<div><label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type='text' size=15 id='OTAA_DEVEUI' name='otaa_DEVEUI'>";
     TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type='text' size=10 id='OTAA_APPEUI' name='otaa_APPEUI'>";
     TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type='text' size=10 id='OTAA_APPKEY' name='otaa_APPKEY'></div>";

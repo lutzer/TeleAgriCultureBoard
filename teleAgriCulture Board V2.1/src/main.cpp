@@ -61,6 +61,8 @@
 #include <SPI.h>
 
 #include <Adafruit_GFX.h>
+#include <FreeSans12pt.h>
+#include <Fonts/FreeSans9pt7b.h>
 #include <Adafruit_ST7735.h>
 
 // ----- Deep Sleep related -----//
@@ -81,6 +83,7 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels);
 void on_time_available(struct timeval *t);
 void printDigits(int digits);
 void digitalClockDisplay(int x, int y);
+void mainPage();
 void checkButton(void);
 void load_Sensors(void);
 void load_Connectors(void);
@@ -116,6 +119,8 @@ bool display_state = true; // Display is awake when true and sleeping when false
 char test_input[6];
 bool portalRunning = false;
 bool _enteredConfigMode = false;
+
+String lastUpload;
 
 WiFiManager wifiManager;
 
@@ -258,8 +263,8 @@ void setup()
    printMeassurments();
    Serial.println();
 
-   tft.fillScreen(background_color);
-
+   //   tft.fillScreen(background_color);
+   mainPage();
    // showSensors(ConnectorType::I2C);
 }
 
@@ -282,7 +287,7 @@ void loop()
       if (now() != prevDisplay)
       { // update the display only if time has changed
          prevDisplay = now();
-         digitalClockDisplay(5,10);
+         digitalClockDisplay(5, 75);
       }
    }
    // Serial.println(digitalRead(LEFT_BUTTON_PIN));
@@ -361,7 +366,7 @@ void on_time_available(struct timeval *t)
    struct tm timeInfo;
    getLocalTime(&timeInfo, 1000);
    Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-
+   lastUpload=String(timeInfo.tm_hour) + ":" + String(timeInfo.tm_min) + ":" + String(timeInfo.tm_sec);
    setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
 
    // every hour
@@ -375,7 +380,7 @@ void digitalClockDisplay(int x, int y)
    tft.setCursor(x, y);
    tft.setTextColor(ST7735_BLACK);
 
-   tft.fillRect(x-5,y-5,120,15,background_color);
+   tft.fillRect(x - 5, y - 5, 120, 15, background_color);
 
    tft.print(hour());
    printDigits(minute());
@@ -663,7 +668,27 @@ void save_Connectors()
 
 void mainPage()
 {
-   
+   tft.fillScreen(background_color);
+   tft.setTextColor(ST7735_BLACK);
+   tft.setFont(&FreeSans9pt7b);
+   tft.setTextSize(1);
+   tft.setCursor(5, 17);
+   tft.print("TeleAgriCulture");
+   tft.setCursor(5, 38);
+   tft.print("Board V2.1");
+
+   tft.setTextColor(ST7735_BLUE);
+   tft.setFont();
+   tft.setTextSize(1);
+   tft.setCursor(5, 45);
+   tft.print(version);
+   tft.setTextColor(ST7735_BLACK);
+   tft.setCursor(5, 60);
+   tft.print("IP: ");
+   tft.print(WiFi.localIP());
+   tft.setCursor(5, 90);
+   tft.print("last data UPLOAD: ");
+   tft.print(lastUpload);
 }
 
 void printConnectors(ConnectorType typ)

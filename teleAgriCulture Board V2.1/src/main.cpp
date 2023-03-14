@@ -43,6 +43,7 @@
 #include <WiFiClientSecure.h>
 #include <ESPmDNS.h>
 #include <time.h>
+// #include <ESP32Time.h>
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -67,6 +68,7 @@
 #define uS_TO_S_FACTOR 1000000     /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP 20           /* Time ESP32 will go to sleep (in seconds) */
 
+// ESP32Time rtc;
 RTC_DATA_ATTR int bootCount = 0;
 
 void print_wakeup_reason();
@@ -77,6 +79,8 @@ void print_GPIO_wake_up();
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels);
 void on_time_available(struct timeval *t);
+void printDigits(int digits);
+void digitalClockDisplay(int x, int y);
 void checkButton(void);
 void load_Sensors(void);
 void load_Connectors(void);
@@ -204,14 +208,6 @@ void setup()
    Serial.println();
 
    // checkLoadedStuff();
-   Serial.println();
-
-   sensorRead();
-   Serial.println();
-
-   printMeassurments();
-   Serial.println();
-
    //  load_WiFiConfig();
 
    // reset settings - wipe stored credentials for testing
@@ -253,15 +249,21 @@ void setup()
    Serial.println("IP address: ");
    Serial.println(WiFi.localIP());
 
+   delay(1000);
    if (WiFi.status() == WL_CONNECTED)
    {
       WiFiManagerNS::configTime();
    }
 
-   wifi_sendData();
+   printMeassurments();
+   Serial.println();
 
-   showSensors(ConnectorType::I2C);
+   tft.fillScreen(background_color);
+
+   // showSensors(ConnectorType::I2C);
 }
+
+time_t prevDisplay = 0; // when the digital clock was displayed
 
 void loop()
 {
@@ -269,11 +271,20 @@ void loop()
 
    if (currentMillis - previousMillis >= interval)
    {
+      // print
       previousMillis = currentMillis;
-
-      // checkLoadedStuff();
    }
+
    delay(100);
+
+   if (timeStatus() != timeNotSet)
+   {
+      if (now() != prevDisplay)
+      { // update the display only if time has changed
+         prevDisplay = now();
+         digitalClockDisplay(5,10);
+      }
+   }
    // Serial.println(digitalRead(LEFT_BUTTON_PIN));
    // Serial.println(digitalRead(RIGHT_BUTTON_PIN));
    // digitalWrite(LED, LOW);
@@ -350,7 +361,41 @@ void on_time_available(struct timeval *t)
    struct tm timeInfo;
    getLocalTime(&timeInfo, 1000);
    Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-   // RTC.adjust( &timeInfo );
+
+   setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
+
+   // every hour
+   sensorRead();
+   wifi_sendData();
+}
+
+void digitalClockDisplay(int x, int y)
+{
+   tft.setTextSize(1);
+   tft.setCursor(x, y);
+   tft.setTextColor(ST7735_BLACK);
+
+   tft.fillRect(x-5,y-5,120,15,background_color);
+
+   tft.print(hour());
+   printDigits(minute());
+   printDigits(second());
+   tft.print(" ");
+   tft.print(day());
+   tft.print(" ");
+   tft.print(month());
+   tft.print(" ");
+   tft.print(year());
+   tft.println();
+}
+
+void printDigits(int digits)
+{
+   // utility for digital clock display: prints preceding colon and leading 0
+   tft.print(":");
+   if (digits < 10)
+      tft.print('0');
+   tft.print(digits);
 }
 
 void checkButton()
@@ -614,6 +659,11 @@ void save_Connectors()
 
    connectorsFile.close();
    // end save
+}
+
+void mainPage()
+{
+   
 }
 
 void printConnectors(ConnectorType typ)
@@ -989,7 +1039,7 @@ void wifi_sendData(void)
 
       StaticJsonDocument<32> doc;
 
-      doc["test"] = 40;
+      doc["test"] = 46;
 
       String output;
 
@@ -1020,12 +1070,6 @@ void wifi_sendData(void)
       Serial.print("\nHTTP Response code: ");
       Serial.println(httpResponseCode);
       Serial.println();
-
-      if (httpResponseCode > 0)
-      {
-         String payload = https.getString();
-         Serial.println(payload);
-      }
 
       // Free resources
       https.end();

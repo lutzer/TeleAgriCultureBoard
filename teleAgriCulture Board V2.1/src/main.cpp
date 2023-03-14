@@ -35,6 +35,7 @@
 */
 
 #include <Arduino.h>
+#define ESP_DRD_USE_SPIFFS true
 #include <FS.h>
 #include "SPIFFS.h"
 #include <vector>
@@ -48,6 +49,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <LoraMessage.h>
+#include <ESP_DoubleResetDetector.h>
 
 #include <sensor_Board.hpp>
 #include <sensor_Read.hpp>
@@ -71,10 +73,10 @@
 #define TIME_TO_SLEEP 20           /* Time ESP32 will go to sleep (in seconds) */
 
 // ESP32Time rtc;
-RTC_DATA_ATTR int bootCount = 0;
+// RTC_DATA_ATTR int bootCount = 0;
 
-void print_wakeup_reason();
-void print_GPIO_wake_up();
+// void print_wakeup_reason();
+// void print_GPIO_wake_up();
 // ----- Deep Sleep related -----//
 
 // ----- Function declaration -----//
@@ -116,11 +118,21 @@ bool display_state = true; // Display is awake when true and sleeping when false
 // ----- WiFiManager section ---- //
 #define WM_NOHELP 1
 
+// Number of seconds after reset during which a
+// subseqent reset will be considered a double reset.
+#define DRD_TIMEOUT 5
+
+// RTC Memory Address for the DoubleResetDetector to use
+#define DRD_ADDRESS 0
+
+DoubleResetDetector *drd;
+
 char test_input[6];
 bool portalRunning = false;
 bool _enteredConfigMode = false;
 
 String lastUpload;
+bool sendDataWifi = false;
 
 WiFiManager wifiManager;
 
@@ -133,16 +145,17 @@ WiFiManagerParameter p_lora("lora", "lora", "T", 2, "type=\"checkbox\" ", WFM_LA
 
 void setup()
 {
-   Serial.begin(115200);
-   delay(1000); // Take some time to open up the Serial Monitor
-
-   // Increment boot number and print it every reboot
-   ++bootCount;
-   Serial.println("Boot number: " + String(bootCount));
-
    // Print the wakeup reason for ESP32
    // print_wakeup_reason();
    // print_GPIO_wake_up();
+   bool forceConfig = false;
+
+   drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
+   if (drd->detectDoubleReset())
+   {
+      Serial.println(F("Forcing config mode as there was a Double reset detected"));
+      forceConfig = true;
+   }
 
    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
@@ -159,6 +172,7 @@ void setup()
    analogWrite(TFT_BL, backlight_pwm);
    digitalWrite(LED, HIGH);
 
+   
    // ----- Initiate the TFT display and Start Image----- //
    tft.initR(INITR_GREENTAB); // work around to set protected offset values
    tft.initR(INITR_BLACKTAB); // change the colormode back, offset values stay as "green display"
@@ -171,6 +185,12 @@ void setup()
    // ----- Initiate the TFT display  and Start Image----- //
 
    delay(4000);
+
+   Serial.begin(115200);
+
+   // Increment boot number and print it every reboot
+   //++bootCount;
+   //Serial.println("Boot number: " + String(bootCount));
 
    // Initialize SPIFFS file system
    if (!SPIFFS.begin(true))
@@ -247,7 +267,29 @@ void setup()
    wifiManager.addParameter(&p_lineBreak_notext); // linebreak
    wifiManager.addParameter(&p_Test_Input);
 
-   wifiManager.autoConnect("TeleAgriCulture Board", "concesso");
+if (forceConfig)
+  {
+    if (!wifiManager.autoConnect("TeleAgriCulture Board", "enter123"))
+    {
+      Serial.println("failed to connect and hit timeout");
+      delay(3000);
+      //reset and try again, or maybe put it to deep sleep
+      ESP.restart();
+      delay(5000);
+    }
+  }
+  else
+  {
+    if (!wifiManager.autoConnect("TeleAgriCulture Board", "enter123"))
+    {
+      Serial.println("failed to connect and hit timeout");
+      delay(3000);
+      // if we still have not connected restart and try all over again
+      ESP.restart();
+      delay(5000);
+    }
+  }
+
 
    Serial.println("");
    Serial.println("WiFi connected");
@@ -290,6 +332,17 @@ void loop()
          digitalClockDisplay(5, 75);
       }
    }
+
+   if (sendDataWifi)
+   {
+      sensorRead();
+      wifi_sendData();
+      sendDataWifi = false;
+      tft.setCursor(5, 90);
+      tft.print("last data UPLOAD:");
+      tft.print(lastUpload);
+   }
+
    // Serial.println(digitalRead(LEFT_BUTTON_PIN));
    // Serial.println(digitalRead(RIGHT_BUTTON_PIN));
    // digitalWrite(LED, LOW);
@@ -366,12 +419,12 @@ void on_time_available(struct timeval *t)
    struct tm timeInfo;
    getLocalTime(&timeInfo, 1000);
    Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-   lastUpload=String(timeInfo.tm_hour) + ":" + String(timeInfo.tm_min) + ":" + String(timeInfo.tm_sec);
    setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
 
    // every hour
-   sensorRead();
-   wifi_sendData();
+   sendDataWifi = true;
+   lastUpload = String(timeInfo.tm_hour) + ":" + String(timeInfo.tm_min) + ":" + String(timeInfo.tm_sec);
+   Serial.println(lastUpload);
 }
 
 void digitalClockDisplay(int x, int y)
@@ -686,9 +739,6 @@ void mainPage()
    tft.setCursor(5, 60);
    tft.print("IP: ");
    tft.print(WiFi.localIP());
-   tft.setCursor(5, 90);
-   tft.print("last data UPLOAD: ");
-   tft.print(lastUpload);
 }
 
 void printConnectors(ConnectorType typ)
@@ -1062,9 +1112,9 @@ void wifi_sendData(void)
 
       HTTPClient https;
 
-      StaticJsonDocument<32> doc;
+      StaticJsonDocument<100> doc;
 
-      doc["test"] = 46;
+      doc["test"] = 42;
 
       String output;
 
@@ -1095,6 +1145,12 @@ void wifi_sendData(void)
       Serial.print("\nHTTP Response code: ");
       Serial.println(httpResponseCode);
       Serial.println();
+
+      // if (httpResponseCode > 0)
+      // {
+      //    String payload = https.getString();
+      //    Serial.println(payload);
+      // }
 
       // Free resources
       https.end();

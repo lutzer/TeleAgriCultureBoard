@@ -35,35 +35,34 @@
 */
 
 #include <Arduino.h>
-#define ESP_DRD_USE_SPIFFS true
 #include <FS.h>
 #include "SPIFFS.h"
 #include <vector>
+#include <Ticker.h>
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <ESPmDNS.h>
 #include <time.h>
-// #include <ESP32Time.h>
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <LoraMessage.h>
-#include <ESP_DoubleResetDetector.h>
 
+#include <tac_logo.h>
+#include <customTitle_picture.h>
 #include <sensor_Board.hpp>
 #include <sensor_Read.hpp>
 
+#define ESP_DRD_USE_SPIFFS true
+#include <ESP_DoubleResetDetector.h>
 #include <WiFiManager.h>
-#include <tac_logo.h>
-#include <customTitle_picture.h>
 #include <WiFiManagerTz.h>
 
 #include <Wire.h>
 #include <SPI.h>
 
 #include <Adafruit_GFX.h>
-#include <FreeSans12pt.h>
 #include <Fonts/FreeSans9pt7b.h>
 #include <Adafruit_ST7735.h>
 
@@ -72,20 +71,25 @@
 #define uS_TO_S_FACTOR 1000000     /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP 20           /* Time ESP32 will go to sleep (in seconds) */
 
-// ESP32Time rtc;
-// RTC_DATA_ATTR int bootCount = 0;
+RTC_DATA_ATTR int bootCount = 0;
 
-// void print_wakeup_reason();
-// void print_GPIO_wake_up();
+void print_wakeup_reason();
+void print_GPIO_wake_up();
 // ----- Deep Sleep related -----//
 
-// ----- Function declaration -----//
+// ----- LED Timer related -----//
+#define TIMER_DIVIDER 16
+#define TIMER_SCALE (TIMER_BASE_CLK / TIMER_DIVIDER)
+#define BLINK_INTERVAL_MS 500
+// ----- LED Timer related -----//
 
+// ----- Function declaration -----//
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels);
 void on_time_available(struct timeval *t);
+void configModeCallback(WiFiManager *myWiFiManager);
 void printDigits(int digits);
-void digitalClockDisplay(int x, int y);
-void mainPage();
+void digitalClockDisplay(int x, int y, bool date);
+void mainPage(void);
 void checkButton(void);
 void load_Sensors(void);
 void load_Connectors(void);
@@ -100,7 +104,9 @@ void addMeassurments(String name, float value);
 void printMeassurments(void);
 void wifi_sendData(void);
 void lora_sendData(void);
-
+void toggleLED(void);
+void startBlinking(void);
+void stopBlinking(void);
 // ----- Function declaration -----//
 
 // ----- Initialize TFT ----- //
@@ -126,12 +132,15 @@ bool display_state = true; // Display is awake when true and sleeping when false
 #define DRD_ADDRESS 0
 
 DoubleResetDetector *drd;
+Ticker blinker;
 
 char test_input[6];
 bool portalRunning = false;
 bool _enteredConfigMode = false;
 
 String lastUpload;
+bool initialState; // state of the LED
+bool ledState = false;
 bool sendDataWifi = false;
 
 WiFiManager wifiManager;
@@ -143,11 +152,46 @@ WiFiManagerParameter p_wifi("wifi", "wifi", "T", 2, "type=\"checkbox\" ", WFM_LA
 WiFiManagerParameter p_lora("lora", "lora", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
 // ----- WiFiManager section ---- //
 
+// ----- Hardware Timer ---- //
+// void IRAM_ATTR onTimer(void *arg)
+// {
+//    static bool ledState = false;
+//    digitalWrite(LED, ledState);
+//    ledState = !ledState;
+// }
+
 void setup()
 {
+   pinMode(BATSENS, INPUT_PULLDOWN);
+   pinMode(TFT_BL, OUTPUT);
+   pinMode(LED, OUTPUT);
+   // pinMode(LEFT_BUTTON_PIN, INPUT_PULLUP);
+   // pinMode(RIGHT_BUTTON_PIN, INPUT_PULLUP);
+
+   // ----- Initiate the TFT display and Start Image----- //
+   tft.initR(INITR_GREENTAB); // work around to set protected offset values
+   tft.initR(INITR_BLACKTAB); // change the colormode back, offset values stay as "green display"
+
+   analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
+
+   tft.cp437(true);
+   tft.setCursor(0, 0);
+   tft.setRotation(3);
+   tft.fillScreen(background_color);
+   tft.drawRGBBitmap(0, 0, tac_logo, 160, 128);
+   // ----- Initiate the TFT display  and Start Image----- //
+
+   delay(1000);
+   Serial.begin(115200); // start Serial for debuging
+
+   // Increment boot number and print it every reboot
+   ++bootCount;
+   Serial.println("Boot number: " + String(bootCount));
+
    // Print the wakeup reason for ESP32
-   // print_wakeup_reason();
-   // print_GPIO_wake_up();
+   print_wakeup_reason();
+   print_GPIO_wake_up();
+
    bool forceConfig = false;
 
    drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
@@ -161,36 +205,7 @@ void setup()
    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
    Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) + " Seconds");
 
-   pinMode(BATSENS, INPUT_PULLDOWN);
-   pinMode(TFT_BL, OUTPUT);
-   pinMode(LED, OUTPUT);
-   // pinMode(LEFT_BUTTON_PIN, INPUT_PULLUP);
-   // pinMode(RIGHT_BUTTON_PIN, INPUT_PULLUP);
-
    load_Sensors(); // Prototypes get loaded
-
-   analogWrite(TFT_BL, backlight_pwm);
-   digitalWrite(LED, HIGH);
-
-   
-   // ----- Initiate the TFT display and Start Image----- //
-   tft.initR(INITR_GREENTAB); // work around to set protected offset values
-   tft.initR(INITR_BLACKTAB); // change the colormode back, offset values stay as "green display"
-
-   tft.cp437(true);
-   tft.setCursor(0, 0);
-   tft.setRotation(3);
-   tft.fillScreen(background_color);
-   tft.drawRGBBitmap(0, 0, tac_logo, 160, 128);
-   // ----- Initiate the TFT display  and Start Image----- //
-
-   delay(4000);
-
-   Serial.begin(115200);
-
-   // Increment boot number and print it every reboot
-   //++bootCount;
-   //Serial.println("Boot number: " + String(bootCount));
 
    // Initialize SPIFFS file system
    if (!SPIFFS.begin(true))
@@ -233,7 +248,7 @@ void setup()
    Serial.println();
 
    // checkLoadedStuff();
-   //  load_WiFiConfig();
+   // load_WiFiConfig();
 
    // reset settings - wipe stored credentials for testing
    // these are stored by the esp library
@@ -249,6 +264,9 @@ void setup()
    wifiManager.setHostname(hostname.c_str());
    wifiManager.setTitle("Board Config");
    wifiManager.setCustomHeadElement(custom_Title_Html.c_str());
+
+   // set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+   wifiManager.setAPCallback(configModeCallback);
 
    // wifiManager.setDebugOutput(false);
    wifiManager.setCleanConnect(true);
@@ -267,36 +285,37 @@ void setup()
    wifiManager.addParameter(&p_lineBreak_notext); // linebreak
    wifiManager.addParameter(&p_Test_Input);
 
-if (forceConfig)
-  {
-    if (!wifiManager.autoConnect("TeleAgriCulture Board", "enter123"))
-    {
-      Serial.println("failed to connect and hit timeout");
-      delay(3000);
-      //reset and try again, or maybe put it to deep sleep
-      ESP.restart();
-      delay(5000);
-    }
-  }
-  else
-  {
-    if (!wifiManager.autoConnect("TeleAgriCulture Board", "enter123"))
-    {
-      Serial.println("failed to connect and hit timeout");
-      delay(3000);
-      // if we still have not connected restart and try all over again
-      ESP.restart();
-      delay(5000);
-    }
-  }
-
+   startBlinking();
+   if (forceConfig)
+   {
+      if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
+      {
+         Serial.println("failed to connect and hit timeout");
+         delay(3000);
+         // reset and try again, or maybe put it to deep sleep
+         ESP.restart();
+         delay(5000);
+      }
+   }
+   else
+   {
+      if (!wifiManager.autoConnect("TeleAgriCulture Board", "enter123"))
+      {
+         Serial.println("failed to connect and hit timeout");
+         delay(3000);
+         // if we still have not connected restart and try all over again
+         ESP.restart();
+         delay(5000);
+      }
+   }
+   stopBlinking();
 
    Serial.println("");
    Serial.println("WiFi connected");
    Serial.println("IP address: ");
    Serial.println(WiFi.localIP());
 
-   delay(1000);
+   delay(100);
    if (WiFi.status() == WL_CONNECTED)
    {
       WiFiManagerNS::configTime();
@@ -305,7 +324,6 @@ if (forceConfig)
    printMeassurments();
    Serial.println();
 
-   //   tft.fillScreen(background_color);
    mainPage();
    // showSensors(ConnectorType::I2C);
 }
@@ -314,6 +332,7 @@ time_t prevDisplay = 0; // when the digital clock was displayed
 
 void loop()
 {
+   drd->loop();
    unsigned long currentMillis = millis();
 
    if (currentMillis - previousMillis >= interval)
@@ -329,7 +348,7 @@ void loop()
       if (now() != prevDisplay)
       { // update the display only if time has changed
          prevDisplay = now();
-         digitalClockDisplay(5, 75);
+         digitalClockDisplay(5, 75, false);
       }
    }
 
@@ -338,8 +357,11 @@ void loop()
       sensorRead();
       wifi_sendData();
       sendDataWifi = false;
+      digitalClockDisplay(5, 75, true);
       tft.setCursor(5, 90);
       tft.print("last data UPLOAD:");
+      tft.setTextColor(ST7735_ORANGE);
+      tft.setCursor(5, 105);
       tft.print(lastUpload);
    }
 
@@ -423,28 +445,44 @@ void on_time_available(struct timeval *t)
 
    // every hour
    sendDataWifi = true;
-   lastUpload = String(timeInfo.tm_hour) + ":" + String(timeInfo.tm_min) + ":" + String(timeInfo.tm_sec);
+
+   if (timeInfo.tm_hour < 10)
+      lastUpload += '0';
+   lastUpload += String(timeInfo.tm_hour) + ':';
+
+   if (timeInfo.tm_min < 10)
+      lastUpload += '0';
+   lastUpload += String(timeInfo.tm_min) + ':';
+
+   if (timeInfo.tm_sec < 10)
+      lastUpload += '0';
+   lastUpload += String(timeInfo.tm_sec);
+
    Serial.println(lastUpload);
 }
 
-void digitalClockDisplay(int x, int y)
+void digitalClockDisplay(int x, int y, bool date)
 {
    tft.setTextSize(1);
    tft.setCursor(x, y);
    tft.setTextColor(ST7735_BLACK);
 
-   tft.fillRect(x - 5, y - 5, 120, 15, background_color);
+   tft.fillRect(x - 5, y - 5, 60, 15, background_color);
 
    tft.print(hour());
    printDigits(minute());
    printDigits(second());
-   tft.print(" ");
-   tft.print(day());
-   tft.print(" ");
-   tft.print(month());
-   tft.print(" ");
-   tft.print(year());
-   tft.println();
+
+   if (date)
+   {
+      tft.print("   ");
+      tft.print(day());
+      tft.print(" ");
+      tft.print(month());
+      tft.print(" ");
+      tft.print(year());
+      tft.println();
+   }
 }
 
 void printDigits(int digits)
@@ -1185,4 +1223,62 @@ void lora_sendData(void)
    Serial.println();
 
    // TODO: lora send message
+}
+
+void startBlinking()
+{
+   // Store initial state of LED
+   initialState = digitalRead(LED);
+
+   // Start Timer
+   blinker.attach(1.0, toggleLED);
+}
+
+void stopBlinking()
+{
+   // Stop Timer
+   blinker.detach();
+
+   // Restore initial state of LED
+   digitalWrite(LED, initialState);
+}
+
+void toggleLED()
+{
+   digitalWrite(LED, ledState);
+   ledState = !ledState;
+}
+
+void configModeCallback(WiFiManager *myWiFiManager)
+{
+   Serial.println("Entered Conf Mode");
+   Serial.print("Config SSID: ");
+   Serial.println(myWiFiManager->getConfigPortalSSID());
+   Serial.print("Config IP Address: ");
+   Serial.println(WiFi.softAPIP());
+
+   tft.fillScreen(background_color);
+   tft.setTextColor(ST7735_BLACK);
+   tft.setFont(&FreeSans9pt7b);
+   tft.setTextSize(1);
+   tft.setCursor(5, 17);
+   tft.print("TeleAgriCulture");
+   tft.setCursor(5, 38);
+   tft.print("Board V2.1");
+
+   tft.setTextColor(ST7735_RED);
+   tft.setFont();
+   tft.setTextSize(2);
+   tft.setCursor(5, 50);
+   tft.print("Config MODE");
+   tft.setTextColor(ST7735_BLACK);
+   tft.setTextSize(1);
+   tft.setCursor(5, 78);
+   tft.print("SSID:");
+   tft.setCursor(5, 90);
+   tft.print(myWiFiManager->getConfigPortalSSID());
+   tft.setCursor(5, 105);
+   tft.print("IP: ");
+   tft.setCursor(5, 117);
+   tft.print(WiFi.softAPIP());
 }

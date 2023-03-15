@@ -100,7 +100,6 @@ void printProtoSensors(void);
 void showSensors(ConnectorType type);
 void load_WiFiConfig(void);
 void save_WiFIConfig(void);
-void addMeassurments(String name, float value);
 void printMeassurments(void);
 void printSensors(void);
 void wifi_sendData(void);
@@ -345,7 +344,7 @@ void loop()
       if (now() != prevDisplay)
       { // update the display only if time has changed
          prevDisplay = now();
-         digitalClockDisplay(5, 75, false);
+         digitalClockDisplay(5, 90, false);
       }
    }
 
@@ -353,18 +352,18 @@ void loop()
    {
       sensorRead();
       // showSensors(ConnectorType::I2C);
-      Serial.println("Print Measurements: ");
+      Serial.println("\nPrint Measurements: ");
       printMeassurments();
-      Serial.println("Print Sensors connected: ");
+      Serial.println("\nPrint Sensors connected: ");
       printSensors();
       Serial.println();
       wifi_sendData();
       sendDataWifi = false;
-      digitalClockDisplay(5, 75, true);
-      tft.setCursor(5, 90);
+      digitalClockDisplay(5, 90, true);
+      tft.setCursor(5, 105);
       tft.print("last data UPLOAD:");
       tft.setTextColor(ST7735_ORANGE);
-      tft.setCursor(5, 105);
+      tft.setCursor(5, 115 );
       tft.print(lastUpload);
    }
 
@@ -775,9 +774,12 @@ void mainPage()
    tft.setFont();
    tft.setTextSize(1);
    tft.setCursor(5, 45);
+   tft.print("Board ID: ");
+   tft.print(boardID);
+   tft.setCursor(5, 60);
    tft.print(version);
    tft.setTextColor(ST7735_BLACK);
-   tft.setCursor(5, 60);
+   tft.setCursor(5, 75);
    tft.print("IP: ");
    tft.print(WiFi.localIP());
 }
@@ -1112,31 +1114,29 @@ void loadWiFiConfig(void)
 {
 }
 
-// Function to add a name-value pair to the global vector
-void addMeassurments(String name, float value)
-{
-   std::pair<std::string, float> pair(name.c_str(), value);
-   measuredVector.push_back(pair);
-}
-
 void printMeassurments()
 {
    // Loop through all the elements in the vector
-   for (auto &pair : measuredVector)
+   for (int i = 0; i < sensorVector.size(); ++i)
    {
-      // Print the name and value using Serial.println()
-      Serial.print("Name: ");
-      Serial.print(pair.first.c_str());
-      Serial.print(", Value: ");
-      Serial.println(pair.second);
+      for (int j = 0; j < sensorVector[i].returnCount; j++)
+      {
+         Serial.print(sensorVector[i].measurements[j].data_name);
+         Serial.print(":  ");         
+         Serial.println(sensorVector[i].measurements[j].value);
+      }
    }
+   Serial.print("\nVector elements: ");
+   Serial.print(sensorVector.size()+1);
+      Serial.print("\nSize of Vector: ");
+   Serial.println(sizeof(sensorVector));
 }
 
 void wifi_sendData(void)
 {
    // ----- code later used to post measurements
 
-   DynamicJsonDocument docMeasures(3000);
+   DynamicJsonDocument docMeasures(2000);
 
    for (int i = 0; i < sensorVector.size(); ++i)
    {
@@ -1145,23 +1145,11 @@ void wifi_sendData(void)
          docMeasures[sensorVector[i].measurements[j].data_name] = sensorVector[i].measurements[j].value;
       }
    }
-   Serial.println("send Data:");
+
+   Serial.println("\nsend Data:");
    serializeJson(docMeasures, Serial);
 
    DynamicJsonDocument deallocate(docMeasures);
-
-   // Serial.println();
-
-   // DynamicJsonDocument docMeasures(1000);
-   // for (auto &pair : measuredVector)
-   // {
-   //    docMeasures[pair.first.c_str()] = pair.second;
-   // }
-   // Serial.println();
-   // serializeJson(docMeasures, Serial);
-   // Serial.println();
-
-   // DynamicJsonDocument deallocate(docMeasures);
 
    Serial.println();
 
@@ -1230,20 +1218,21 @@ void lora_sendData(void)
 
    // https://github.com/thesolarnomad/lora-serialization
 
-   byte message[measuredVector.size()];
+   byte message[sizeof(sensorVector)*4];  //TODO: change to actual size
    LoraEncoder encoder(message);
 
-   for (auto &pair : measuredVector)
+ for (int i = 0; i < sensorVector.size(); ++i)
    {
-      uint8_t j = 0;
-      for (int i = 0; i < pair.first.size(); i++)
-      {
-         j = pair.first[i];
-         encoder.writeUint8(j);
-      }
+      int k=sensorVector[i].sensor_id;
+      encoder.writeUint8(k);
 
-      encoder.writeRawFloat(pair.second); // TODO: switch case to change type
+      for (int j = 0; j < sensorVector[i].returnCount; j++)
+      {
+         int l = sensorVector[i].measurements[j].value;
+         encoder.writeRawFloat(l); // TODO: switch case to change type
+      }
    }
+
    Serial.println();
    Serial.print(sizeof(message));
    Serial.println();
@@ -1299,12 +1288,14 @@ void configModeCallback(WiFiManager *myWiFiManager)
    tft.print("Config MODE");
    tft.setTextColor(ST7735_BLACK);
    tft.setTextSize(1);
-   tft.setCursor(5, 78);
+   tft.setCursor(5, 73);
    tft.print("SSID:");
-   tft.setCursor(5, 90);
+   tft.setCursor(5, 85);
    tft.print(myWiFiManager->getConfigPortalSSID());
-   tft.setCursor(5, 105);
+   tft.setCursor(5, 100);
    tft.print("IP: ");
-   tft.setCursor(5, 117);
    tft.print(WiFi.softAPIP());
+   tft.setCursor(5, 117);
+   tft.setTextColor(ST7735_BLUE);
+   tft.print(version);
 }

@@ -50,8 +50,7 @@
 Sensor allSensors[SENSORS_NUM];
 Measurement measurements[MEASURMENT_NUM];
 
-// Global vector to store name-value pairs
-std::vector<std::pair<std::string, float>> measuredVector;
+// Global vector to store connected Sensor data
 std::vector<Sensor> sensorVector;
 
 // flag for saving Connector data
@@ -63,7 +62,6 @@ bool shouldSaveConfig = false;
 Adafruit_BME280 bme;
 Adafruit_VEML7700 veml = Adafruit_VEML7700();
 
-void addMeassurments(String name, float value);
 bool parseI2CAddress(const String &addressString, uint8_t *addressValue);
 void readI2C_Connectors();
 void readADC_Connectors();
@@ -94,13 +92,13 @@ const long interval = 4000;
 
 void sensorRead()
 {
+    digitalWrite(LED, HIGH);
     pinMode(SW_3V3, OUTPUT);
     pinMode(SW_5V, OUTPUT);
 
     digitalWrite(SW_3V3, HIGH);
     digitalWrite(SW_5V, HIGH);
 
-    measuredVector.clear(); // reset vector
     sensorVector.clear();
 
     if (I2C_5V_con_table[0] == MULTIGAS_V1)
@@ -123,8 +121,6 @@ void sensorRead()
     }
 
     pinMode(BATSENS, INPUT);
-    // allSensors[BATTERY].measurements[0].value = analogRead(BATSENS);
-    addMeassurments(allSensors[BATTERY].measurements[0].data_name, analogRead(BATSENS));
     Sensor newSensor = allSensors[BATTERY];
     newSensor.measurements->value = analogRead(BATSENS);
     sensorVector.push_back(newSensor);
@@ -135,11 +131,12 @@ void sensorRead()
     readI2C_Connectors();
     readADC_Connectors();
     readOneWire_Connectors();
-    // readI2C_5V_Connector();
+    readI2C_5V_Connector();
     readEXTRA_Connectors();
 
     digitalWrite(SW_3V3, LOW);
     digitalWrite(SW_5V, LOW);
+    digitalWrite(LED, LOW);
 }
 
 void readI2C_Connectors()
@@ -186,12 +183,6 @@ void readI2C_Connectors()
             }
             // Serial.print(bme.readTemperature());
             // Serial.print(1.8 * bme.readTemperature() + 32);
-            // allSensors[BM280].measurements[0].value = bme.readHumidity();
-            // allSensors[BM280].measurements[1].value = bme.readTemperature();
-            // allSensors[BM280].measurements[2].value = (bme.readPressure() / 100.0F);
-            addMeassurments(allSensors[BM280].measurements[0].data_name, bme.readHumidity());
-            addMeassurments(allSensors[BM280].measurements[1].data_name, bme.readTemperature());
-            addMeassurments(allSensors[BM280].measurements[2].data_name, (bme.readPressure() / 100.0F));
 
             Sensor newSensor = allSensors[BM280];
             newSensor.measurements[0].value = bme.readHumidity();
@@ -248,8 +239,6 @@ void readI2C_Connectors()
                 trig_section++;
                 touch_val >>= 1;
             }
-            // allSensors[LEVEL].measurements[0].value = trig_section * 5;
-            addMeassurments(allSensors[LEVEL].measurements[0].data_name, trig_section * 5);
             Sensor newSensor = allSensors[LEVEL];
             newSensor.measurements[0].value = trig_section * 5;
 
@@ -267,10 +256,10 @@ void readI2C_Connectors()
                 break;
             }
             // allSensors[VEML7700].measurements[0].value = veml.readLux(VEML_LUX_AUTO);
-            addMeassurments(allSensors[VEML7700].measurements[0].data_name, veml.readLux(VEML_LUX_AUTO));
 
             Sensor newSensor = allSensors[VEML7700];
             newSensor.measurements[0].value = veml.readLux(VEML_LUX_AUTO);
+            newSensor.measurements[1].value = veml.readALS();
 
             sensorVector.push_back(newSensor);
         }
@@ -345,8 +334,7 @@ void readADC_Connectors()
                     float compensationCoefficient = 1.0 + 0.02 * (temperature - 25.0);                                                                                                               // temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
                     float compensationVolatge = averageVoltage / compensationCoefficient;                                                                                                            // temperature compensation
                     tdsValue = (133.42 * compensationVolatge * compensationVolatge * compensationVolatge - 255.86 * compensationVolatge * compensationVolatge + 857.39 * compensationVolatge) * 0.5; // convert voltage value to tds value
-                    // allSensors[TDS].measurements[0].value = tdsValue;
-                    addMeassurments(allSensors[TDS].measurements[0].data_name, tdsValue);
+
                     Sensor newSensor = allSensors[TDS];
                     newSensor.measurements[0].value = tdsValue;
 
@@ -375,8 +363,7 @@ void readADC_Connectors()
             }
 
             pinMode(cap_SoilPin, INPUT);
-            // allSensors[CAP_SOIL].measurements[0].value = analogRead(cap_SoilPin);
-            addMeassurments(allSensors[CAP_SOIL].measurements[0].data_name, analogRead(cap_SoilPin));
+
             Sensor newSensor = allSensors[CAP_SOIL];
             newSensor.measurements[0].value = analogRead(cap_SoilPin);
 
@@ -404,8 +391,7 @@ void readADC_Connectors()
             }
 
             pinMode(cap_GroovePin, INPUT);
-            // allSensors[CAP_GROOVE].measurements[0].value = analogRead(cap_GroovePin);
-            addMeassurments(allSensors[CAP_SOIL].measurements[0].data_name, analogRead(cap_GroovePin));
+
             Sensor newSensor = allSensors[CAP_GROOVE];
             newSensor.measurements[0].value = analogRead(cap_GroovePin);
 
@@ -454,10 +440,6 @@ void readOneWire_Connectors()
             DHT dht(dht22SensorPin, DHTTYPE);
             dht.begin(dht22SensorPin);
             delay(2000);
-            // allSensors[DHT_22].measurements[0].value = dht.readTemperature();
-            // allSensors[DHT_22].measurements[1].value = dht.readHumidity();
-            addMeassurments(allSensors[DHT_22].measurements[0].data_name, dht.readTemperature());
-            addMeassurments(allSensors[DHT_22].measurements[1].data_name, dht.readHumidity());
 
             Sensor newSensor = allSensors[DHT_22];
             newSensor.measurements[0].value = dht.readTemperature();
@@ -489,8 +471,7 @@ void readOneWire_Connectors()
             DallasTemperature sensors(&oneWire);
             sensors.begin();
             delay(2000);
-            // allSensors[DS18B20].measurements[0].value = sensors.getTempCByIndex(0);
-            addMeassurments(allSensors[DS18B20].measurements[0].data_name, sensors.getTempCByIndex(0));
+
             Sensor newSensor = allSensors[DS18B20];
             newSensor.measurements[0].value = sensors.getTempCByIndex(0);
 
@@ -561,8 +542,6 @@ void readI2C_5V_Connector()
             PPM = pow(10, lgPPM);
 
         } while (millis() - messureTime < 2000U);
-        // allSensors[MULTIGAS].measurements[0].value = PPM;
-        addMeassurments(allSensors[MULTIGAS].measurements[0].data_name, PPM);
 
         Sensor newSensor = allSensors[MULTIGAS];
         newSensor.measurements[0].value = PPM;
@@ -608,8 +587,6 @@ void readI2C_5V_Connector()
             PPM = pow(10, lgPPM);
         } while (millis() - messureTime < 2000U);
 
-        // allSensors[MULTIGAS].measurements[1].value = PPM;
-        addMeassurments(allSensors[MULTIGAS].measurements[1].data_name, PPM);
         newSensor.measurements[1].value = PPM;
 
         sensorVector.push_back(newSensor);
@@ -622,15 +599,6 @@ void readI2C_5V_Connector()
 
         multiGasV1.begin(0x04);
         multiGasV1.powerOn();
-
-        addMeassurments(allSensors[MULTIGAS_V1].measurements[0].data_name, multiGasV1.measureCO());
-        addMeassurments(allSensors[MULTIGAS_V1].measurements[1].data_name, multiGasV1.measureNO2());
-        addMeassurments(allSensors[MULTIGAS_V1].measurements[2].data_name, multiGasV1.measureNH3());
-        addMeassurments(allSensors[MULTIGAS_V1].measurements[3].data_name, multiGasV1.measureC3H8());
-        addMeassurments(allSensors[MULTIGAS_V1].measurements[4].data_name, multiGasV1.measureC4H10());
-        addMeassurments(allSensors[MULTIGAS_V1].measurements[5].data_name, multiGasV1.measureCH4());
-        addMeassurments(allSensors[MULTIGAS_V1].measurements[6].data_name, multiGasV1.measureH2());
-        addMeassurments(allSensors[MULTIGAS_V1].measurements[7].data_name, multiGasV1.measureC2H5OH());
 
         Sensor newSensor = allSensors[MULTIGAS_V1];
 

@@ -446,6 +446,8 @@ void on_time_available(struct timeval *t)
    // every hour
    sendDataWifi = true;
 
+   lastUpload="";
+
    if (timeInfo.tm_hour < 10)
       lastUpload += '0';
    lastUpload += String(timeInfo.tm_hour) + ':';
@@ -1005,73 +1007,69 @@ void printProtoSensors(void)
    Serial.println();
 }
 
-void showSensors(ConnectorType sensor_type)
+void I2C_ConnectorPage()
 {
    tft.fillScreen(ST7735_BLACK);
    tft.setTextSize(1);
 
    int cursor_y = 5;
 
-   for (int i = 0; i < SENSORS_NUM; i++)
+   for (int i = 0; i < I2C_NUM; i++)
    {
-      if (sensor_type == ConnectorType::I2C && !(allSensors[i].con_typ == "I2C"))
-      {
-         continue;
-      }
-      if (sensor_type == ConnectorType::ONE_WIRE && !(allSensors[i].con_typ == "ONE_WIRE"))
-      {
-         continue;
-      }
-      if (sensor_type == ConnectorType::ADC && !(allSensors[i].con_typ == "ADC"))
-      {
-         continue;
-      }
-      if (sensor_type == ConnectorType::SPI_CON && !(allSensors[i].con_typ == "SPI"))
-      {
-         continue;
-      }
-
       tft.setCursor(5, cursor_y);
       tft.setTextColor(ST7735_YELLOW);
 
-      tft.print(allSensors[i].sensor_name);
+      tft.print("I2C_");
+      tft.print(i+1);
       tft.setCursor(80, cursor_y);
       tft.setTextColor(ST7735_GREEN);
 
-      tft.print(allSensors[i].con_typ);
+      tft.print(allSensors[I2C_con_table[i]].sensor_name);
       cursor_y += 10;
+   }
+}
 
-      for (int j = 0; j < MEASURMENT_NUM; j++)
-      {
-         if (allSensors[i].measurements[j].data_name == "")
-         {
-            continue;
-         }
-         tft.setCursor(30, cursor_y);
-         tft.setTextColor(ST7735_BLUE);
+void ADC_ConnectorPage()
+{
+   tft.fillScreen(ST7735_BLACK);
+   tft.setTextSize(1);
 
-         tft.print(allSensors[i].measurements[j].data_name);
-         tft.setCursor(80, cursor_y);
-         tft.setTextColor(ST7735_WHITE);
+   int cursor_y = 5;
 
-         tft.print(allSensors[i].measurements[j].value);
-         tft.print(" ");
-         if (allSensors[i].measurements[j].unit == "°C")
-         {
-            tft.drawChar(114, cursor_y - 4, 9, ST7735_WHITE, ST7735_BLACK, 1);
-            tft.print(" C");
-         }
-         if (allSensors[i].measurements[j].unit == "°F")
-         {
-            tft.drawChar(114, cursor_y - 4, 9, ST7735_WHITE, ST7735_BLACK, 1);
-            tft.print(" F");
-         }
-         if (!(allSensors[i].measurements[j].unit == "°C" || allSensors[i].measurements[j].unit == "°F"))
-         {
-            tft.print(allSensors[i].measurements[j].unit);
-         }
-         cursor_y += 10;
-      }
+   for (int i = 0; i < ADC_NUM; i++)
+   {
+      tft.setCursor(5, cursor_y);
+      tft.setTextColor(ST7735_YELLOW);
+
+      tft.print("ADC_");
+      tft.print(i+1);
+      tft.setCursor(80, cursor_y);
+      tft.setTextColor(ST7735_GREEN);
+
+      tft.print(allSensors[ADC_con_table[i]].sensor_name);
+      cursor_y += 10;
+   }
+}
+
+void OneWire_ConnectorPage()
+{
+   tft.fillScreen(ST7735_BLACK);
+   tft.setTextSize(1);
+
+   int cursor_y = 5;
+
+   for (int i = 0; i < ONEWIRE_NUM; i++)
+   {
+      tft.setCursor(5, cursor_y);
+      tft.setTextColor(ST7735_YELLOW);
+
+      tft.print("1-Wire_");
+      tft.print(i+1);
+      tft.setCursor(80, cursor_y);
+      tft.setTextColor(ST7735_GREEN);
+
+      tft.print(allSensors[OneWire_con_table[i]].sensor_name);
+      cursor_y += 10;
    }
 }
 
@@ -1126,18 +1124,18 @@ void wifi_sendData(void)
 {
    // ----- code later used to post measurements
 
-   // StaticJsonDocument<300> docMeasures;
-   // for (auto &pair : measuredVector)
-   // {
-   //    docMeasures[pair.first.c_str()] = pair.second;
-   // }
-   // Serial.println();
-   // serializeJson(docMeasures, Serial);
-   // Serial.println();
+   DynamicJsonDocument docMeasures(1000);
+   for (auto &pair : measuredVector)
+   {
+      docMeasures[pair.first.c_str()] = pair.second;
+   }
+   Serial.println();
+   serializeJson(docMeasures, Serial);
+   Serial.println();
 
-   // DynamicJsonDocument deallocate(docMeasures);
+   DynamicJsonDocument deallocate(docMeasures);
 
-   // Serial.println();
+   Serial.println();
 
    // --------------------------   test all hard coded ....
 
@@ -1152,7 +1150,7 @@ void wifi_sendData(void)
 
       StaticJsonDocument<100> doc;
 
-      doc["test"] = 42;
+      doc["test"] = 16;
 
       String output;
 

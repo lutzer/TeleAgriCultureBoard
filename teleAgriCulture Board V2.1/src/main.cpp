@@ -102,6 +102,7 @@ void load_WiFiConfig(void);
 void save_WiFIConfig(void);
 void addMeassurments(String name, float value);
 void printMeassurments(void);
+void printSensors(void);
 void wifi_sendData(void);
 void lora_sendData(void);
 void toggleLED(void);
@@ -321,11 +322,7 @@ void setup()
       WiFiManagerNS::configTime();
    }
 
-   printMeassurments();
-   Serial.println();
-
    mainPage();
-   // showSensors(ConnectorType::I2C);
 }
 
 time_t prevDisplay = 0; // when the digital clock was displayed
@@ -355,6 +352,12 @@ void loop()
    if (sendDataWifi)
    {
       sensorRead();
+         // showSensors(ConnectorType::I2C);
+   Serial.println("Print Measurements: ");
+   printMeassurments();
+   Serial.println("Print Sensors connected: ");
+   printSensors();
+   Serial.println();
       wifi_sendData();
       sendDataWifi = false;
       digitalClockDisplay(5, 75, true);
@@ -446,7 +449,7 @@ void on_time_available(struct timeval *t)
    // every hour
    sendDataWifi = true;
 
-   lastUpload="";
+   lastUpload = "";
 
    if (timeInfo.tm_hour < 10)
       lastUpload += '0';
@@ -459,8 +462,6 @@ void on_time_available(struct timeval *t)
    if (timeInfo.tm_sec < 10)
       lastUpload += '0';
    lastUpload += String(timeInfo.tm_sec);
-
-   Serial.println(lastUpload);
 }
 
 void digitalClockDisplay(int x, int y, bool date)
@@ -1007,6 +1008,17 @@ void printProtoSensors(void)
    Serial.println();
 }
 
+void printSensors()
+{
+   for (int i = 0; i < sensorVector.size(); ++i)
+   {
+      Serial.print("Sensor ");
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.println(sensorVector[i].sensor_name);
+   }
+}
+
 void I2C_ConnectorPage()
 {
    tft.fillScreen(ST7735_BLACK);
@@ -1020,7 +1032,7 @@ void I2C_ConnectorPage()
       tft.setTextColor(ST7735_YELLOW);
 
       tft.print("I2C_");
-      tft.print(i+1);
+      tft.print(i + 1);
       tft.setCursor(80, cursor_y);
       tft.setTextColor(ST7735_GREEN);
 
@@ -1042,7 +1054,7 @@ void ADC_ConnectorPage()
       tft.setTextColor(ST7735_YELLOW);
 
       tft.print("ADC_");
-      tft.print(i+1);
+      tft.print(i + 1);
       tft.setCursor(80, cursor_y);
       tft.setTextColor(ST7735_GREEN);
 
@@ -1064,7 +1076,7 @@ void OneWire_ConnectorPage()
       tft.setTextColor(ST7735_YELLOW);
 
       tft.print("1-Wire_");
-      tft.print(i+1);
+      tft.print(i + 1);
       tft.setCursor(80, cursor_y);
       tft.setTextColor(ST7735_GREEN);
 

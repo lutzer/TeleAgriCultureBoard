@@ -28,7 +28,7 @@
 #include <WString.h>
 
 int boardID = 1003;
-String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB";  // TODO: after all the testing has to be masked in the gitlab and changed in the app
+String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // TODO: after all the testing has to be masked in the gitlab and changed in the app
 
 String version = "Firmware Version 0.82";
 String hostname = "TeleAgriCulture Board";
@@ -113,7 +113,6 @@ const char *kits_ca =
 
 // ----- Define Pins ----- //
 
-
 // ----- Declare Connectors ----- //
 
 int I2C_con_table[I2C_NUM];
@@ -124,7 +123,6 @@ int I2C_5V_con_table[I2C_5V_NUM];
 int EXTRA_con_table[EXTRA_NUM];
 
 // ----- Declare Connectors ----- //
-
 
 // ---- Classes and Enum ---- //
 
@@ -175,10 +173,34 @@ public:
   Measurement measurements[8];
   String i2c_add;
   String possible_i2c_add[2];
+
+public:
+  Sensor() : sensor_id(), sensor_name(), con_typ(), returnCount(0), i2c_add()
+  {
+    for (int i = 0; i < 8; ++i)
+    {
+      measurements[i] = Measurement();
+    }
+    for (int i = 0; i < 2; ++i)
+    {
+      possible_i2c_add[i] = "";
+    }
+  }
+
+  Sensor(const Sensor &s) : sensor_id(s.sensor_id), sensor_name(s.sensor_name), con_typ(s.con_typ), returnCount(s.returnCount), i2c_add(s.i2c_add)
+  {
+    for (int i = 0; i < 8; ++i)
+    {
+      measurements[i] = s.measurements[i];
+    }
+    for (int i = 0; i < 2; ++i)
+    {
+      possible_i2c_add[i] = s.possible_i2c_add[i];
+    }
+  }
 };
 
 // ---- Classes and Enum ---- //
-
 
 // ---- PROTOTYPE JSON for implemented sensors (gets loaded at start)
 

@@ -52,6 +52,7 @@ Measurement measurements[MEASURMENT_NUM];
 
 // Global vector to store name-value pairs
 std::vector<std::pair<std::string, float>> measuredVector;
+std::vector<Sensor> sensorVector;
 
 // flag for saving Connector data
 bool shouldSaveConfig = false;
@@ -99,7 +100,8 @@ void sensorRead()
     digitalWrite(SW_3V3, HIGH);
     digitalWrite(SW_5V, HIGH);
 
-       measuredVector.clear();   // reset vector
+    measuredVector.clear(); // reset vector
+    sensorVector.clear();
 
     if (I2C_5V_con_table[0] == MULTIGAS_V1)
     {
@@ -123,6 +125,9 @@ void sensorRead()
     pinMode(BATSENS, INPUT);
     // allSensors[BATTERY].measurements[0].value = analogRead(BATSENS);
     addMeassurments(allSensors[BATTERY].measurements[0].data_name, analogRead(BATSENS));
+    Sensor newSensor = allSensors[BATTERY];
+    newSensor.measurements->value = analogRead(BATSENS);
+    sensorVector.push_back(newSensor);
 
     Serial.println("SensorRead.....");
     Serial.println();
@@ -187,6 +192,13 @@ void readI2C_Connectors()
             addMeassurments(allSensors[BM280].measurements[0].data_name, bme.readHumidity());
             addMeassurments(allSensors[BM280].measurements[1].data_name, bme.readTemperature());
             addMeassurments(allSensors[BM280].measurements[2].data_name, (bme.readPressure() / 100.0F));
+
+            Sensor newSensor = allSensors[BM280];
+            newSensor.measurements[0].value = bme.readHumidity();
+            newSensor.measurements[1].value = bme.readTemperature();
+            newSensor.measurements[2].value = (bme.readPressure() / 100.0F);
+
+            sensorVector.push_back(newSensor);
         }
         break;
 
@@ -238,6 +250,10 @@ void readI2C_Connectors()
             }
             // allSensors[LEVEL].measurements[0].value = trig_section * 5;
             addMeassurments(allSensors[LEVEL].measurements[0].data_name, trig_section * 5);
+            Sensor newSensor = allSensors[LEVEL];
+            newSensor.measurements[0].value = trig_section * 5;
+
+            sensorVector.push_back(newSensor);
         }
         break;
 
@@ -252,6 +268,11 @@ void readI2C_Connectors()
             }
             // allSensors[VEML7700].measurements[0].value = veml.readLux(VEML_LUX_AUTO);
             addMeassurments(allSensors[VEML7700].measurements[0].data_name, veml.readLux(VEML_LUX_AUTO));
+
+            Sensor newSensor = allSensors[VEML7700];
+            newSensor.measurements[0].value = veml.readLux(VEML_LUX_AUTO);
+
+            sensorVector.push_back(newSensor);
         }
         break;
 
@@ -326,6 +347,10 @@ void readADC_Connectors()
                     tdsValue = (133.42 * compensationVolatge * compensationVolatge * compensationVolatge - 255.86 * compensationVolatge * compensationVolatge + 857.39 * compensationVolatge) * 0.5; // convert voltage value to tds value
                     // allSensors[TDS].measurements[0].value = tdsValue;
                     addMeassurments(allSensors[TDS].measurements[0].data_name, tdsValue);
+                    Sensor newSensor = allSensors[TDS];
+                    newSensor.measurements[0].value = tdsValue;
+
+                    sensorVector.push_back(newSensor);
                 }
             } while (millis() - messureTime < 2000U);
         }
@@ -352,6 +377,10 @@ void readADC_Connectors()
             pinMode(cap_SoilPin, INPUT);
             // allSensors[CAP_SOIL].measurements[0].value = analogRead(cap_SoilPin);
             addMeassurments(allSensors[CAP_SOIL].measurements[0].data_name, analogRead(cap_SoilPin));
+            Sensor newSensor = allSensors[CAP_SOIL];
+            newSensor.measurements[0].value = analogRead(cap_SoilPin);
+
+            sensorVector.push_back(newSensor);
         }
         break;
 
@@ -377,6 +406,10 @@ void readADC_Connectors()
             pinMode(cap_GroovePin, INPUT);
             // allSensors[CAP_GROOVE].measurements[0].value = analogRead(cap_GroovePin);
             addMeassurments(allSensors[CAP_SOIL].measurements[0].data_name, analogRead(cap_GroovePin));
+            Sensor newSensor = allSensors[CAP_GROOVE];
+            newSensor.measurements[0].value = analogRead(cap_GroovePin);
+
+            sensorVector.push_back(newSensor);
         }
         break;
 
@@ -425,8 +458,14 @@ void readOneWire_Connectors()
             // allSensors[DHT_22].measurements[1].value = dht.readHumidity();
             addMeassurments(allSensors[DHT_22].measurements[0].data_name, dht.readTemperature());
             addMeassurments(allSensors[DHT_22].measurements[1].data_name, dht.readHumidity());
-            break;
+
+            Sensor newSensor = allSensors[DHT_22];
+            newSensor.measurements[0].value = dht.readTemperature();
+            newSensor.measurements[1].value = dht.readHumidity();
+
+            sensorVector.push_back(newSensor);
         }
+        break;
 
         case DS18B20:
         {
@@ -452,8 +491,12 @@ void readOneWire_Connectors()
             delay(2000);
             // allSensors[DS18B20].measurements[0].value = sensors.getTempCByIndex(0);
             addMeassurments(allSensors[DS18B20].measurements[0].data_name, sensors.getTempCByIndex(0));
-            break;
+            Sensor newSensor = allSensors[DS18B20];
+            newSensor.measurements[0].value = sensors.getTempCByIndex(0);
+
+            sensorVector.push_back(newSensor);
         }
+        break;
 
         default:
             break;
@@ -521,6 +564,11 @@ void readI2C_5V_Connector()
         // allSensors[MULTIGAS].measurements[0].value = PPM;
         addMeassurments(allSensors[MULTIGAS].measurements[0].data_name, PPM);
 
+        Sensor newSensor = allSensors[MULTIGAS];
+        newSensor.measurements[0].value = PPM;
+
+        sensorVector.push_back(newSensor);
+
         /* Multichannel sensor Grove V2, by vcoder 2021
             NO2 range 0 - 10 PPM
             Calibrated according calibration curve by Winsen: 0 - 10 PPM
@@ -561,7 +609,10 @@ void readI2C_5V_Connector()
         } while (millis() - messureTime < 2000U);
 
         // allSensors[MULTIGAS].measurements[1].value = PPM;
-        addMeassurments(allSensors[MULTIGAS].measurements[0].data_name, PPM);
+        addMeassurments(allSensors[MULTIGAS].measurements[1].data_name, PPM);
+        newSensor.measurements[1].value = PPM;
+
+        sensorVector.push_back(newSensor);
     }
     else if (I2C_5V_con_table[0] == MULTIGAS_V1)
     {
@@ -580,6 +631,19 @@ void readI2C_5V_Connector()
         addMeassurments(allSensors[MULTIGAS_V1].measurements[5].data_name, multiGasV1.measureCH4());
         addMeassurments(allSensors[MULTIGAS_V1].measurements[6].data_name, multiGasV1.measureH2());
         addMeassurments(allSensors[MULTIGAS_V1].measurements[7].data_name, multiGasV1.measureC2H5OH());
+
+        Sensor newSensor = allSensors[MULTIGAS_V1];
+
+        newSensor.measurements[0].value = multiGasV1.measureCO();
+        newSensor.measurements[1].value = multiGasV1.measureNO2();
+        newSensor.measurements[2].value = multiGasV1.measureNH3();
+        newSensor.measurements[3].value = multiGasV1.measureC3H8();
+        newSensor.measurements[4].value = multiGasV1.measureC4H10();
+        newSensor.measurements[5].value = multiGasV1.measureCH4();
+        newSensor.measurements[6].value = multiGasV1.measureH2();
+        newSensor.measurements[7].value = multiGasV1.measureC2H5OH();
+
+        sensorVector.push_back(newSensor);
     }
     else
     {

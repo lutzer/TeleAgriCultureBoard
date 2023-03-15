@@ -352,12 +352,12 @@ void loop()
    if (sendDataWifi)
    {
       sensorRead();
-         // showSensors(ConnectorType::I2C);
-   Serial.println("Print Measurements: ");
-   printMeassurments();
-   Serial.println("Print Sensors connected: ");
-   printSensors();
-   Serial.println();
+      // showSensors(ConnectorType::I2C);
+      Serial.println("Print Measurements: ");
+      printMeassurments();
+      Serial.println("Print Sensors connected: ");
+      printSensors();
+      Serial.println();
       wifi_sendData();
       sendDataWifi = false;
       digitalClockDisplay(5, 75, true);
@@ -1136,16 +1136,32 @@ void wifi_sendData(void)
 {
    // ----- code later used to post measurements
 
-   DynamicJsonDocument docMeasures(1000);
-   for (auto &pair : measuredVector)
+   DynamicJsonDocument docMeasures(3000);
+
+   for (int i = 0; i < sensorVector.size(); ++i)
    {
-      docMeasures[pair.first.c_str()] = pair.second;
+      for (int j = 0; j < sensorVector[i].returnCount; j++)
+      {
+         docMeasures[sensorVector[i].measurements[j].data_name] = sensorVector[i].measurements[j].value;
+      }
    }
-   Serial.println();
+   Serial.println("send Data:");
    serializeJson(docMeasures, Serial);
-   Serial.println();
 
    DynamicJsonDocument deallocate(docMeasures);
+
+   // Serial.println();
+
+   // DynamicJsonDocument docMeasures(1000);
+   // for (auto &pair : measuredVector)
+   // {
+   //    docMeasures[pair.first.c_str()] = pair.second;
+   // }
+   // Serial.println();
+   // serializeJson(docMeasures, Serial);
+   // Serial.println();
+
+   // DynamicJsonDocument deallocate(docMeasures);
 
    Serial.println();
 

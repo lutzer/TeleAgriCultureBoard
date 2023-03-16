@@ -829,8 +829,9 @@ void mainPage()
 
    digitalClockDisplay(5, 90, true);
    tft.setCursor(5, 105);
-   tft.print("last data UPLOAD:");
+   tft.print("last data UPLOAD: ");
    tft.setTextColor(ST7735_ORANGE);
+   tft.print("WiFi");
    tft.setCursor(5, 115);
    tft.print(lastUpload);
 }
@@ -1183,7 +1184,7 @@ void measurementsPage()
    tft.print("Sensor Data");
 
    tft.setTextSize(1);
-   int cursor_y = 30;
+   int cursor_y = 35;
 
    for (int i = 0; i < sensorVector.size(); i++)
    {

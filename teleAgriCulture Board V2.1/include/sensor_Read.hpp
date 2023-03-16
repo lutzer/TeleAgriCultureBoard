@@ -117,10 +117,13 @@ void sensorRead()
         }
     }
 
-    pinMode(BATSENS, INPUT);
-    Sensor newSensor = allSensors[BATTERY];
-    newSensor.measurements->value = analogRead(BATSENS);
-    sensorVector.push_back(newSensor);
+    // battery measurement
+    //TODO: scale to volts
+
+    // pinMode(BATSENS, INPUT);
+    // Sensor newSensor = allSensors[BATTERY];
+    // newSensor.measurements->value = analogRead(BATSENS);
+    // sensorVector.push_back(newSensor);
 
     Serial.println("SensorRead.....");
     Serial.println();
@@ -302,7 +305,7 @@ void readADC_Connectors()
                 tdsSensorPin = ANALOG2;
             }
 
-            if (i == 3)
+            if (i == 2)
             {
                 tdsSensorPin = ANALOG3;
             }
@@ -354,7 +357,7 @@ void readADC_Connectors()
                 cap_SoilPin = ANALOG2;
             }
 
-            if (i == 3)
+            if (i == 2)
             {
                 cap_SoilPin = ANALOG3;
             }
@@ -382,7 +385,7 @@ void readADC_Connectors()
                 cap_GroovePin = ANALOG2;
             }
 
-            if (i == 3)
+            if (i == 2)
             {
                 cap_GroovePin = ANALOG3;
             }
@@ -429,7 +432,7 @@ void readOneWire_Connectors()
                 dht22SensorPin = ONEWIRE_2;
             }
 
-            if (i == 3)
+            if (i == 2)
             {
                 dht22SensorPin = ONEWIRE_3;
             }
@@ -459,7 +462,7 @@ void readOneWire_Connectors()
                 ds18b20SensorPin = ONEWIRE_2;
             }
 
-            if (i == 3)
+            if (i == 2)
             {
                 ds18b20SensorPin = ONEWIRE_3;
             }
@@ -467,9 +470,10 @@ void readOneWire_Connectors()
             OneWire oneWire(ds18b20SensorPin);
             DallasTemperature sensors(&oneWire);
             sensors.begin();
-            delay(2000);
+            delay(5000);
 
             Sensor newSensor = allSensors[DS18B20];
+            newSensor.measurements[0].data_name=newSensor.measurements[0].data_name+i+1;
             newSensor.measurements[0].value = sensors.getTempCByIndex(0);
 
             sensorVector.push_back(newSensor);

@@ -67,6 +67,7 @@
 #include <Fonts/FreeSans9pt7b.h>
 #include <Adafruit_ST7735.h>
 
+
 // ----- Deep Sleep related -----//
 #define BUTTON_PIN_BITMASK 0x10001 // GPIOs 0 and 16
 #define uS_TO_S_FACTOR 1000000     /* Conversion factor for micro seconds to seconds */
@@ -148,6 +149,7 @@ Button downButton(RIGHT_BUTTON_PIN);
 char test_input[6];
 bool portalRunning = false;
 bool _enteredConfigMode = false;
+bool configSaved = false;
 
 int currentPage = 0;
 int lastPage = -1; // Store the last page to avoid refreshing unnecessarily
@@ -158,15 +160,16 @@ bool ledState = false;
 bool sendDataWifi = false;
 
 unsigned long previousMillis = 0;
+unsigned long upButtonsMillis = 0;
 const long interval = 200000; // screen backlight darken time 20s
 
 WiFiManager wifiManager;
 
-WiFiManagerParameter p_lineBreak_notext("<p></p>");
-WiFiManagerParameter p_lineBreak_text("<p>Choose one of the following options:</p>");
-WiFiManagerParameter p_Test_Input("testInput", "Test Input", test_input, 5);
-WiFiManagerParameter p_wifi("wifi", "wifi", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
-WiFiManagerParameter p_lora("lora", "lora", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
+// WiFiManagerParameter p_lineBreak_notext("<p></p>");
+// WiFiManagerParameter p_lineBreak_text("<p>Choose one of the following options:</p>");
+// WiFiManagerParameter p_Test_Input("testInput", "Test Input", test_input, 5);
+// WiFiManagerParameter p_wifi("wifi", "wifi", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
+// WiFiManagerParameter p_lora("lora", "lora", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
 // ----- WiFiManager section ---- //
 
 // ----- Hardware Timer ---- //
@@ -197,7 +200,7 @@ void setup()
    // ----- Initiate the TFT display  and Start Image----- //
 
    delay(1000);
-   Serial.begin(115200); // start Serial for debuging
+   //Serial.begin(115200); // start Serial for debuging
 
    // Increment boot number and print it every reboot
    ++bootCount;
@@ -229,37 +232,37 @@ void setup()
       return;
    }
 
-   listDir(SPIFFS, "/", 0);
-   Serial.println();
+   // listDir(SPIFFS, "/", 0);
+   // Serial.println();
 
    // ---  Test DATA for connected Sensors ---> comes from Web Config normaly or out of SPIFF
    // commented out after first upload
 
-   // I2C_con_table[0] = BM280;
-   // I2C_con_table[1] = VEML7700;
-   // I2C_con_table[2] = NO;
-   // I2C_con_table[3] = VEML7700;
+   I2C_con_table[0] = BM280;
+   I2C_con_table[1] = NO;
+   I2C_con_table[2] = NO;
+   I2C_con_table[3] = NO;
 
-   // ADC_con_table[0] = CAP_SOIL;
-   // ADC_con_table[1] = TDS;
-   // ADC_con_table[2] = NO;
+   ADC_con_table[0] = CAP_SOIL;
+   ADC_con_table[1] = TDS;
+   ADC_con_table[2] = NO;
 
-   // OneWire_con_table[0] = DHT_22;
-   // OneWire_con_table[1] = DS18B20;
-   // OneWire_con_table[2] = NO;
+   OneWire_con_table[0] = DS18B20;
+   OneWire_con_table[1] = DS18B20;
+   OneWire_con_table[2] = DHT_22;
 
-   // SPI_con_table[0] = NO;
+   SPI_con_table[0] = NO;
 
-   // I2C_5V_con_table[0] = NO;
+   I2C_5V_con_table[0] = NO;
 
-   // EXTRA_con_table[0] = NO;
-   // EXTRA_con_table[1] = NO;
+   EXTRA_con_table[0] = NO;
+   EXTRA_con_table[1] = NO;
 
-   // save_Connectors(); // <------------------ called normaly after Web Config
+   save_Connectors(); // <------------------ called normaly after Web Config
 
    // Test DATA for connected Sensors ---> come from Web Config normaly
 
-   load_Connectors(); // Connectors lookup table
+   // load_Connectors(); // Connectors lookup table
    Serial.println();
 
    // checkLoadedStuff();
@@ -292,13 +295,15 @@ void setup()
 
    // wifiManager.setShowInfoUpdate(false);
    wifiManager.setDarkMode(true);
+   // wifiManager.setSaveConfigCallback([]()
+   //                                   { configSaved = true; }); // restart on credentials save, ESP32 doesn't like to switch between AP/STA
 
    // some WiFi AP test parameters
-   wifiManager.addParameter(&p_lineBreak_text); // linebreak
-   wifiManager.addParameter(&p_wifi);
-   wifiManager.addParameter(&p_lora);
-   wifiManager.addParameter(&p_lineBreak_notext); // linebreak
-   wifiManager.addParameter(&p_Test_Input);
+   // wifiManager.addParameter(&p_lineBreak_text); // linebreak
+   // wifiManager.addParameter(&p_wifi);
+   // wifiManager.addParameter(&p_lora);
+   // wifiManager.addParameter(&p_lineBreak_notext); // linebreak
+   // wifiManager.addParameter(&p_Test_Input);
 
    startBlinking();
    if (forceConfig)
@@ -325,10 +330,10 @@ void setup()
    }
    stopBlinking();
 
-   Serial.println("");
-   Serial.println("WiFi connected");
-   Serial.println("IP address: ");
-   Serial.println(WiFi.localIP());
+   // Serial.println("");
+   // Serial.println("WiFi connected");
+   // Serial.println("IP address: ");
+   // Serial.println(WiFi.localIP());
 
    delay(100);
    if (WiFi.status() == WL_CONNECTED)
@@ -359,11 +364,30 @@ void loop()
    {
       currentPage = (currentPage + 1) % NUM_PAGES;
       backlight_pwm = 250;
+      upButtonsMillis = millis();
    }
    if (downButton.pressed())
    {
       currentPage = (currentPage - 1 + NUM_PAGES) % NUM_PAGES;
       backlight_pwm = 250;
+   }
+
+   if (upButton.released())
+   {
+      if (millis()-upButtonsMillis > 5000)
+      {
+         startBlinking();
+         if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
+         {
+            Serial.println("failed to connect and hit timeout");
+            delay(3000);
+            // reset and try again, or maybe put it to deep sleep
+            ESP.restart();
+            delay(5000);
+         }
+      }
+      upButtonsMillis = 0;
+      stopBlinking();
    }
 
    // Only refresh the screen if the current page has changed
@@ -385,11 +409,11 @@ void loop()
    if (sendDataWifi)
    {
       sensorRead();
-      Serial.println("\nPrint Measurements: ");
-      printMeassurments();
-      Serial.println("\nPrint Sensors connected: ");
-      printSensors();
-      Serial.println();
+      //Serial.println("\nPrint Measurements: ");
+      //printMeassurments();
+      //Serial.println("\nPrint Sensors connected: ");
+      //printSensors();
+      //Serial.println();
       wifi_sendData();
       sendDataWifi = false;
       renderPage(currentPage);
@@ -438,23 +462,23 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
    }
 }
 
-void readFile(fs::FS &fs, const char *path)
-{
-   Serial.printf("Reading file: %s\r\n", path);
+// void readFile(fs::FS &fs, const char *path)
+// {
+//    Serial.printf("Reading file: %s\r\n", path);
 
-   File file = fs.open(path);
-   if (!file || file.isDirectory())
-   {
-      Serial.println("− failed to open file for reading");
-      return;
-   }
+//    File file = fs.open(path);
+//    if (!file || file.isDirectory())
+//    {
+//       Serial.println("− failed to open file for reading");
+//       return;
+//    }
 
-   Serial.println("− read from file:");
-   while (file.available())
-   {
-      Serial.write(file.read());
-   }
-}
+//    Serial.println("− read from file:");
+//    while (file.available())
+//    {
+//       Serial.write(file.read());
+//    }
+// }
 
 // Optional callback function, fired when NTP gets updated.
 // Used to print the updated time or adjust an external RTC module.
@@ -820,12 +844,15 @@ void mainPage()
    tft.setCursor(5, 45);
    tft.print("Board ID: ");
    tft.print(boardID);
-   tft.setCursor(5, 60);
+   tft.setCursor(5, 55);
    tft.print(version);
    tft.setTextColor(ST7735_BLACK);
-   tft.setCursor(5, 75);
+   tft.setCursor(5, 65);
    tft.print("IP: ");
    tft.print(WiFi.localIP());
+   tft.setCursor(5, 75);
+   tft.print("MAC: ");
+   tft.print(WiFi.macAddress());
 
    digitalClockDisplay(5, 90, true);
    tft.setCursor(5, 105);
@@ -1283,12 +1310,11 @@ void wifi_sendData(void)
       }
    }
 
-   Serial.println("\nsend Data:");
-   serializeJson(docMeasures, Serial);
+   String output;
+   serializeJson(docMeasures, output);
 
-   DynamicJsonDocument deallocate(docMeasures);
-
-   Serial.println();
+   // Serial.println("\nsend Data:");
+   // serializeJson(docMeasures, Serial);
 
    // --------------------------   test all hard coded ....
 
@@ -1301,18 +1327,18 @@ void wifi_sendData(void)
 
       HTTPClient https;
 
-      StaticJsonDocument<100> doc;
+      //    StaticJsonDocument<100> doc;
 
-      doc["test"] = 16;
+      //    doc["test"] = 16;
 
-      String output;
+      //    String output;
 
-      serializeJson(doc, output);
+      //    serializeJson(doc, output);
 
-      Serial.print("\njson Data for POST: ");
-      serializeJson(doc, Serial);
+      //    Serial.print("\njson Data for POST: ");
+      //    serializeJson(doc, Serial);
 
-      Serial.println();
+      //    Serial.println();
 
       // https://gitlab.com/teleagriculture/community/-/blob/main/API.md
 
@@ -1348,6 +1374,10 @@ void wifi_sendData(void)
    {
       Serial.println("WiFi Disconnected");
    }
+
+   DynamicJsonDocument deallocate(docMeasures);
+
+   Serial.println();
 }
 
 void lora_sendData(void)
@@ -1399,11 +1429,11 @@ void toggleLED()
 
 void configModeCallback(WiFiManager *myWiFiManager)
 {
-   Serial.println("Entered Conf Mode");
-   Serial.print("Config SSID: ");
-   Serial.println(myWiFiManager->getConfigPortalSSID());
-   Serial.print("Config IP Address: ");
-   Serial.println(WiFi.softAPIP());
+   // Serial.println("Entered Conf Mode");
+   // Serial.print("Config SSID: ");
+   // Serial.println(myWiFiManager->getConfigPortalSSID());
+   // Serial.print("Config IP Address: ");
+   // Serial.println(WiFi.softAPIP());
 
    tft.fillScreen(background_color);
    tft.setTextColor(ST7735_BLACK);
@@ -1425,9 +1455,12 @@ void configModeCallback(WiFiManager *myWiFiManager)
    tft.print("SSID:");
    tft.setCursor(5, 85);
    tft.print(myWiFiManager->getConfigPortalSSID());
-   tft.setCursor(5, 100);
+   tft.setCursor(5, 95);
    tft.print("IP: ");
    tft.print(WiFi.softAPIP());
+   tft.setCursor(5, 108);
+   tft.print("MAC: ");
+   tft.print(WiFi.macAddress());
    tft.setCursor(5, 117);
    tft.setTextColor(ST7735_BLUE);
    tft.print(version);

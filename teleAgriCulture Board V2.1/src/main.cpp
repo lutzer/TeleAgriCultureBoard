@@ -56,6 +56,7 @@
 
 #define ESP_DRD_USE_SPIFFS true
 #include <ESP_DoubleResetDetector.h>
+#include <Button.h>
 #include <WiFiManager.h>
 #include <WiFiManagerTz.h>
 
@@ -89,7 +90,12 @@ void on_time_available(struct timeval *t);
 void configModeCallback(WiFiManager *myWiFiManager);
 void printDigits(int digits);
 void digitalClockDisplay(int x, int y, bool date);
+void renderPage(int page);
 void mainPage(void);
+void I2C_ConnectorPage(void);
+void ADC_ConnectorPage(void);
+void OneWire_ConnectorPage(void);
+void measurementsPage(void);
 void checkButton(void);
 void load_Sensors(void);
 void load_Connectors(void);
@@ -116,7 +122,8 @@ void stopBlinking(void);
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, MOSI, SCLK, TFT_RST);
 
-int backlight_pwm = 255;
+int backlight_pwm = 250;
+// String tempUnit = "\u00B0";
 
 bool display_state = true; // Display is awake when true and sleeping when false
 // ----- Initialize TFT ----- //
@@ -133,15 +140,25 @@ bool display_state = true; // Display is awake when true and sleeping when false
 
 DoubleResetDetector *drd;
 Ticker blinker;
+Button upButton(LEFT_BUTTON_PIN);
+Button downButton(RIGHT_BUTTON_PIN);
+
+#define NUM_PAGES 5
 
 char test_input[6];
 bool portalRunning = false;
 bool _enteredConfigMode = false;
 
+int currentPage = 0;
+int lastPage = -1; // Store the last page to avoid refreshing unnecessarily
+
 String lastUpload;
 bool initialState; // state of the LED
 bool ledState = false;
 bool sendDataWifi = false;
+
+unsigned long previousMillis = 0;
+const long interval = 200000; // screen backlight darken time 20s
 
 WiFiManager wifiManager;
 
@@ -165,8 +182,6 @@ void setup()
    pinMode(BATSENS, INPUT_PULLDOWN);
    pinMode(TFT_BL, OUTPUT);
    pinMode(LED, OUTPUT);
-   // pinMode(LEFT_BUTTON_PIN, INPUT_PULLUP);
-   // pinMode(RIGHT_BUTTON_PIN, INPUT_PULLUP);
 
    // ----- Initiate the TFT display and Start Image----- //
    tft.initR(INITR_GREENTAB); // work around to set protected offset values
@@ -321,7 +336,8 @@ void setup()
       WiFiManagerNS::configTime();
    }
 
-   mainPage();
+   upButton.begin();
+   downButton.begin();
 }
 
 time_t prevDisplay = 0; // when the digital clock was displayed
@@ -329,17 +345,35 @@ time_t prevDisplay = 0; // when the digital clock was displayed
 void loop()
 {
    drd->loop();
+   analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
+
    unsigned long currentMillis = millis();
 
    if (currentMillis - previousMillis >= interval)
    {
-      // print
+      backlight_pwm = 5; // turns Backlight down
       previousMillis = currentMillis;
    }
 
-   delay(100);
+   if (upButton.pressed())
+   {
+      currentPage = (currentPage + 1) % NUM_PAGES;
+      backlight_pwm = 250;
+   }
+   if (downButton.pressed())
+   {
+      currentPage = (currentPage - 1 + NUM_PAGES) % NUM_PAGES;
+      backlight_pwm = 250;
+   }
 
-   if (timeStatus() != timeNotSet)
+   // Only refresh the screen if the current page has changed
+   if (currentPage != lastPage)
+   {
+      lastPage = currentPage;
+      renderPage(currentPage);
+   }
+
+   if (timeStatus() != timeNotSet && currentPage == 0)
    {
       if (now() != prevDisplay)
       { // update the display only if time has changed
@@ -351,7 +385,6 @@ void loop()
    if (sendDataWifi)
    {
       sensorRead();
-      // showSensors(ConnectorType::I2C);
       Serial.println("\nPrint Measurements: ");
       printMeassurments();
       Serial.println("\nPrint Sensors connected: ");
@@ -359,20 +392,8 @@ void loop()
       Serial.println();
       wifi_sendData();
       sendDataWifi = false;
-      digitalClockDisplay(5, 90, true);
-      tft.setCursor(5, 105);
-      tft.print("last data UPLOAD:");
-      tft.setTextColor(ST7735_ORANGE);
-      tft.setCursor(5, 115 );
-      tft.print(lastUpload);
+      renderPage(currentPage);
    }
-
-   // Serial.println(digitalRead(LEFT_BUTTON_PIN));
-   // Serial.println(digitalRead(RIGHT_BUTTON_PIN));
-   // digitalWrite(LED, LOW);
-   // backlight_pwm = 0;
-   // analogWrite(TFT_BL, backlight_pwm);
-
    // Serial.println("Going to sleep now");
    // Serial.flush();
    // esp_deep_sleep_start();
@@ -759,6 +780,29 @@ void save_Connectors()
    // end save
 }
 
+void renderPage(int page)
+{
+   // Update the TFT display with content for the specified page
+   switch (page)
+   {
+   case 0:
+      mainPage();
+      break;
+   case 1:
+      I2C_ConnectorPage();
+      break;
+   case 2:
+      ADC_ConnectorPage();
+      break;
+   case 3:
+      OneWire_ConnectorPage();
+      break;
+   case 4:
+      measurementsPage();
+      break;
+   }
+}
+
 void mainPage()
 {
    tft.fillScreen(background_color);
@@ -782,6 +826,13 @@ void mainPage()
    tft.setCursor(5, 75);
    tft.print("IP: ");
    tft.print(WiFi.localIP());
+
+   digitalClockDisplay(5, 90, true);
+   tft.setCursor(5, 105);
+   tft.print("last data UPLOAD:");
+   tft.setTextColor(ST7735_ORANGE);
+   tft.setCursor(5, 115);
+   tft.print(lastUpload);
 }
 
 void printConnectors(ConnectorType typ)
@@ -1024,9 +1075,13 @@ void printSensors()
 void I2C_ConnectorPage()
 {
    tft.fillScreen(ST7735_BLACK);
-   tft.setTextSize(1);
+   tft.setTextSize(2);
+   tft.setCursor(10, 10);
+   tft.setTextColor(ST7735_WHITE);
+   tft.print("I2C Con");
 
-   int cursor_y = 5;
+   tft.setTextSize(1);
+   int cursor_y = 45;
 
    for (int i = 0; i < I2C_NUM; i++)
    {
@@ -1036,9 +1091,16 @@ void I2C_ConnectorPage()
       tft.print("I2C_");
       tft.print(i + 1);
       tft.setCursor(80, cursor_y);
-      tft.setTextColor(ST7735_GREEN);
-
-      tft.print(allSensors[I2C_con_table[i]].sensor_name);
+      if (I2C_con_table[i] == -1)
+      {
+         tft.setTextColor(ST7735_RED);
+         tft.print("NO");
+      }
+      else
+      {
+         tft.setTextColor(ST7735_GREEN);
+         tft.print(allSensors[I2C_con_table[i]].sensor_name);
+      }
       cursor_y += 10;
    }
 }
@@ -1046,9 +1108,14 @@ void I2C_ConnectorPage()
 void ADC_ConnectorPage()
 {
    tft.fillScreen(ST7735_BLACK);
-   tft.setTextSize(1);
+   tft.fillScreen(ST7735_BLACK);
+   tft.setTextSize(2);
+   tft.setCursor(10, 10);
+   tft.setTextColor(ST7735_WHITE);
+   tft.print("ADC Con");
 
-   int cursor_y = 5;
+   tft.setTextSize(1);
+   int cursor_y = 45;
 
    for (int i = 0; i < ADC_NUM; i++)
    {
@@ -1058,9 +1125,16 @@ void ADC_ConnectorPage()
       tft.print("ADC_");
       tft.print(i + 1);
       tft.setCursor(80, cursor_y);
-      tft.setTextColor(ST7735_GREEN);
-
-      tft.print(allSensors[ADC_con_table[i]].sensor_name);
+      if (ADC_con_table[i] == -1)
+      {
+         tft.setTextColor(ST7735_RED);
+         tft.print("NO");
+      }
+      else
+      {
+         tft.setTextColor(ST7735_GREEN);
+         tft.print(allSensors[ADC_con_table[i]].sensor_name);
+      }
       cursor_y += 10;
    }
 }
@@ -1068,9 +1142,15 @@ void ADC_ConnectorPage()
 void OneWire_ConnectorPage()
 {
    tft.fillScreen(ST7735_BLACK);
-   tft.setTextSize(1);
 
-   int cursor_y = 5;
+   tft.fillScreen(ST7735_BLACK);
+   tft.setTextSize(2);
+   tft.setCursor(10, 10);
+   tft.setTextColor(ST7735_WHITE);
+   tft.print("OneWire Con");
+
+   tft.setTextSize(1);
+   int cursor_y = 45;
 
    for (int i = 0; i < ONEWIRE_NUM; i++)
    {
@@ -1080,10 +1160,66 @@ void OneWire_ConnectorPage()
       tft.print("1-Wire_");
       tft.print(i + 1);
       tft.setCursor(80, cursor_y);
-      tft.setTextColor(ST7735_GREEN);
-
-      tft.print(allSensors[OneWire_con_table[i]].sensor_name);
+      if (OneWire_con_table[i] == -1)
+      {
+         tft.setTextColor(ST7735_RED);
+         tft.print("NO");
+      }
+      else
+      {
+         tft.setTextColor(ST7735_GREEN);
+         tft.print(allSensors[OneWire_con_table[i]].sensor_name);
+      }
       cursor_y += 10;
+   }
+}
+
+void measurementsPage()
+{
+   tft.fillScreen(ST7735_BLACK);
+   tft.setTextSize(2);
+   tft.setCursor(10, 10);
+   tft.setTextColor(ST7735_WHITE);
+   tft.print("Sensor Data");
+
+   tft.setTextSize(1);
+   int cursor_y = 30;
+
+   for (int i = 0; i < sensorVector.size(); i++)
+   {
+      for (int j = 0; j < sensorVector[i].returnCount; j++)
+      {
+         tft.setCursor(5, cursor_y);
+         tft.setTextColor(ST7735_BLUE);
+         tft.print(sensorVector[i].measurements[j].data_name);
+         tft.print(": ");
+
+         tft.setCursor(60, cursor_y);
+         tft.setTextColor(ST7735_YELLOW);
+
+         if (!isnan(sensorVector[i].measurements[j].value))
+         {
+            tft.print(sensorVector[i].measurements[j].value);
+         }
+         else
+         {
+            tft.print("NAN");
+         }
+
+         tft.print(" ");
+
+         if (!(sensorVector[i].measurements[j].unit == "°C"))
+         {
+            tft.print(sensorVector[i].measurements[j].unit);
+         }
+         else
+         {
+            tft.drawChar(tft.getCursorX(), tft.getCursorY(), 0xF8, ST7735_YELLOW, ST7735_BLACK, 1);
+            tft.setCursor(tft.getCursorX() + 7, tft.getCursorY());
+            tft.print("C");
+         }
+         cursor_y += 10;
+      }
    }
 }
 
@@ -1122,13 +1258,13 @@ void printMeassurments()
       for (int j = 0; j < sensorVector[i].returnCount; j++)
       {
          Serial.print(sensorVector[i].measurements[j].data_name);
-         Serial.print(":  ");         
+         Serial.print(":  ");
          Serial.println(sensorVector[i].measurements[j].value);
       }
    }
    Serial.print("\nVector elements: ");
-   Serial.print(sensorVector.size()+1);
-      Serial.print("\nSize of Vector: ");
+   Serial.print(sensorVector.size() + 1);
+   Serial.print("\nSize of Vector: ");
    Serial.println(sizeof(sensorVector));
 }
 
@@ -1218,24 +1354,20 @@ void lora_sendData(void)
 
    // https://github.com/thesolarnomad/lora-serialization
 
-   byte message[sizeof(sensorVector)*4];  //TODO: change to actual size
+   byte message[400]; // max. 11 Sensor with id Uint8_t (1 byte) and max 8 value float (4 byte) = 11 + 11*8*4 = 363
    LoraEncoder encoder(message);
 
- for (int i = 0; i < sensorVector.size(); ++i)
+   for (int i = 0; i < sensorVector.size(); ++i)
    {
-      int k=sensorVector[i].sensor_id;
+      int k = static_cast<uint8_t>(sensorVector[i].sensor_id);
       encoder.writeUint8(k);
 
       for (int j = 0; j < sensorVector[i].returnCount; j++)
       {
-         int l = sensorVector[i].measurements[j].value;
+         int l = static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0);
          encoder.writeRawFloat(l); // TODO: switch case to change type
       }
    }
-
-   Serial.println();
-   Serial.print(sizeof(message));
-   Serial.println();
 
    // TODO: lora send message
 }

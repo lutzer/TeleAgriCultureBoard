@@ -87,9 +87,6 @@ void getLow8SectionValue(void);
 int getMedianNum(int bArray[], int iFilterLen);
 // TDS Sensor
 
-unsigned long previousMillis = 0;
-const long interval = 4000;
-
 void sensorRead()
 {
     digitalWrite(LED, HIGH);

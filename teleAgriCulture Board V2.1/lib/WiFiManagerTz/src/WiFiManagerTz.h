@@ -138,9 +138,8 @@ namespace WiFiManagerNS
     TimeConfHTML += "document.getElementById('set-time').value = adjustedDate.toISOString().substring(0,16); });";
     TimeConfHTML += "</script>";
 
-    TimeConfHTML += "<script>function showDiv() { var checked = document.querySelector('input[name=upload]:checked'); var div = document.getElementById('Lora'); if (checked && checked.value == 'lora') { div.style.display = 'block';";
-    TimeConfHTML += "var checkbox = document.getElementById('use-WPA_enterprise'); checkbox.checked = false; var div = document.getElementById('use_NTP'); div.style.display = 'none'; } else { div.style.display = 'none'; var div = document.getElementById('no_NTP'); div.style.display = 'block';}}</script>";
-
+    TimeConfHTML += "<script>function showDiv() {var checked = document.querySelector('input[name=upload]:checked');var div = document.getElementById('Lora');if (checked && checked.value == 'lora') {div.style.display = 'block'; var checkbox = document.getElementById('use-WPA_enterprise'); checkbox.checked = false; var div = document.getElementById('use_NTP'); div.style.display = 'none'; var div = document.getElementById('no_NTP'); div.style.display = 'block';";
+    TimeConfHTML += "} else {div.style.display = 'none'; var div = document.getElementById('use_NTP'); div.style.display = 'block'; var div = document.getElementById('no_NTP'); div.style.display = 'none'; }}</script>";
     TimeConfHTML += getTemplate(HTML_STYLE);
     TimeConfHTML += "<style>input[type='checkbox'][name='use-WPA_enterprise']:not(:checked)~.enterprise { display: none; }</style>";
     
@@ -312,16 +311,15 @@ namespace WiFiManagerNS
     }
     TimeConfHTML += "</select><br>";
 
-    TimeConfHTML += "<label for='use-ntp-server'>Enable NTP Client</label> ";
-    TimeConfHTML += " <input value='1' type=checkbox name='use-ntp-server' id='use-ntp-server' checked >";
-    TimeConfHTML += "<br>";
-
     TimeConfHTML += "<div id='no_NTP'>";
     TimeConfHTML += "<label for='set-time'>Set Time ";
     TimeConfHTML += "<input style=width:auto name='set-time' id='set-time' type='datetime-local' value='" + systimeStr + "'>";
     TimeConfHTML += "</div>";
 
     TimeConfHTML += "<div id='use_NTP'>";
+    TimeConfHTML += "<label for='use-ntp-server'>Enable NTP Client</label> ";
+    TimeConfHTML += "<input value='1' type=checkbox name='use-ntp-server' id='use-ntp-server' checked >";
+    TimeConfHTML += "<br>";
 
     TimeConfHTML += "<h2>NTP Client Setup</h2>";
 

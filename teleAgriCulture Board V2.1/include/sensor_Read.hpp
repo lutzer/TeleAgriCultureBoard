@@ -31,9 +31,10 @@
 #include "Adafruit_VEML7700.h"
 #include <Multichannel_Gas_GMXXX.h>
 #include <MiCS6814-I2C.h>
-#include <OneWire.h>
 #include <DHT.h>
+#include <OneWire.h>
 #include <DallasTemperature.h>
+#include <GravityTDS.h>
 
 #define DHTTYPE DHT22
 
@@ -61,6 +62,10 @@ bool shouldSaveConfig = false;
 #define SEALEVELPRESSURE_HPA (1013.25)
 Adafruit_BME280 bme;
 Adafruit_VEML7700 veml = Adafruit_VEML7700();
+
+GravityTDS gravityTds;
+
+float temperature = 22, tdsValue = 0;
 
 bool parseI2CAddress(const String &addressString, uint8_t *addressValue);
 void readI2C_Connectors();
@@ -118,7 +123,7 @@ void sensorRead()
     }
 
     // battery measurement
-    //TODO: scale to volts
+    // TODO: scale to volts
 
     // pinMode(BATSENS, INPUT);
     // Sensor newSensor = allSensors[BATTERY];
@@ -287,11 +292,11 @@ void readADC_Connectors()
 
         case TDS:
         {
-            //          www.cqrobot.wiki/index.php/TDS_(Total_Dissolved_Solids)_Meter_Sensor_SKU:_CQRSENTDS01
+
             int analogBuffer[SCOUNT]; // store the analog value in the array, read from ADC
             int analogBufferTemp[SCOUNT];
             int analogBufferIndex = 0, copyIndex = 0;
-            float averageVoltage = 0, tdsValue = 0, temperature = 25;
+            float averageVoltage = 0, tdsValue = 0, temperature = 18;
 
             int tdsSensorPin;
 
@@ -310,37 +315,52 @@ void readADC_Connectors()
                 tdsSensorPin = ANALOG3;
             }
 
-            pinMode(tdsSensorPin, INPUT);
+            gravityTds.setPin(tdsSensorPin);
+            gravityTds.setAref(3.3);      // reference voltage on ADC, default 5.0V on Arduino UNO
+            gravityTds.setAdcRange(4096); // 1024 for 10bit ADC;4096 for 12bit ADC
+            gravityTds.begin();           // initialization
 
-            unsigned long messureTime = millis();
-            do
-            {
-                static unsigned long analogSampleTimepoint = millis();
-                if (millis() - analogSampleTimepoint > 40U) // every 40 milliseconds,read the analog value from the ADC
-                {
-                    analogSampleTimepoint = millis();
-                    analogBuffer[analogBufferIndex] = analogRead(tdsSensorPin); // read the analog value and store into the buffer
-                    analogBufferIndex++;
-                    if (analogBufferIndex == SCOUNT)
-                        analogBufferIndex = 0;
-                }
-                static unsigned long printTimepoint = millis();
-                if (millis() - printTimepoint > 1800U)
-                {
-                    printTimepoint = millis();
-                    for (copyIndex = 0; copyIndex < SCOUNT; copyIndex++)
-                        analogBufferTemp[copyIndex] = analogBuffer[copyIndex];
-                    averageVoltage = getMedianNum(analogBufferTemp, SCOUNT) * (float)VREF / 1024.0;                                                                                                  // read the analog value more stable by the median filtering algorithm, and convert to voltage value
-                    float compensationCoefficient = 1.0 + 0.02 * (temperature - 25.0);                                                                                                               // temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
-                    float compensationVolatge = averageVoltage / compensationCoefficient;                                                                                                            // temperature compensation
-                    tdsValue = (133.42 * compensationVolatge * compensationVolatge * compensationVolatge - 255.86 * compensationVolatge * compensationVolatge + 857.39 * compensationVolatge) * 0.5; // convert voltage value to tds value
+            gravityTds.setTemperature(temperature); // set the temperature and execute temperature compensation
+            gravityTds.update();                    // sample and calculate
+            tdsValue = gravityTds.getTdsValue();    // then get the value
 
-                    Sensor newSensor = allSensors[TDS];
-                    newSensor.measurements[0].value = tdsValue;
+            Sensor newSensor = allSensors[TDS];
+            newSensor.measurements[0].value = tdsValue;
 
-                    sensorVector.push_back(newSensor);
-                }
-            } while (millis() - messureTime < 2000U);
+            sensorVector.push_back(newSensor);
+
+            // pinMode(tdsSensorPin, INPUT);
+
+            //          www.cqrobot.wiki/index.php/TDS_(Total_Dissolved_Solids)_Meter_Sensor_SKU:_CQRSENTDS01
+            // unsigned long messureTime = millis();
+            // do
+            // {
+            //     static unsigned long analogSampleTimepoint = millis();
+            //     if (millis() - analogSampleTimepoint > 40U) // every 40 milliseconds,read the analog value from the ADC
+            //     {
+            //         analogSampleTimepoint = millis();
+            //         analogBuffer[analogBufferIndex] = analogRead(tdsSensorPin); // read the analog value and store into the buffer
+            //         analogBufferIndex++;
+            //         if (analogBufferIndex == SCOUNT)
+            //             analogBufferIndex = 0;
+            //     }
+            //     static unsigned long printTimepoint = millis();
+            //     if (millis() - printTimepoint > 1800U)
+            //     {
+            //         printTimepoint = millis();
+            //         for (copyIndex = 0; copyIndex < SCOUNT; copyIndex++)
+            //             analogBufferTemp[copyIndex] = analogBuffer[copyIndex];
+            //         averageVoltage = getMedianNum(analogBufferTemp, SCOUNT) * (float)VREF / 1024.0;                                                                                                  // read the analog value more stable by the median filtering algorithm, and convert to voltage value
+            //         float compensationCoefficient = 1.0 + 0.02 * (temperature - 25.0);                                                                                                               // temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
+            //         float compensationVolatge = averageVoltage / compensationCoefficient;                                                                                                            // temperature compensation
+            //         tdsValue = (133.42 * compensationVolatge * compensationVolatge * compensationVolatge - 255.86 * compensationVolatge * compensationVolatge + 857.39 * compensationVolatge) * 0.5; // convert voltage value to tds value
+
+            //         Sensor newSensor = allSensors[TDS];
+            //         newSensor.measurements[0].value = tdsValue;
+
+            //         sensorVector.push_back(newSensor);
+            //     }
+            // } while (millis() - messureTime < 2000U);
         }
         break;
 
@@ -467,13 +487,28 @@ void readOneWire_Connectors()
                 ds18b20SensorPin = ONEWIRE_3;
             }
 
+            DeviceAddress DS18B20_Address;
             OneWire oneWire(ds18b20SensorPin);
             DallasTemperature sensors(&oneWire);
             sensors.begin();
-            delay(5000);
+
+            Serial.println("DS12B20 read");
+            Serial.println(sensors.getDeviceCount(), DEC);
+            Serial.println();
+
+            // Für jeden Sensor die Bitauflösung auf 12 Bit programmieren
+            for (byte i = 0; i < sensors.getDeviceCount(); i++)
+            {
+                if (sensors.getAddress(DS18B20_Address, i))
+                {
+                    sensors.setResolution(DS18B20_Address, 12);
+                }
+            }
+
+            sensors.requestTemperatures();
 
             Sensor newSensor = allSensors[DS18B20];
-            newSensor.measurements[0].data_name=newSensor.measurements[0].data_name+i+1;
+            newSensor.measurements[0].data_name = newSensor.measurements[0].data_name + (i + 1);
             newSensor.measurements[0].value = sensors.getTempCByIndex(0);
 
             sensorVector.push_back(newSensor);

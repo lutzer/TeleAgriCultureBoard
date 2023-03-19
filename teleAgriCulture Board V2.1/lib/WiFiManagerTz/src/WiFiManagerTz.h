@@ -138,9 +138,12 @@ namespace WiFiManagerNS
     TimeConfHTML += "document.getElementById('set-time').value = adjustedDate.toISOString().substring(0,16); });";
     TimeConfHTML += "</script>";
 
+    TimeConfHTML += "<script>function showDiv() { var checked = document.querySelector('input[name=upload]:checked'); var div = document.getElementById('Lora'); if (checked && checked.value == 'lora') { div.style.display = 'block';";
+    TimeConfHTML += "var checkbox = document.getElementById('use-WPA_enterprise'); checkbox.checked = false; var div = document.getElementById('use_NTP'); div.style.display = 'none'; } else { div.style.display = 'none'; var div = document.getElementById('no_NTP'); div.style.display = 'block';}}</script>";
+
     TimeConfHTML += getTemplate(HTML_STYLE);
-    TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:not(:checked) ~.collapsable { display:none; }</style>";
-    TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:checked       ~.collapsed   { display:none; }</style>";
+    TimeConfHTML += "<style>input[type='checkbox'][name='use-WPA_enterprise']:not(:checked)~.enterprise { display: none; }</style>";
+    
     TimeConfHTML += getTemplate(HTML_HEAD_END);
     TimeConfHTML.replace(FPSTR(T_c), "invert"); // add class str
 
@@ -149,27 +152,33 @@ namespace WiFiManagerNS
     TimeConfHTML += "<h2>Board Setup</h2>";
     TimeConfHTML += version;
     TimeConfHTML += "<BR><BR>";
+    TimeConfHTML += "Board MAC Address: " + WiFi.macAddress();
+    TimeConfHTML += "<BR><BR>";
 
-    TimeConfHTML += "<div><form><fieldset><legend>Please select your data upload method:</legend>";
+    TimeConfHTML += "<div><form action='/save-tz' target='dummyframe' method='POST'><fieldset><legend>Please select your data upload method:</legend>";
     TimeConfHTML += "<table style='width:100%'><tr>";
-    TimeConfHTML += "<td><input type='radio' id='wificheck' name='upload' value='wifi'/><label for='upload1'>WiFi</label></td>";
-    TimeConfHTML += "<td><input type='radio' id='loracheck' name='upload' value='lora' /><label for='upload2'>LoRa</label></td>";
-    TimeConfHTML += "</tr></table></div>";
-    TimeConfHTML += "<BR><b>WiFi Data</b>";
-    TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type='number' size=4 id='BoardID' name='boardID'>";
-    TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type='text' size=10 id='API_KEY' name='api_key'></div>";
-    TimeConfHTML += "<BR><b>LoRa Data</b><BR>";
+    TimeConfHTML += "<td><input type='radio' id='wificheck' name='upload' value='wifi' onchange='showDiv()' checked /><label for='upload1'>WiFi</label></td>";
+    TimeConfHTML += "<td><input type='radio' id='loracheck' name='upload' value='lora' onchange='showDiv()' /><label for='upload2'>LoRa</label></td>";
+    TimeConfHTML += "</tr></table></fieldset></div><BR><div><fieldset><BR>";
+
+    TimeConfHTML += "<b>WiFi Data</b>";
+    TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type=“text” id='BoardID' name='BoardID' pattern='^(1[0-9]{3}|199[0-9])$' title='Enter 4 digit Board ID' value=1001 required>";
+    TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type=“text” name='API_KEY' pattern='^[A-Za-z0-9]{32}$' title=' Enter Bearer token' value=0123456789ABCDEF0123456789abcdef required>";
+    TimeConfHTML += "<br><br><label for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type=checkbox name='use-WPA_enterprise' id='use-WPA_enterprise'><br>";
+    TimeConfHTML += "<div class='enterprise'><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS' title='Enter anonym id' value='anonymus@example.com' required>";
+    TimeConfHTML += "<br><br><label for='certificate'>Please paste your CA server certificate here:</label><textarea id='certificate' name='certificate' rows='23' cols='63' placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----' required></textarea></div></fieldset></div>";
+    TimeConfHTML += "<div id='Lora' style='display:none'><fieldset><br><BR><b>LoRa Data</b><BR>";
     TimeConfHTML += "<label for='lora_fqz'>Lora Frequency</label><select id='lora_fqz' name='lora_fqz'><option value='EU'>EU 868 MHz</option>";
     TimeConfHTML += "<option value='US'>US/CD/AUS  915 MHz</option>";
     TimeConfHTML += "<option value='ASIA'>Asia 923 MHz</option></select>";
-    TimeConfHTML += "<div><label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type='text' size=15 id='OTAA_DEVEUI' name='otaa_DEVEUI'>";
-    TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type='text' size=10 id='OTAA_APPEUI' name='otaa_APPEUI'>";
-    TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type='text' size=10 id='OTAA_APPKEY' name='otaa_APPKEY'></div>";
-    TimeConfHTML += "</fieldset></form>";
+    TimeConfHTML += " <label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type=“text” id='OTAA_DEVEUI' name='OTAA_DEVEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=70B3D57ED005A8F4 required>";
+    TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type=“text” id='OTAA_APPEUI' name='OTAA_APPEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=70B3D57ED005A8F4  required>";
+    TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type=“text” id='OTAA_APPKEY' name='OTAA_APPKEY' pattern='^[0-9A-F]{32}$' title='Enter 16 hexadecimal digits without any prefix or separator' value=DF6B2A4AC0930BCA55141564D751D578 required>";
+    TimeConfHTML += "</div><BR></fieldset>";
 
     //------------- Start Connectors ------- //
 
-    TimeConfHTML += "<BR><h2>Connectors:</h2>";
+    TimeConfHTML += "<BR><h2>Connectors:</h2><fieldset>";
 
     TimeConfHTML += "<table style='width:100%'><tbody><tr><td colspan='2'><h3>I2C Connectors</h3></td></tr><tr>";
 
@@ -279,7 +288,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "<select id='onewire_3' name='onewire_3'>";
 
     TimeConfHTML += dropdown_1wire;
-    TimeConfHTML += "</tr></tbody></table>";
+    TimeConfHTML += "</tr></tbody></table><BR></fieldset>";
     dropdown_1wire = String();
 
     TimeConfHTML += "<BR><h2>Time Settings</h2>";
@@ -304,15 +313,15 @@ namespace WiFiManagerNS
     TimeConfHTML += "</select><br>";
 
     TimeConfHTML += "<label for='use-ntp-server'>Enable NTP Client</label> ";
-    TimeConfHTML += " <input value='1' type=checkbox name='use-ntp-server' id='use-ntp-server'" + String(NTPEnabled ? "checked" : "") + ">";
+    TimeConfHTML += " <input value='1' type=checkbox name='use-ntp-server' id='use-ntp-server' checked >";
     TimeConfHTML += "<br>";
 
-    TimeConfHTML += "<div class='collapsed'>";
+    TimeConfHTML += "<div id='no_NTP'>";
     TimeConfHTML += "<label for='set-time'>Set Time ";
     TimeConfHTML += "<input style=width:auto name='set-time' id='set-time' type='datetime-local' value='" + systimeStr + "'>";
     TimeConfHTML += "</div>";
 
-    TimeConfHTML += "<div class='collapsable'>";
+    TimeConfHTML += "<div id='use_NTP'>";
 
     TimeConfHTML += "<h2>NTP Client Setup</h2>";
 

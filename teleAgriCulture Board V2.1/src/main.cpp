@@ -47,6 +47,7 @@
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <lmic.h>
 #include <LoraMessage.h>
 
 #include <tac_logo.h>
@@ -200,7 +201,7 @@ void setup()
    // ----- Initiate the TFT display  and Start Image----- //
 
    delay(1000);
-   //Serial.begin(115200); // start Serial for debuging
+  Serial.begin(115200); // start Serial for debuging
 
    // Increment boot number and print it every reboot
    ++bootCount;
@@ -1382,7 +1383,6 @@ void wifi_sendData(void)
 
 void lora_sendData(void)
 {
-
    // https://github.com/thesolarnomad/lora-serialization
 
    byte message[400]; // max. 11 Sensor with id Uint8_t (1 byte) and max 8 value float (4 byte) = 11 + 11*8*4 = 363

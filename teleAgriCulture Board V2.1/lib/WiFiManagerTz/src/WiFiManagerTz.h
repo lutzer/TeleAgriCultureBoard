@@ -97,17 +97,17 @@ namespace WiFiManagerNS
   // const char favicon[] = "<link rel='icon' type='image/png; base64' sizes='32x32' href='data:image/png;base64,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'>";
 
   // teeny-tiny 57 bytes GIF favicon
-  const char favicon[] =
-      {
-          0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x09, 0x00, 0x08, 0x00, 0x80, 0x00, 0x00, 0xff, 0xff, 0xff,
-          0x00, 0x00, 0x00, 0x21, 0xf9, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00,
-          0x09, 0x00, 0x08, 0x00, 0x00, 0x02, 0x10, 0x8c, 0x8f, 0x01, 0xbb, 0xc7, 0x60, 0xa0, 0x8a, 0x54,
-          0xbd, 0x16, 0x1f, 0x82, 0x3c, 0xf9, 0x02, 0x00, 0x3b};
+  // const char favicon[] =
+  //     {
+  //         0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x09, 0x00, 0x08, 0x00, 0x80, 0x00, 0x00, 0xff, 0xff, 0xff,
+  //         0x00, 0x00, 0x00, 0x21, 0xf9, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00,
+  //         0x09, 0x00, 0x08, 0x00, 0x00, 0x02, 0x10, 0x8c, 0x8f, 0x01, 0xbb, 0xc7, 0x60, 0xa0, 0x8a, 0x54,
+  //         0xbd, 0x16, 0x1f, 0x82, 0x3c, 0xf9, 0x02, 0x00, 0x3b};
 
-  void handleFavicon()
-  {
-    _wifiManager->server->send_P(200, "text/html", favicon, sizeof(favicon));
-  }
+  // void handleFavicon()
+  // {
+  //   _wifiManager->server->send_P(200, "text/html", favicon, sizeof(favicon));
+  // }
 
   String getSystimeStr()
   {
@@ -129,8 +129,8 @@ namespace WiFiManagerNS
 
     TimeConfHTML = "";
     TimeConfHTML += getTemplate(HTML_HEAD_START);
-    TimeConfHTML.replace(FPSTR(T_v), "TeleAgriCulture Board");
-    TimeConfHTML += "<link rel='icon' type='image/png; base64' sizes='32x32' href='data:image/png;base64,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'>";
+    TimeConfHTML.replace(FPSTR(T_v), "TeleAgriCulture Board Setup");
+    TimeConfHTML += custom_Title_Html;//favicon;//"<link rel='icon' type='image/png; base64' sizes='32x32' href='data:image/png;base64,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'>";
     TimeConfHTML += getTemplate(HTML_SCRIPT);
 
     TimeConfHTML += "<script>";
@@ -142,7 +142,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "} else {div.style.display = 'none'; var div = document.getElementById('use_NTP'); div.style.display = 'block'; var div = document.getElementById('no_NTP'); div.style.display = 'none'; }}</script>";
     TimeConfHTML += getTemplate(HTML_STYLE);
     TimeConfHTML += "<style>input[type='checkbox'][name='use-WPA_enterprise']:not(:checked)~.enterprise { display: none; }</style>";
-    
+
     TimeConfHTML += getTemplate(HTML_HEAD_END);
     TimeConfHTML.replace(FPSTR(T_c), "invert"); // add class str
 
@@ -154,30 +154,31 @@ namespace WiFiManagerNS
     TimeConfHTML += "Board MAC Address: " + WiFi.macAddress();
     TimeConfHTML += "<BR><BR>";
 
-    TimeConfHTML += "<div><form action='/save-tz' target='dummyframe' method='POST'><fieldset><legend>Please select your data upload method:</legend>";
+    TimeConfHTML += "<div><form action='/save-tz' target='dummyframe' method='POST'><legend>Please select your data upload method:</legend>";
     TimeConfHTML += "<table style='width:100%'><tr>";
-    TimeConfHTML += "<td><input type='radio' id='wificheck' name='upload' value='wifi' onchange='showDiv()' checked /><label for='upload1'>WiFi</label></td>";
-    TimeConfHTML += "<td><input type='radio' id='loracheck' name='upload' value='lora' onchange='showDiv()' /><label for='upload2'>LoRa</label></td>";
-    TimeConfHTML += "</tr></table></fieldset></div><BR><div><fieldset><BR>";
+    TimeConfHTML += "<td><input type='radio' id='wificheck' name='upload' value='wifi' onchange='showDiv()' checked /><label for='upload1'> WiFi</label></td>";
+    TimeConfHTML += "<td><input type='radio' id='loracheck' name='upload' value='lora' onchange='showDiv()' /><label for='upload2'> LoRa</label></td>";
+    TimeConfHTML += "</tr></table><br><input type='radio' id='battery' name='battery' value='battery'/><label for='battery'> powerd by battery</label><br><br>";
+    TimeConfHTML += "<input type='radio' id='display' name='display' value='display'/><label for='display'> show display</label></div><BR><div><BR>";
 
     TimeConfHTML += "<b>WiFi Data</b>";
     TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type=“text” id='BoardID' name='BoardID' pattern='^(1[0-9]{3}|199[0-9])$' title='Enter 4 digit Board ID' value=1001 required>";
     TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type=“text” name='API_KEY' pattern='^[A-Za-z0-9]{32}$' title=' Enter Bearer token' value=0123456789ABCDEF0123456789abcdef required>";
     TimeConfHTML += "<br><br><label for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type=checkbox name='use-WPA_enterprise' id='use-WPA_enterprise'><br>";
-    TimeConfHTML += "<div class='enterprise'><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS' title='Enter anonym id' value='anonymus@example.com' required>";
-    TimeConfHTML += "<br><br><label for='certificate'>Please paste your CA server certificate here:</label><textarea id='certificate' name='certificate' rows='23' cols='63' placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----' required></textarea></div></fieldset></div>";
-    TimeConfHTML += "<div id='Lora' style='display:none'><fieldset><br><BR><b>LoRa Data</b><BR>";
+    TimeConfHTML += "<div class='enterprise'><label for='User_name'>User Name</label><input type='text' name='User_name' title='Enter User Name' value='user@example.com' required><br><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS' title='Enter anonym id' value='anonymus@example.com' required>";
+    TimeConfHTML += "<br><br><label for='certificate'>Please paste your CA server certificate here:</label><textarea id='certificate' name='certificate' rows='23' cols='63' placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----' required></textarea></div></div>";
+    TimeConfHTML += "<div id='Lora' style='display:none'><br><BR><b>LoRa Data</b><BR>";
     TimeConfHTML += "<label for='lora_fqz'>Lora Frequency</label><select id='lora_fqz' name='lora_fqz'><option value='EU'>EU 868 MHz</option>";
     TimeConfHTML += "<option value='US'>US/CD/AUS  915 MHz</option>";
     TimeConfHTML += "<option value='ASIA'>Asia 923 MHz</option></select>";
     TimeConfHTML += " <label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type=“text” id='OTAA_DEVEUI' name='OTAA_DEVEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=70B3D57ED005A8F4 required>";
     TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type=“text” id='OTAA_APPEUI' name='OTAA_APPEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=70B3D57ED005A8F4  required>";
     TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type=“text” id='OTAA_APPKEY' name='OTAA_APPKEY' pattern='^[0-9A-F]{32}$' title='Enter 16 hexadecimal digits without any prefix or separator' value=DF6B2A4AC0930BCA55141564D751D578 required>";
-    TimeConfHTML += "</div><BR></fieldset>";
+    TimeConfHTML += "</div><BR>";
 
     //------------- Start Connectors ------- //
 
-    TimeConfHTML += "<BR><h2>Connectors:</h2><fieldset>";
+    TimeConfHTML += "<BR><h2>Connectors:</h2>";
 
     TimeConfHTML += "<table style='width:100%'><tbody><tr><td colspan='2'><h3>I2C Connectors</h3></td></tr><tr>";
 
@@ -287,7 +288,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "<select id='onewire_3' name='onewire_3'>";
 
     TimeConfHTML += dropdown_1wire;
-    TimeConfHTML += "</tr></tbody></table><BR></fieldset>";
+    TimeConfHTML += "</tr></tbody></table><BR>";
     dropdown_1wire = String();
 
     TimeConfHTML += "<BR><h2>Time Settings</h2>";
@@ -299,7 +300,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "<input readonly style=width:auto name='system-time' type='datetime-local' value='" + systimeStr + "'>";
     TimeConfHTML += " <button onclick=location.reload() style=width:auto type=button> Refresh </button></label><br>";
 
-    TimeConfHTML += "<iframe name='dummyframe' id='dummyframe' style='display: none;'></iframe><form action='/save-tz' target='dummyframe' method='POST'>";
+    TimeConfHTML += "<iframe name='dummyframe' id='dummyframe' style='display: none;'></iframe>";
 
     // const char *currentTimeZone = "Europe/Paris";
     TimeConfHTML += "<label for='timezone'>Time Zone</label>";
@@ -325,7 +326,7 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<label for='enable-dst'>Auto-adjust clock for DST</label> ";
     TimeConfHTML += " <input value='1' type=checkbox name='enable-dst' id='enable-dst'" + String(DSTEnabled ? "checked" : "") + ">";
-    TimeConfHTML += "<br>";
+    TimeConfHTML += "<br><br>";
 
     TimeConfHTML += "<label for='ntp-server'>Server:</label>";
     // TimeConfHTML += "<input list='ntp-server-list' id='ntp-server' name='ntp-server' placeholder='pool.ntp.org'";
@@ -374,6 +375,7 @@ namespace WiFiManagerNS
     {
       NTPEnabled = false;
     }
+
     if (_NTPEnabled != NTPEnabled)
     {
       prefs::setBool("NTPEnabled", NTPEnabled);
@@ -424,6 +426,10 @@ namespace WiFiManagerNS
         }
         NTP::setSyncDelay(serverInterval);
       }
+    }
+
+    if (_wifiManager->server->hasArg(""))
+    {
     }
 
     const char *successResp = "<script>parent.location.href = '/';</script>";

@@ -281,7 +281,7 @@ void setup()
    WiFiManagerNS::init(&wifiManager);
 
    wifiManager.setHostname(hostname.c_str());
-   wifiManager.setTitle("Board Config");
+   wifiManager.setTitle("TeleAgriCulture Board");
    wifiManager.setCustomHeadElement(custom_Title_Html.c_str());
 
    // set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode

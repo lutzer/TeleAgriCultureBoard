@@ -261,36 +261,42 @@
         <h2>Board Setup</h2>Firmware Version 0.82<BR><BR>Board MAC Address: 70:04:1D:BB:70:34<BR><BR>
         <div>
             <form action='/save-tz' target='dummyframe' method='POST'>
-                <fieldset>
+
                     <legend>Please select your data upload method:</legend>
                     <table style='width:100%'>
                         <tr>
                             <td><input type='radio' id='wificheck' name='upload' value='wifi' onchange='showDiv()'
-                                    checked /><label for='upload1'>WiFi</label></td>
+                                    checked /><label for='upload1'> WiFi</label></td>
                             <td><input type='radio' id='loracheck' name='upload' value='lora'
-                                    onchange='showDiv()' /><label for='upload2'>LoRa</label></td>
+                                    onchange='showDiv()' /><label for='upload2'> LoRa</label></td>
                         </tr>
-                    </table>
-                </fieldset>
+                    </table><br>
+<input type='radio' id='battery' name='battery' value='battery'/><label for='battery'> powerd by battery</label>
+<br><br>
+<input type='radio' id='display' name='display' value='display'/><label for='display'> show display</label>
+
         </div><BR>
         <div>
-            <fieldset><BR><b>WiFi Data</b>
+<b>WiFi Data</b>
                 <div><label for='BoardID'>Board ID:</label><input type=“text” id='BoardID' name='BoardID'
                         pattern='^(1[0-9]{3}|199[0-9])$' title='Enter 4 digit Board ID' value=1001 required><label
                         for='API_KEY'>API KEY:</label><input type=“text” name='API_KEY' pattern='^[A-Za-z0-9]{32}$'
                         title=' Enter Bearer token' value=0123456789ABCDEF0123456789abcdef required><br><br><label
                         for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type=checkbox
-                        name='use-WPA_enterprise' id='use-WPA_enterprise'><br>
-                    <div class='enterprise'><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS'
+                        name='use-WPA_enterprise' id='use-WPA_enterprise'>
+                    <div class='enterprise'>
+<label for='User_name'>User Name</label><input type='text' name='User_name'
+                            title='Enter User Name' value='user@example.com' required><br>
+<label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS'
                             title='Enter anonym id' value='anonymus@example.com' required><br><br><label
                             for='certificate'>Please paste your CA server certificate here:</label><textarea
                             id='certificate' name='certificate' rows='23' cols='63'
                             placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----' required></textarea>
                     </div>
-            </fieldset>
+
         </div>
         <div id='Lora' style='display:none'>
-            <fieldset><br><BR><b>LoRa Data</b><BR><label for='lora_fqz'>Lora Frequency</label><select id='lora_fqz'
+<br><BR><b>LoRa Data</b><BR><label for='lora_fqz'>Lora Frequency</label><select id='lora_fqz'
                     name='lora_fqz'>
                     <option value='EU'>EU 868 MHz</option>
                     <option value='US'>US/CD/AUS 915 MHz</option>
@@ -305,9 +311,9 @@
                     name='OTAA_APPKEY' pattern='^[0-9A-F]{32}$'
                     title='Enter 16 hexadecimal digits without any prefix or separator'
                     value=DF6B2A4AC0930BCA55141564D751D578 required>
-        </div><BR></fieldset><BR>
+        </div><BR><BR>
         <h2>Connectors:</h2>
-        <fieldset>
+
             <table style='width:100%'>
                 <tbody>
                     <tr>
@@ -400,12 +406,12 @@
                     </tr>
                 </tbody>
             </table><BR>
-        </fieldset><BR>
+<BR>
         <h2>Time Settings</h2><label for='ntp-server'>System Time <input readonly style=width:auto name='system-time'
                 type='datetime-local' value='2023-03-19T19:44'> <button onclick=location.reload() style=width:auto
                 type=button> Refresh </button></label><br><iframe name='dummyframe' id='dummyframe'
             style='display: none;'></iframe>
-        <form action='/save-tz' target='dummyframe' method='POST'><label for='timezone'>Time Zone</label><select
+<label for='timezone'>Time Zone</label><select
                 id='timezone' name='timezone'>
                 <option value='0'>Africa/Abidjan</option>
                 <option value='2'>Africa/Accra</option>
@@ -875,7 +881,7 @@
                 <label for='use-ntp-server'>Enable NTP Client</label> <input value='1' type=checkbox
                 name='use-ntp-server' id='use-ntp-server' checked><br>
                 <h2>NTP Client Setup</h2><label for='enable-dst'>Auto-adjust clock for DST</label> <input value='1'
-                    type=checkbox name='enable-dst' id='enable-dst' checked><br><label
+                    type=checkbox name='enable-dst' id='enable-dst' checked><br><br><label
                     for='ntp-server'>Server:</label><select id='ntp-server-list' name='ntp-server'>
                     <option value='0'>Global(pool.ntp.org)</option>
                     <option value='1'>Africa(africa.pool.ntp.org)</option>

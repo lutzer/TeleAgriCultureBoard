@@ -38,6 +38,7 @@
 #include <FS.h>
 #include "SPIFFS.h"
 #include <vector>
+#include <WString.h>
 #include <Ticker.h>
 
 #include <WiFi.h>
@@ -68,7 +69,6 @@
 #include <Fonts/FreeSans9pt7b.h>
 #include <Adafruit_ST7735.h>
 
-
 // ----- Deep Sleep related -----//
 #define BUTTON_PIN_BITMASK 0x10001 // GPIOs 0 and 16
 #define uS_TO_S_FACTOR 1000000     /* Conversion factor for micro seconds to seconds */
@@ -93,21 +93,23 @@ void configModeCallback(WiFiManager *myWiFiManager);
 void printDigits(int digits);
 void digitalClockDisplay(int x, int y, bool date);
 void renderPage(int page);
+int countMeasurements(const std::vector<Sensor> &sensors);
 void mainPage(void);
 void I2C_ConnectorPage(void);
 void ADC_ConnectorPage(void);
 void OneWire_ConnectorPage(void);
-void measurementsPage(void);
+void measurementsPage_one(void);
+void measurementsPage_two(void);
 void checkButton(void);
 void load_Sensors(void);
 void load_Connectors(void);
 void save_Connectors(void);
+void load_Config(void);
+void save_Config(void);
 void checkLoadedStuff(void);
 void printConnectors(ConnectorType typ);
 void printProtoSensors(void);
 void showSensors(ConnectorType type);
-void load_WiFiConfig(void);
-void save_WiFIConfig(void);
 void printMeassurments(void);
 void printSensors(void);
 void wifi_sendData(void);
@@ -146,6 +148,7 @@ Button upButton(LEFT_BUTTON_PIN);
 Button downButton(RIGHT_BUTTON_PIN);
 
 #define NUM_PAGES 5
+#define NUM_PERPAGE 9
 
 char test_input[6];
 bool portalRunning = false;
@@ -154,6 +157,7 @@ bool configSaved = false;
 
 int currentPage = 0;
 int lastPage = -1; // Store the last page to avoid refreshing unnecessarily
+int num_pages = NUM_PAGES;
 
 String lastUpload;
 bool initialState; // state of the LED
@@ -201,7 +205,7 @@ void setup()
    // ----- Initiate the TFT display  and Start Image----- //
 
    delay(1000);
-  Serial.begin(115200); // start Serial for debuging
+   Serial.begin(115200); // start Serial for debuging
 
    // Increment boot number and print it every reboot
    ++bootCount;
@@ -238,36 +242,36 @@ void setup()
 
    // ---  Test DATA for connected Sensors ---> comes from Web Config normaly or out of SPIFF
    // commented out after first upload
+   /*
+      I2C_con_table[0] = BM280;
+      I2C_con_table[1] = NO;
+      I2C_con_table[2] = NO;
+      I2C_con_table[3] = NO;
 
-   I2C_con_table[0] = BM280;
-   I2C_con_table[1] = NO;
-   I2C_con_table[2] = NO;
-   I2C_con_table[3] = NO;
+      ADC_con_table[0] = CAP_SOIL;
+      ADC_con_table[1] = TDS;
+      ADC_con_table[2] = NO;
 
-   ADC_con_table[0] = CAP_SOIL;
-   ADC_con_table[1] = TDS;
-   ADC_con_table[2] = NO;
+      OneWire_con_table[0] = DS18B20;
+      OneWire_con_table[1] = DS18B20;
+      OneWire_con_table[2] = DHT_22;
 
-   OneWire_con_table[0] = DS18B20;
-   OneWire_con_table[1] = DS18B20;
-   OneWire_con_table[2] = DHT_22;
+      SPI_con_table[0] = NO;
 
-   SPI_con_table[0] = NO;
+      I2C_5V_con_table[0] = MULTIGAS_V1;
 
-   I2C_5V_con_table[0] = NO;
+      EXTRA_con_table[0] = NO;
+      EXTRA_con_table[1] = NO;
 
-   EXTRA_con_table[0] = NO;
-   EXTRA_con_table[1] = NO;
-
-   save_Connectors(); // <------------------ called normaly after Web Config
-
+      save_Connectors(); // <------------------ called normaly after Web Config
+    */
    // Test DATA for connected Sensors ---> come from Web Config normaly
 
-   // load_Connectors(); // Connectors lookup table
+   load_Connectors();      // Connectors lookup table
+   load_Config();          // loade config Data
    Serial.println();
 
    // checkLoadedStuff();
-   // load_WiFiConfig();
 
    // reset settings - wipe stored credentials for testing
    // these are stored by the esp library
@@ -281,7 +285,7 @@ void setup()
    WiFiManagerNS::init(&wifiManager);
 
    wifiManager.setHostname(hostname.c_str());
-   wifiManager.setTitle("TeleAgriCulture Board");
+   wifiManager.setTitle("Board Config");
    wifiManager.setCustomHeadElement(custom_Title_Html.c_str());
 
    // set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
@@ -361,21 +365,40 @@ void loop()
       previousMillis = currentMillis;
    }
 
+   show_measurements.clear();
+
+   for (int i = 0; i < sensorVector.size(); i++)
+   {
+      for (int j = 0; j < sensorVector[i].returnCount; j++)
+      {
+         show_measurements.push_back(sensorVector[i].measurements[j]);
+      }
+   }
+
+   if (show_measurements.size() > NUM_PERPAGE)
+   {
+      num_pages = NUM_PAGES + 1;
+   }
+   else
+   {
+      num_pages = NUM_PAGES;
+   }
+
    if (upButton.pressed())
    {
-      currentPage = (currentPage + 1) % NUM_PAGES;
+      currentPage = (currentPage + 1) % num_pages;
       backlight_pwm = 250;
       upButtonsMillis = millis();
    }
    if (downButton.pressed())
    {
-      currentPage = (currentPage - 1 + NUM_PAGES) % NUM_PAGES;
+      currentPage = (currentPage - 1 + num_pages) % num_pages;
       backlight_pwm = 250;
    }
 
    if (upButton.released())
    {
-      if (millis()-upButtonsMillis > 5000)
+      if (millis() - upButtonsMillis > 5000)
       {
          startBlinking();
          if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
@@ -403,18 +426,18 @@ void loop()
       if (now() != prevDisplay)
       { // update the display only if time has changed
          prevDisplay = now();
-         digitalClockDisplay(5, 90, false);
+         digitalClockDisplay(5, 95, false);
       }
    }
 
    if (sendDataWifi)
    {
       sensorRead();
-      //Serial.println("\nPrint Measurements: ");
-      //printMeassurments();
-      //Serial.println("\nPrint Sensors connected: ");
-      //printSensors();
-      //Serial.println();
+      // Serial.println("\nPrint Measurements: ");
+      // printMeassurments();
+      // Serial.println("\nPrint Sensors connected: ");
+      // printSensors();
+      // Serial.println();
       wifi_sendData();
       sendDataWifi = false;
       renderPage(currentPage);
@@ -515,7 +538,7 @@ void digitalClockDisplay(int x, int y, bool date)
    tft.setCursor(x, y);
    tft.setTextColor(ST7735_BLACK);
 
-   tft.fillRect(x - 5, y - 5, 60, 15, background_color);
+   tft.fillRect(x - 5, y - 2, 60, 10, background_color);
 
    tft.print(hour());
    printDigits(minute());
@@ -823,9 +846,22 @@ void renderPage(int page)
       OneWire_ConnectorPage();
       break;
    case 4:
-      measurementsPage();
+      measurementsPage_one();
+      break;
+   case 5:
+      measurementsPage_two();
       break;
    }
+}
+
+int countMeasurements(const std::vector<Sensor> &sensors)
+{
+   int count = 0;
+   for (const auto &sensor : sensors)
+   {
+      count += sensor.returnCount;
+   }
+   return count;
 }
 
 void mainPage()
@@ -849,13 +885,17 @@ void mainPage()
    tft.print(version);
    tft.setTextColor(ST7735_BLACK);
    tft.setCursor(5, 65);
+   tft.print("WiFI: ");
+   tft.print(WiFi.SSID());
+   tft.setCursor(5, 75);
    tft.print("IP: ");
    tft.print(WiFi.localIP());
-   tft.setCursor(5, 75);
+   tft.setCursor(5, 85);
    tft.print("MAC: ");
    tft.print(WiFi.macAddress());
 
-   digitalClockDisplay(5, 90, true);
+   digitalClockDisplay(5, 95, true);
+
    tft.setCursor(5, 105);
    tft.print("last data UPLOAD: ");
    tft.setTextColor(ST7735_ORANGE);
@@ -1203,7 +1243,7 @@ void OneWire_ConnectorPage()
    }
 }
 
-void measurementsPage()
+void measurementsPage_one()
 {
    tft.fillScreen(ST7735_BLACK);
    tft.setTextSize(2);
@@ -1212,43 +1252,94 @@ void measurementsPage()
    tft.print("Sensor Data");
 
    tft.setTextSize(1);
+   tft.print(" 1");
    int cursor_y = 35;
 
-   for (int i = 0; i < sensorVector.size(); i++)
+   for (int i = 0; i < show_measurements.size(); i++)
    {
-      for (int j = 0; j < sensorVector[i].returnCount; j++)
+      if (i >= NUM_PERPAGE)
       {
-         tft.setCursor(5, cursor_y);
-         tft.setTextColor(ST7735_BLUE);
-         tft.print(sensorVector[i].measurements[j].data_name);
-         tft.print(": ");
-
-         tft.setCursor(60, cursor_y);
-         tft.setTextColor(ST7735_YELLOW);
-
-         if (!isnan(sensorVector[i].measurements[j].value))
-         {
-            tft.print(sensorVector[i].measurements[j].value);
-         }
-         else
-         {
-            tft.print("NAN");
-         }
-
-         tft.print(" ");
-
-         if (!(sensorVector[i].measurements[j].unit == "°C"))
-         {
-            tft.print(sensorVector[i].measurements[j].unit);
-         }
-         else
-         {
-            tft.drawChar(tft.getCursorX(), tft.getCursorY(), 0xF8, ST7735_YELLOW, ST7735_BLACK, 1);
-            tft.setCursor(tft.getCursorX() + 7, tft.getCursorY());
-            tft.print("C");
-         }
-         cursor_y += 10;
+         break;
       }
+
+      tft.setCursor(5, cursor_y);
+      tft.setTextColor(ST7735_BLUE);
+      tft.print(show_measurements[i].data_name);
+      tft.print(": ");
+
+      tft.setCursor(60, cursor_y);
+      tft.setTextColor(ST7735_YELLOW);
+
+      if (!isnan(show_measurements[i].value))
+      {
+         tft.print(show_measurements[i].value);
+      }
+      else
+      {
+         tft.print("NAN");
+      }
+
+      tft.print(" ");
+
+      if (!(show_measurements[i].unit == "°C"))
+      {
+         tft.print(show_measurements[i].unit);
+      }
+      else
+      {
+         tft.drawChar(tft.getCursorX(), tft.getCursorY(), 0xF8, ST7735_YELLOW, ST7735_BLACK, 1);
+         tft.setCursor(tft.getCursorX() + 7, tft.getCursorY());
+         tft.print("C");
+      }
+      cursor_y += 10;
+   }
+}
+
+void measurementsPage_two()
+{
+   tft.fillScreen(ST7735_BLACK);
+   tft.setTextSize(2);
+   tft.setCursor(10, 10);
+   tft.setTextColor(ST7735_WHITE);
+   tft.print("Sensor Data");
+
+   tft.setTextSize(1);
+   tft.print(" 2");
+
+   int cursor_y = 35;
+
+   for (int i = NUM_PERPAGE; i < show_measurements.size(); i++)
+   {
+      tft.setCursor(5, cursor_y);
+      tft.setTextColor(ST7735_BLUE);
+      tft.print(show_measurements[i].data_name);
+      tft.print(": ");
+
+      tft.setCursor(60, cursor_y);
+      tft.setTextColor(ST7735_YELLOW);
+
+      if (!isnan(show_measurements[i].value))
+      {
+         tft.print(show_measurements[i].value);
+      }
+      else
+      {
+         tft.print("NAN");
+      }
+
+      tft.print(" ");
+
+      if (!(show_measurements[i].unit == "°C"))
+      {
+         tft.print(show_measurements[i].unit);
+      }
+      else
+      {
+         tft.drawChar(tft.getCursorX(), tft.getCursorY(), 0xF8, ST7735_YELLOW, ST7735_BLACK, 1);
+         tft.setCursor(tft.getCursorX() + 7, tft.getCursorY());
+         tft.print("C");
+      }
+      cursor_y += 10;
    }
 }
 
@@ -1271,12 +1362,83 @@ void checkLoadedStuff(void)
    Serial.println();
 }
 
-void saveWiFiConfig(void)
+void save_Config(void)
 {
+   StaticJsonDocument<400> doc;
+
+   doc["BoardID"] = boardID;
+   doc["useBattery"] = useBattery;
+   doc["useDisplay"] = useDisplay;
+   doc["API_KEY"] = API_KEY;
+   doc["upload"] = upload;
+   doc["user_name"] = user_name;
+   doc["anonym"] = anonym;
+   doc["lora_fqz"] = lora_fqz;
+   doc["OTAA_DEVEUI"] = OTAA_DEVEUI;
+   doc["OTAA_APPEUI"] = OTAA_APPEUI;
+   doc["OTAA_APPKEY"] = OTAA_APPKEY;
+
+   File configFile = SPIFFS.open("/board_config.json", "w");
+   if (!configFile)
+   {
+      Serial.println("failed to open config file for writing");
+   }
+
+   serializeJson(doc, configFile);
+
+   Serial.println("Connector Table Saved!");
+
+   configFile.close();
+   // end save
 }
 
-void loadWiFiConfig(void)
+void load_Config(void)
 {
+   if (SPIFFS.begin())
+   {
+      if (SPIFFS.exists("/board_config.json"))
+      {
+         // file exists, reading and loading
+         Serial.println("reading config file");
+         File configFile = SPIFFS.open("/board_config.json", "r");
+         if (configFile)
+         {
+            Serial.println("opened config file");
+            size_t size = configFile.size();
+            // Allocate a buffer to store contents of the file.
+            std::unique_ptr<char[]> buf(new char[size]);
+
+            configFile.readBytes(buf.get(), size);
+
+            StaticJsonDocument<540> doc;
+            auto deserializeError = deserializeJson(doc, buf.get());
+
+            if (!deserializeError)
+            {
+               boardID = doc["BoardID"];
+               useBattery = doc[useBattery];
+               useDisplay=doc[useDisplay];
+               API_KEY = doc["API_KEY"].as<String>();
+               upload = doc["upload"].as<String>();
+               user_name = doc["user_name"].as<String>();
+               anonym = doc["anonym"].as<String>();
+               lora_fqz = doc["lora_fqz"].as<String>();
+               OTAA_DEVEUI = doc["OTAA_DEVEUI"].as<String>();
+               OTAA_APPEUI = doc["OTAA_APPEUI"].as<String>();
+               OTAA_APPKEY = doc["OTAA_APPKEY"].as<String>();
+            }
+         }
+         else
+         {
+            Serial.println("failed to load json config");
+         }
+         configFile.close();
+      }
+   }
+   else
+   {
+      Serial.println("failed to mount FS");
+   }
 }
 
 void printMeassurments()

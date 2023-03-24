@@ -1,9 +1,41 @@
+/*            web server args
+upload: lora
+BoardID: 1001
+API_KEY: 0123456789ABCDEF0123456789abcdef
+User_name: user@example.com
+ANONYMUS: anonymus@example.com
+certificate:
+lora_fqz: EU
+OTAA_DEVEUI: 70B3D57ED005A8F4
+OTAA_APPEUI: 70B3D57ED005A8F4
+OTAA_APPKEY: DF6B2A4AC0930BCA55141564D751D578
+i2c_1: 0
+i2c_3: -1
+i2c_2: -1
+i2c_4: -1
+adc_1: 4
+onewire_1: 7
+adc_2: 3
+onewire_2: 7
+adc_3: 4
+onewire_3: 6
+system-time: 2023-03-23T21:23
+timezone: 810
+set-time: 2023-03-23T21:23
+use-ntp-server: 1
+enable-dst: 1
+ntp-server: 3
+ntp-server-interval: 60
+*/
 
 #pragma once
 
 #include "prefs.hpp"
 #include "NTP.hpp"
 #include "TZ.hpp"
+
+void save_Connectors();
+void save_Config();
 
 namespace WiFiManagerNS
 {
@@ -18,6 +50,8 @@ namespace WiFiManagerNS
   constexpr const char *menuhtml = "<form action='/custom' method='get'><button>Setup Board</button></form><br/>\n";
 
   WiFiManager *_wifiManager;
+
+  String generateDropdown(String con_typ, int sensor_id);
 
   void bindServerCallback();
 
@@ -93,21 +127,10 @@ namespace WiFiManagerNS
     return templates[element].content;
   }
 
-  // teleAgriCulture favicon png/base64 used in HTML Head
-  // const char favicon[] = "<link rel='icon' type='image/png; base64' sizes='32x32' href='data:image/png;base64,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'>";
-
-  // teeny-tiny 57 bytes GIF favicon
-  // const char favicon[] =
-  //     {
-  //         0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x09, 0x00, 0x08, 0x00, 0x80, 0x00, 0x00, 0xff, 0xff, 0xff,
-  //         0x00, 0x00, 0x00, 0x21, 0xf9, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00,
-  //         0x09, 0x00, 0x08, 0x00, 0x00, 0x02, 0x10, 0x8c, 0x8f, 0x01, 0xbb, 0xc7, 0x60, 0xa0, 0x8a, 0x54,
-  //         0xbd, 0x16, 0x1f, 0x82, 0x3c, 0xf9, 0x02, 0x00, 0x3b};
-
-  // void handleFavicon()
-  // {
-  //   _wifiManager->server->send_P(200, "text/html", favicon, sizeof(favicon));
-  // }
+  void handleFavicon()
+  {
+    _wifiManager->server->send_P(200, "text/html", favicon.c_str(), sizeof(favicon));
+  }
 
   String getSystimeStr()
   {
@@ -130,7 +153,7 @@ namespace WiFiManagerNS
     TimeConfHTML = "";
     TimeConfHTML += getTemplate(HTML_HEAD_START);
     TimeConfHTML.replace(FPSTR(T_v), "TeleAgriCulture Board Setup");
-    TimeConfHTML += custom_Title_Html;//favicon;//"<link rel='icon' type='image/png; base64' sizes='32x32' href='data:image/png;base64,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'>";
+    TimeConfHTML += custom_Title_Html; // favicon;//"<link rel='icon' type='image/png; base64' sizes='32x32' href='data:image/png;base64,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'>";
     TimeConfHTML += getTemplate(HTML_SCRIPT);
 
     TimeConfHTML += "<script>";
@@ -158,15 +181,15 @@ namespace WiFiManagerNS
     TimeConfHTML += "<table style='width:100%'><tr>";
     TimeConfHTML += "<td><input type='radio' id='wificheck' name='upload' value='wifi' onchange='showDiv()' checked /><label for='upload1'> WiFi</label></td>";
     TimeConfHTML += "<td><input type='radio' id='loracheck' name='upload' value='lora' onchange='showDiv()' /><label for='upload2'> LoRa</label></td>";
-    TimeConfHTML += "</tr></table><br><input type='radio' id='battery' name='battery' value='battery'/><label for='battery'> powerd by battery</label><br><br>";
-    TimeConfHTML += "<input type='radio' id='display' name='display' value='display'/><label for='display'> show display</label></div><BR><div><BR>";
+    TimeConfHTML += "</tr></table><br><input type='checkbox' id='battery' name='battery' value='battery'/><label for='battery'> powerd by battery</label><br><br>";
+    TimeConfHTML += "<input type='checkbox' id='display' name='display' value='display'/><label for='display'> show display</label></div><BR><div><BR>";
 
     TimeConfHTML += "<b>WiFi Data</b>";
     TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type=“text” id='BoardID' name='BoardID' pattern='^(1[0-9]{3}|199[0-9])$' title='Enter 4 digit Board ID' value=1001 required>";
     TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type=“text” name='API_KEY' pattern='^[A-Za-z0-9]{32}$' title=' Enter Bearer token' value=0123456789ABCDEF0123456789abcdef required>";
     TimeConfHTML += "<br><br><label for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type=checkbox name='use-WPA_enterprise' id='use-WPA_enterprise'><br>";
     TimeConfHTML += "<div class='enterprise'><label for='User_name'>User Name</label><input type='text' name='User_name' title='Enter User Name' value='user@example.com' required><br><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS' title='Enter anonym id' value='anonymus@example.com' required>";
-    TimeConfHTML += "<br><br><label for='certificate'>Please paste your CA server certificate here:</label><textarea id='certificate' name='certificate' rows='23' cols='63' placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----' required></textarea></div></div>";
+    TimeConfHTML += "<br><br><label for='certificate'>Please paste your CA server certificate here:</label><textarea id='certificate' name='certificate' rows='23' cols='63' placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----'></textarea></div></div>";
     TimeConfHTML += "<div id='Lora' style='display:none'><br><BR><b>LoRa Data</b><BR>";
     TimeConfHTML += "<label for='lora_fqz'>Lora Frequency</label><select id='lora_fqz' name='lora_fqz'><option value='EU'>EU 868 MHz</option>";
     TimeConfHTML += "<option value='US'>US/CD/AUS  915 MHz</option>";
@@ -186,25 +209,25 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<select id='I2C_1' name='i2c_1'>";
 
-    String dropdown_i2c = "<option value='NO'>NO</option>";
+    // String dropdown_i2c = "<option value='-1'>NO</option>";
 
-    for (int i = 0; i < SENSORS_NUM; i++)
-    {
-      if (allSensors[i].con_typ == "I2C")
-      {
-        dropdown_i2c += "<option value='" + allSensors[i].sensor_name + "'>" + allSensors[i].sensor_name + "</option>";
-      }
-    }
+    // for (int i = 0; i < SENSORS_NUM; i++)
+    // {
+    //   if (allSensors[i].con_typ == "I2C")
+    //   {
+    //     dropdown_i2c += "<option value='" + String(int(allSensors[i].sensor_id)) + "'>" + allSensors[i].sensor_name + "</option>";
+    //   }
+    // }
 
-    dropdown_i2c += "</select></td>";
+    // dropdown_i2c += "</select></td>";
 
-    TimeConfHTML += dropdown_i2c;
+    TimeConfHTML += generateDropdown("I2C", I2C_con_table[0]);
 
     TimeConfHTML += "<td><label for='i2c_3'>I2C_3</label>";
 
     TimeConfHTML += "<select id='I2C_3' name='i2c_3'>";
 
-    TimeConfHTML += dropdown_i2c;
+    TimeConfHTML += generateDropdown("I2C", I2C_con_table[1]);
 
     TimeConfHTML += "</tr><tr>";
 
@@ -212,84 +235,92 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<select id='I2C_2' name='i2c_2'>";
 
-    TimeConfHTML += dropdown_i2c;
+    TimeConfHTML += generateDropdown("I2C", I2C_con_table[2]);
 
     TimeConfHTML += "<td><label for='i2c_4'>I2C_4</label>";
 
     TimeConfHTML += "<select id='I2C_4' name='i2c_4'>";
 
-    TimeConfHTML += dropdown_i2c;
+    TimeConfHTML += generateDropdown("I2C", I2C_con_table[3]);
 
     TimeConfHTML += "</tr></tbody></table>";
-    dropdown_i2c = String();
 
     TimeConfHTML += "<table style='width:100%'><tbody><tr><td><h3>ADC Connectors</h3></td>";
     TimeConfHTML += "<td><h3>1-Wire Connectors</h3></td></tr><tr>";
+
+    // TimeConfHTML += "<td><label for='adc_1'>ADC_1</label>";
+
+    // TimeConfHTML += "<select id='ADC_1' name='adc_1'>";
 
     TimeConfHTML += "<td><label for='adc_1'>ADC_1</label>";
 
     TimeConfHTML += "<select id='ADC_1' name='adc_1'>";
 
-    String dropdown_adc = "<option value='NO'>NO</option>";
+    // String dropdown_adc = "<option value='-1'>NO</option>";
 
-    for (int i = 0; i < SENSORS_NUM; i++)
-    {
-      if (allSensors[i].con_typ == "ADC")
-      {
-        dropdown_adc += "<option value='" + allSensors[i].sensor_name + "'>" + allSensors[i].sensor_name + "</option>";
-      }
-    }
+    // for (int i = 0; i < SENSORS_NUM; i++)
+    // {
+    //   if (allSensors[i].con_typ == "ADC")
+    //   {
+    //     // check if the current sensor_id matches the ADC_con_table[0] value
+    //     if (allSensors[i].sensor_id == ADC_con_table[0])
+    //     {
+    //       // add the selected attribute to that option
+    //       dropdown_adc += "<option value='" + String(int(allSensors[i].sensor_id)) + "' selected>" + allSensors[i].sensor_name + "</option>";
+    //     }
+    //     else
+    //     {
+    //       // otherwise, add a normal option without the selected attribute
+    //       dropdown_adc += "<option value='" + String(int(allSensors[i].sensor_id)) + "'>" + allSensors[i].sensor_name + "</option>";
+    //     }
+    //   }
+    // }
 
-    dropdown_adc += "</select></td>";
-
-    TimeConfHTML += dropdown_adc;
+    TimeConfHTML += generateDropdown("ADC", ADC_con_table[0]);
 
     TimeConfHTML += "<td><label for='onewire_1'>1-Wire_1</label>";
 
     TimeConfHTML += "<select id='onewire_1' name='onewire_1'>";
 
-    String dropdown_1wire = "<option value='NO'>NO</option>";
+    // String dropdown_1wire = "<option value='-1'>NO</option>";
 
-    for (int i = 0; i < SENSORS_NUM; i++)
-    {
-      if (allSensors[i].con_typ == "ONE_WIRE")
-      {
-        dropdown_1wire += "<option value='" + allSensors[i].sensor_name + "'>" + allSensors[i].sensor_name + "</option>";
-      }
-    }
+    // for (int i = 0; i < SENSORS_NUM; i++)
+    // {
+    //   if (allSensors[i].con_typ == "ONE_WIRE")
+    //   {
+    //     dropdown_1wire += "<option value='" + String(int(allSensors[i].sensor_id)) + "'>" + allSensors[i].sensor_name + "</option>";
+    //   }
+    // }
 
-    dropdown_1wire += "</select>";
-    dropdown_1wire += "</td>";
+    // dropdown_1wire += "</select>";
+    // dropdown_1wire += "</td>";
 
-    TimeConfHTML += dropdown_1wire;
+    TimeConfHTML += generateDropdown("ONE_WIRE", OneWire_con_table[0]);
 
     TimeConfHTML += "</tr><tr><td><label for='adc_2'>ADC_2</label>";
 
     TimeConfHTML += "<select id='ADC_2' name='adc_2'>";
 
-    TimeConfHTML += dropdown_adc;
+    TimeConfHTML += generateDropdown("ADC", ADC_con_table[1]);
 
     TimeConfHTML += "<td><label for='onewire_2'>1-Wire_2</label>";
 
     TimeConfHTML += "<select id='onewire_2' name='onewire_2'>";
 
-    TimeConfHTML += dropdown_1wire;
+    TimeConfHTML += generateDropdown("ONE_WIRE", OneWire_con_table[1]);
 
     TimeConfHTML += "</tr><tr><td><label for='adc_3'>ADC_3</label>";
 
     TimeConfHTML += "<select id='ADC_3' name='adc_3'>";
 
-    TimeConfHTML += dropdown_adc;
-
-    dropdown_adc = String();
+    TimeConfHTML += generateDropdown("ADC", ADC_con_table[2]);
 
     TimeConfHTML += "<td><label for='onewire_3'>1-Wire_3</label>";
 
     TimeConfHTML += "<select id='onewire_3' name='onewire_3'>";
 
-    TimeConfHTML += dropdown_1wire;
+    TimeConfHTML += generateDropdown("ONE_WIRE", OneWire_con_table[2]);
     TimeConfHTML += "</tr></tbody></table><BR>";
-    dropdown_1wire = String();
 
     TimeConfHTML += "<BR><h2>Time Settings</h2>";
 
@@ -428,9 +459,125 @@ namespace WiFiManagerNS
       }
     }
 
-    if (_wifiManager->server->hasArg(""))
+    if (_wifiManager->server->hasArg("BoardID"))
     {
     }
+
+    if (_wifiManager->server->hasArg("i2c_1"))
+    {
+      I2C_con_table[0] = atoi(_wifiManager->server->arg("i2c_1").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("i2c_2"))
+    {
+      I2C_con_table[1] = atoi(_wifiManager->server->arg("i2c_2").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("i2c_3"))
+    {
+      I2C_con_table[2] = atoi(_wifiManager->server->arg("i2c_3").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("i2c_4"))
+    {
+      I2C_con_table[3] = atoi(_wifiManager->server->arg("i2c_4").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("adc_1"))
+    {
+      ADC_con_table[0] = atoi(_wifiManager->server->arg("adc_1").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("adc_2"))
+    {
+      ADC_con_table[1] = atoi(_wifiManager->server->arg("adc_2").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("adc_3"))
+    {
+      ADC_con_table[2] = atoi(_wifiManager->server->arg("adc_3").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("onewire_1"))
+    {
+      OneWire_con_table[0] = atoi(_wifiManager->server->arg("onewire_1").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("onewire_2"))
+    {
+      OneWire_con_table[1] = atoi(_wifiManager->server->arg("onewire_2").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("onewire_3"))
+    {
+      OneWire_con_table[2] = atoi(_wifiManager->server->arg("onewire_3").c_str());
+    }
+
+    save_Connectors();
+    // Serial.println("Saved Connectors");
+
+    if (_wifiManager->server->hasArg("boardID"))
+    {
+      boardID = atoi(_wifiManager->server->arg("BoardID").c_str());
+    }
+
+    if (_wifiManager->server->hasArg("battery"))
+    {
+      uint8_t useB = atoi((_wifiManager->server->arg("battery")).c_str());
+      useBattery = useB == 1;
+    }
+    else
+    {
+      useBattery = false;
+    }
+
+    if (_wifiManager->server->hasArg("display"))
+    {
+      uint8_t useD = atoi((_wifiManager->server->arg("display")).c_str());
+      useDisplay = useD == 1;
+    }
+    else
+    {
+      useBattery = false;
+    }
+
+    if (_wifiManager->server->hasArg("upload"))
+    {
+      upload = _wifiManager->server->arg("upload").c_str();
+    }
+
+    if (_wifiManager->server->hasArg("API_KEY"))
+    {
+      API_KEY = _wifiManager->server->arg("API_KEY").c_str();
+    }
+
+    if (_wifiManager->server->hasArg("ANONYMUS"))
+    {
+      anonym = _wifiManager->server->arg("ANONYMUS").c_str();
+    }
+
+    if (_wifiManager->server->hasArg("lora_fqz"))
+    {
+      lora_fqz = _wifiManager->server->arg("lora_fqz").c_str();
+    }
+
+    if (_wifiManager->server->hasArg("OTAA_DEVEUI"))
+    {
+      OTAA_DEVEUI = _wifiManager->server->arg("OTAA_DEVEUI").c_str();
+    }
+
+    if (_wifiManager->server->hasArg("OTAA_APPEUI"))
+    {
+      OTAA_DEVEUI = _wifiManager->server->arg("OTAA_APPEUI").c_str();
+    }
+
+    if (_wifiManager->server->hasArg("OTAA_APPKEY"))
+    {
+      OTAA_DEVEUI = _wifiManager->server->arg("OTAA_APPKEY").c_str();
+    }
+
+    save_Config();
+    // Serial.println("Saved Config");
 
     const char *successResp = "<script>parent.location.href = '/';</script>";
     const char *failureResp = "<script>parent.alert('fail');</script>";
@@ -442,7 +589,43 @@ namespace WiFiManagerNS
   {
     _wifiManager->server->on("/custom", handleRoute);
     _wifiManager->server->on("/save-tz", handleValues);
-    //_wifiManager->server->on("/favicon.ico", handleFavicon);
+    _wifiManager->server->on("/favicon.ico", handleFavicon); // changed to imbedded png/base64 link
+  }
+
+  // define a function that takes a connector type and a sensor id as parameters
+  String generateDropdown(String con_typ, int sensor_id)
+  {
+    // create an empty string to store the dropdown
+    String dropdown = "";
+
+    // add the 'NO' option
+    dropdown += "<option value='-1'>NO</option>";
+
+    // loop through all sensors
+    for (int i = 0; i < SENSORS_NUM; i++)
+    {
+      // check if the current sensor matches the connector type
+      if (allSensors[i].con_typ == con_typ)
+      {
+        // check if the current sensor matches the sensor id
+        if (int(allSensors[i].sensor_id) == (sensor_id + 1)) // id starts at 1 // enum at 0
+        {
+          // add the selected attribute to that option
+          dropdown += "<option value='" + String(int(allSensors[i].sensor_id) - 1) + "' selected>" + allSensors[i].sensor_name + "</option>";
+        }
+        else
+        {
+          // otherwise, add a normal option without the selected attribute
+          dropdown += "<option value='" + String(int(allSensors[i].sensor_id) - 1) + "'>" + allSensors[i].sensor_name + "</option>";
+        }
+      }
+    }
+
+    // add the closing tag of the select element and the table cell element
+    dropdown += "</select></td>";
+
+    // return the dropdown string
+    return dropdown;
   }
 
 };

@@ -53,6 +53,7 @@ Measurement measurements[MEASURMENT_NUM];
 
 // Global vector to store connected Sensor data
 std::vector<Sensor> sensorVector;
+std::vector<Measurement> show_measurements;
 
 // flag for saving Connector data
 bool shouldSaveConfig = false;

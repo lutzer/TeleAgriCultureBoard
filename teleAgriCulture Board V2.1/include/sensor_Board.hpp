@@ -27,10 +27,48 @@
 #include <Arduino.h>
 #include <WString.h>
 
+#define SENSORS_NUM 14      // Number of Sensors implemeted
+#define MEASURMENT_NUM 8    // max. Sensor values / Sensor (Multi Gas Sensor V1 produces 8 measures to send)
+#define MAX_I2C_ADDRESSES 3 // max. stored I2C addresses / Sensor
+#define I2C_NUM 4
+#define ADC_NUM 3
+#define ONEWIRE_NUM 3
+#define SPI_NUM 1
+#define I2C_5V_NUM 1
+#define EXTRA_NUM 2
+#define JSON_BUFFER 4500 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
+
+// ----- Declare Connectors ----- //
+
+int I2C_con_table[I2C_NUM];
+int ADC_con_table[ADC_NUM];
+int OneWire_con_table[ONEWIRE_NUM];
+int SPI_con_table[SPI_NUM];
+int I2C_5V_con_table[I2C_5V_NUM];
+int EXTRA_con_table[EXTRA_NUM];
+
+// ----- Declare Connectors ----- //
+
+// ***  initial values  ***  // will be overwritten by config file / user input at board setup
+
 int boardID = 1003;
 String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // TODO: after all the testing has to be masked in the gitlab and changed in the app
 
 String version = "Firmware Version 0.82";
+
+bool useBattery= false;
+bool useDisplay = true;
+
+String upload = "wifi";
+String user_name = "user@example.com";
+String anonym = "anonymus@example.com";
+String lora_fqz = "EU";
+String OTAA_DEVEUI = "70B3D57ED005A8F4";
+String OTAA_APPEUI = "70B3D57ED005A8F4";
+String OTAA_APPKEY = "DF6B2A4AC0930BCA55141564D751D578";
+
+// ***  initial values  ***
+
 String hostname = "TeleAgriCulture Board";
 String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
 String api_Bearer = "Bearer " + API_KEY;
@@ -61,17 +99,6 @@ const char *kits_ca =
     "CZMRJCQUzym+5iPDuI9yP+kHyCREU3qzuWFloUwOxkgAyXVjBYdwRVKD05WdRerw\n"
     "6DEdfgkfCv4+3ao8XnTSrLE=\n"
     "-----END CERTIFICATE-----\n";
-
-#define SENSORS_NUM 14      // Number of Sensors implemeted
-#define MEASURMENT_NUM 8    // max. Sensor values / Sensor (Multi Gas Sensor V1 produces 8 measures to send)
-#define MAX_I2C_ADDRESSES 3 // max. stored I2C addresses / Sensor
-#define I2C_NUM 4
-#define ADC_NUM 3
-#define ONEWIRE_NUM 3
-#define SPI_NUM 1
-#define I2C_5V_NUM 1
-#define EXTRA_NUM 2
-#define JSON_BUFFER 4500 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
 
 // ----- Define Pins ----- //
 #define I2C_SDA 8 // on teleAgriCulture Board V2.0 I2C_5V SDA is GPIO 15
@@ -112,17 +139,6 @@ const char *kits_ca =
 #define LED 21
 
 // ----- Define Pins ----- //
-
-// ----- Declare Connectors ----- //
-
-int I2C_con_table[I2C_NUM];
-int ADC_con_table[ADC_NUM];
-int OneWire_con_table[ONEWIRE_NUM];
-int SPI_con_table[SPI_NUM];
-int I2C_5V_con_table[I2C_5V_NUM];
-int EXTRA_con_table[EXTRA_NUM];
-
-// ----- Declare Connectors ----- //
 
 // ---- Classes and Enum ---- //
 

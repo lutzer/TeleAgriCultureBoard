@@ -569,12 +569,12 @@ namespace WiFiManagerNS
 
     if (_wifiManager->server->hasArg("OTAA_APPEUI"))
     {
-      OTAA_DEVEUI = _wifiManager->server->arg("OTAA_APPEUI").c_str();
+      OTAA_APPEUI = _wifiManager->server->arg("OTAA_APPEUI").c_str();
     }
 
     if (_wifiManager->server->hasArg("OTAA_APPKEY"))
     {
-      OTAA_DEVEUI = _wifiManager->server->arg("OTAA_APPKEY").c_str();
+      OTAA_APPKEY = _wifiManager->server->arg("OTAA_APPKEY").c_str();
     }
 
     save_Config();

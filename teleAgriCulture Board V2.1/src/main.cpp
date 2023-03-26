@@ -21,13 +21,13 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- * 
- * 
+ *
+ *
  /*         COMPILER ERRORS !!!
 
       TODO: change CA handling than both errors are gone (MBEDTLS is configured in espressif IDE and precompiled)
 
-      two errors show up: 
+      two errors show up:
 
       httpClient.cpp : (if _cacert==NULL) --> comment out .... wc.insecure()  .... just the else path is used
       ssl_client.cpp : comment out ---> #ifndef MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED #endif
@@ -35,15 +35,15 @@
 */
 
 /*
- * 
+ *
  *
  * For defines, GPIOs and implemented Sensors see sensor_Board.hpp
- * 
+ *
  * Config Portal Access Point:   SSID: TeleAgriCulture Board
  *                               pasword: enter123
- * 
+ *
  * main() handles Config Accesspoint, WiFi, LoRa, load, save and display UI
- * 
+ *
  * Global vector to store connected Sensor data:
  * std::vector<Sensor> sensorVector;
  * std::vector<Measurement> show_measurements;
@@ -132,6 +132,7 @@ void OneWire_ConnectorPage(void);
 void measurementsPage_one(void);
 void measurementsPage_two(void);
 void checkButton(void);
+LoraSendType getLoraSendTypeFromString(String str);
 void load_Sensors(void);
 void load_Connectors(void);
 void save_Connectors(void);
@@ -298,8 +299,8 @@ void setup()
     */
    // Test DATA for connected Sensors ---> come from Web Config normaly
 
-   load_Connectors();      // Connectors lookup table
-   load_Config();          // loade config Data
+   load_Connectors(); // Connectors lookup table
+   load_Config();     // loade config Data
    Serial.println();
 
    // checkLoadedStuff();
@@ -705,6 +706,7 @@ void load_Sensors()
 
             allSensors[i].measurements[j].data_name = measurementObj["data_name"].as<String>();
             allSensors[i].measurements[j].value = measurementObj["value"].as<float>();
+            allSensors[i].measurements[j].loraSend = getLoraSendTypeFromString(measurementObj["loraSend"].as<String>());
             allSensors[i].measurements[j].unit = measurementObj["unit"].as<String>();
          }
       }
@@ -1448,7 +1450,7 @@ void load_Config(void)
             {
                boardID = doc["BoardID"];
                useBattery = doc[useBattery];
-               useDisplay=doc[useDisplay];
+               useDisplay = doc[useDisplay];
                API_KEY = doc["API_KEY"].as<String>();
                upload = doc["upload"].as<String>();
                user_name = doc["user_name"].as<String>();
@@ -1578,18 +1580,46 @@ void lora_sendData(void)
 {
    // https://github.com/thesolarnomad/lora-serialization
 
-   byte message[400]; // max. 11 Sensor with id Uint8_t (1 byte) and max 8 value float (4 byte) = 11 + 11*8*4 = 363
+   byte message[190]; // max. 11 Sensor with id Uint8_t (1 byte) + (MultigasV1 8*float) + (10 Sensors with 3*float) 11 + 1*8*4  + 10*3*4 = 163
    LoraEncoder encoder(message);
 
    for (int i = 0; i < sensorVector.size(); ++i)
    {
-      int k = static_cast<uint8_t>(sensorVector[i].sensor_id);
+      int k = static_cast<uint8_t>(sensorVector[i].sensor_id);    // send Sensor ID as UINT8
       encoder.writeUint8(k);
 
       for (int j = 0; j < sensorVector[i].returnCount; j++)
       {
-         int l = static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0);
-         encoder.writeRawFloat(l); // TODO: switch case to change type
+         switch (sensorVector[i].measurements[j].loraSend)        // send Measurment values as different packeges
+         {
+         case UNIXTIME:
+            encoder.writeUnixtime(static_cast<uint32_t>(round(sensorVector[i].measurements[j].value)));
+            break;
+         // case LATLNG:
+         //    encoder.writeLatLng(sensorVector[i].measurements[j].value.latitude, sensorVector[i].measurements[j].value.longitude);
+         //    break;
+         case UINT8:
+            encoder.writeUint8(static_cast<uint8_t>(round(sensorVector[i].measurements[j].value)));
+            break;
+         case UINT16:
+            encoder.writeUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+            break;
+         case UINT32:
+            encoder.writeUint32(static_cast<uint32_t>(round(sensorVector[i].measurements[j].value)));
+            break;
+         case TEMP:
+            encoder.writeTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+            break;
+         case HUMI:
+            encoder.writeHumidity(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+            break;
+         case RAWFLOAT:
+            encoder.writeRawFloat(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+            break;
+            // case BITMAP:
+            //    encoder.writeBitmap(sensorVector[i].measurements[j].value, false, false, false, false, false, false, false);
+            //    break;
+         }
       }
    }
 
@@ -1657,4 +1687,48 @@ void configModeCallback(WiFiManager *myWiFiManager)
    tft.setCursor(5, 117);
    tft.setTextColor(ST7735_BLUE);
    tft.print(version);
+}
+
+LoraSendType getLoraSendTypeFromString(String str)
+{
+   if (str == "UNIXTIME")
+   {
+      return UNIXTIME;
+   }
+   else if (str == "LATLNG")
+   {
+      return LATLNG;
+   }
+   else if (str == "UINT8")
+   {
+      return UINT8;
+   }
+   else if (str == "UINT16")
+   {
+      return UINT16;
+   }
+   else if (str == "UINT32")
+   {
+      return UINT32;
+   }
+   else if (str == "TEMP")
+   {
+      return TEMP;
+   }
+   else if (str == "HUMI")
+   {
+      return HUMI;
+   }
+   else if (str == "RAWFLOAT")
+   {
+      return RAWFLOAT;
+   }
+   else if (str == "BITMAP")
+   {
+      return BITMAP;
+   }
+   else
+   {
+      return NOT;
+   }
 }

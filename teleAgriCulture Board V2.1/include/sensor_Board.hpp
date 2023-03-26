@@ -152,6 +152,20 @@ enum class ConnectorType : uint8_t
   EXTRA
 };
 
+enum LoraSendType
+{
+  NOT = -1,
+  UNIXTIME,
+  LATLNG,
+  UINT8,
+  UINT16,
+  UINT32,
+  TEMP,
+  HUMI,
+  RAWFLOAT,
+  BITMAP
+};
+
 enum SensorsImplemented
 {
   NO = -1,
@@ -175,6 +189,7 @@ class Measurement
 {
 public:
   double value;
+  int loraSend;
   String unit;
   String data_name;
 };
@@ -229,16 +244,19 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 56,
+        "loraSend": "HUMI",
         "unit": "%",
         "data_name": "hum"
       },
       {
         "value": 20.3,
+        "loraSend": "TEMP",
         "unit": "°C",
         "data_name": "temp"
       },
       {
         "value": 1000.5,
+        "loraSend": "RAWFLOAT",
         "unit": "hPa",
         "data_name": "press"
       }
@@ -261,6 +279,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 14.5,
+        "loraSend": "TEMP",
         "unit": "mm",
         "data_name": "height"
       }
@@ -283,11 +302,13 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 11255,
+        "loraSend": "UINT16",
         "unit": "lux",
         "data_name": "lux"
       },
       {
         "value": 55200,
+        "loraSend": "UINT16",
         "unit": ".",
         "data_name": "ambient"
       }
@@ -307,6 +328,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 300,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "TDS"
       }
@@ -320,6 +342,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 300,
+        "loraSend": "UINT16",
         "unit": ".",
         "data_name": "mois"
       }
@@ -333,6 +356,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 300,
+        "loraSend": "UINT16",
         "unit": ".",
         "data_name": "mois"
       }
@@ -346,11 +370,13 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 20.2,
+        "loraSend": "TEMP",
         "unit": "°C",
         "data_name": "temp"
       },
       {
         "value": 55,
+        "loraSend": "HUMI",
         "unit": "%",
         "data_name": "hum"
       }
@@ -364,6 +390,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 20.2,
+        "loraSend": "TEMP",
         "unit": "°C",
         "data_name": "temp"
       }
@@ -377,11 +404,13 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "CO"
       },
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "NO2"
       }
@@ -404,41 +433,49 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "CO"
       },
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "NO2"
       },
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "NH3"
       },
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "C3H8"
       },
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "C4H10"
       },
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "CH4"
       },
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "H2"
       },
       {
         "value": 5,
+        "loraSend": "UINT16",
         "unit": "ppm",
         "data_name": "C2H5OH"
       }
@@ -460,7 +497,8 @@ const char *proto_sensors = R"([
     "returnCount": 1,
     "measurements": [
       {
-        "value": 200,
+        "value": 20,
+        "loraSend": "TEMP",
         "unit": "°C",
         "data_name": "Temp"
       }
@@ -483,6 +521,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 3.7,
+        "loraSend": "RAWFLOAT",
         "unit": "V",
         "data_name": "Volt"
       }
@@ -496,6 +535,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 1,
+        "loraSend": "UINT8",
         "unit": "OK",
         "data_name": "LED"
       }
@@ -509,6 +549,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 90,
+        "loraSend": "UINT8",
         "unit": "°",
         "data_name": "angle"
       }

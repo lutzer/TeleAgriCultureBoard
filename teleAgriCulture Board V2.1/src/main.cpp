@@ -23,6 +23,18 @@
  * SOFTWARE.
  * 
  * 
+ /*         COMPILER ERRORS !!!
+
+      TODO: change CA handling than both errors are gone (MBEDTLS is configured in espressif IDE and precompiled)
+
+      two errors show up: 
+
+      httpClient.cpp : (if _cacert==NULL) --> comment out .... wc.insecure()  .... just the else path is used
+      ssl_client.cpp : comment out ---> #ifndef MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED #endif
+
+*/
+
+/*
  * 
  *
  * For defines, GPIOs and implemented Sensors see sensor_Board.hpp
@@ -51,14 +63,6 @@
                               readSPI_Connector()
                               readEXTRA_Connectors()
       corresponding to your Sensortype with case statement using your Sensor ENUM
-*/
-
-
-/*
-      TODO: change CA handling than both errors are gone (MBEDTLS is configured in espressif IDE and precompiled)
-      two errors show up: httpClient.cpp : (if _cacert==NULL) --> comment out .... wc.insecure()  .... just the else path is used
-                          ssl_client.cpp : comment out ---> #ifndef MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED #endif
-
 */
 
 #include <Arduino.h>

@@ -195,9 +195,9 @@ namespace WiFiManagerNS
     TimeConfHTML += "<label for='lora_fqz'>Lora Frequency</label><select id='lora_fqz' name='lora_fqz'><option value='EU'>EU 868 MHz</option>";
     TimeConfHTML += "<option value='US'>US/CD/AUS  915 MHz</option>";
     TimeConfHTML += "<option value='ASIA'>Asia 923 MHz</option></select>";
-    TimeConfHTML += " <label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type=“text” id='OTAA_DEVEUI' name='OTAA_DEVEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=70B3D57ED005A8F4 required>";
-    TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type=“text” id='OTAA_APPEUI' name='OTAA_APPEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=70B3D57ED005A8F4  required>";
-    TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type=“text” id='OTAA_APPKEY' name='OTAA_APPKEY' pattern='^[0-9A-F]{32}$' title='Enter 16 hexadecimal digits without any prefix or separator' value=DF6B2A4AC0930BCA55141564D751D578 required>";
+    TimeConfHTML += " <label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type=“text” id='OTAA_DEVEUI' name='OTAA_DEVEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value="+ OTAA_DEVEUI +" required>";
+    TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type=“text” id='OTAA_APPEUI' name='OTAA_APPEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value="+ OTAA_APPEUI +" required>";
+    TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type=“text” id='OTAA_APPKEY' name='OTAA_APPKEY' pattern='^[0-9A-F]{32}$' title='Enter 16 hexadecimal digits without any prefix or separator' value="+ OTAA_APPKEY +" required>";
     TimeConfHTML += "</div><BR>";
 
     //------------- Start Connectors ------- //

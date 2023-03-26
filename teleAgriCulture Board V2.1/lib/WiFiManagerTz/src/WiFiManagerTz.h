@@ -181,23 +181,42 @@ namespace WiFiManagerNS
     TimeConfHTML += "<table style='width:100%'><tr>";
     TimeConfHTML += "<td><input type='radio' id='wificheck' name='upload' value='wifi' onchange='showDiv()' checked /><label for='upload1'> WiFi</label></td>";
     TimeConfHTML += "<td><input type='radio' id='loracheck' name='upload' value='lora' onchange='showDiv()' /><label for='upload2'> LoRa</label></td>";
-    TimeConfHTML += "</tr></table><br><input type='checkbox' id='battery' name='battery' value='battery'/><label for='battery'> powerd by battery</label><br><br>";
-    TimeConfHTML += "<input type='checkbox' id='display' name='display' value='display'/><label for='display'> show display</label></div><BR><div><BR>";
+    TimeConfHTML += "</tr></table><br>";
+
+    if (useBattery)
+    {
+      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='battery' checked /><label for='battery'> powerd by battery</label><br><br>";
+    }
+    else
+    {
+      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='battery'/><label for='battery'> powerd by battery</label><br><br>";
+    }
+
+    if (useDisplay)
+    {
+      TimeConfHTML += "<input type='checkbox' id='display' name='display' value='display' checked /><label for='display'> show display</label>";
+    }
+    else
+    {
+      TimeConfHTML += "<input type='checkbox' id='display' name='display' value='display'/><label for='display'> show display</label>";
+    }
+
+    TimeConfHTML += "</div><BR><div><BR>";
 
     TimeConfHTML += "<b>WiFi Data</b>";
     TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type=“text” id='BoardID' name='BoardID' pattern='^(1[0-9]{3}|199[0-9])$' title='Enter 4 digit Board ID' value=" + String(boardID) + " required>";
     TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type=“text” name='API_KEY' pattern='^[A-Za-z0-9]{32}$' title=' Enter Bearer token' value=" + API_KEY + " required>";
-    TimeConfHTML += "<br><br><label for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type=checkbox name='use-WPA_enterprise' id='use-WPA_enterprise'><br>";
+    // TimeConfHTML += "<br><br><label for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type=checkbox name='use-WPA_enterprise' id='use-WPA_enterprise'><br>";
     TimeConfHTML += "<div class='enterprise'><label for='User_name'>User Name</label><input type='text' name='User_name' title='Enter User Name' value=" + user_name + " required><br><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS' title='Enter anonym id' value=" + anonym + " required>";
     TimeConfHTML += "<br><br><label for='certificate'>Please paste your CA server certificate here:</label><textarea id='certificate' name='certificate' rows='23' cols='63' placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----'></textarea></div></div>";
     TimeConfHTML += "<div id='Lora' style='display:none'><br><BR><b>LoRa Data</b><BR>";
-    
+
     TimeConfHTML += "<label for='lora_fqz'>Lora Frequency</label><select id='lora_fqz' name='lora_fqz'><option value='EU'>EU 868 MHz</option>";
     TimeConfHTML += "<option value='US'>US/CD/AUS  915 MHz</option>";
     TimeConfHTML += "<option value='ASIA'>Asia 923 MHz</option></select>";
-    TimeConfHTML += " <label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type=“text” id='OTAA_DEVEUI' name='OTAA_DEVEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value="+ OTAA_DEVEUI +" required>";
-    TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type=“text” id='OTAA_APPEUI' name='OTAA_APPEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value="+ OTAA_APPEUI +" required>";
-    TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type=“text” id='OTAA_APPKEY' name='OTAA_APPKEY' pattern='^[0-9A-F]{32}$' title='Enter 16 hexadecimal digits without any prefix or separator' value="+ OTAA_APPKEY +" required>";
+    TimeConfHTML += " <label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type=“text” id='OTAA_DEVEUI' name='OTAA_DEVEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=" + OTAA_DEVEUI + " required>";
+    TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type=“text” id='OTAA_APPEUI' name='OTAA_APPEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=" + OTAA_APPEUI + " required>";
+    TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type=“text” id='OTAA_APPKEY' name='OTAA_APPKEY' pattern='^[0-9A-F]{32}$' title='Enter 16 hexadecimal digits without any prefix or separator' value=" + OTAA_APPKEY + " required>";
     TimeConfHTML += "</div><BR>";
 
     //------------- Start Connectors ------- //
@@ -209,18 +228,6 @@ namespace WiFiManagerNS
     TimeConfHTML += "<td><label for='i2c_1'>I2C_1</label>";
 
     TimeConfHTML += "<select id='I2C_1' name='i2c_1'>";
-
-    // String dropdown_i2c = "<option value='-1'>NO</option>";
-
-    // for (int i = 0; i < SENSORS_NUM; i++)
-    // {
-    //   if (allSensors[i].con_typ == "I2C")
-    //   {
-    //     dropdown_i2c += "<option value='" + String(int(allSensors[i].sensor_id)) + "'>" + allSensors[i].sensor_name + "</option>";
-    //   }
-    // }
-
-    // dropdown_i2c += "</select></td>";
 
     TimeConfHTML += generateDropdown("I2C", I2C_con_table[0]);
 
@@ -249,52 +256,15 @@ namespace WiFiManagerNS
     TimeConfHTML += "<table style='width:100%'><tbody><tr><td><h3>ADC Connectors</h3></td>";
     TimeConfHTML += "<td><h3>1-Wire Connectors</h3></td></tr><tr>";
 
-    // TimeConfHTML += "<td><label for='adc_1'>ADC_1</label>";
-
-    // TimeConfHTML += "<select id='ADC_1' name='adc_1'>";
-
     TimeConfHTML += "<td><label for='adc_1'>ADC_1</label>";
 
     TimeConfHTML += "<select id='ADC_1' name='adc_1'>";
-
-    // String dropdown_adc = "<option value='-1'>NO</option>";
-
-    // for (int i = 0; i < SENSORS_NUM; i++)
-    // {
-    //   if (allSensors[i].con_typ == "ADC")
-    //   {
-    //     // check if the current sensor_id matches the ADC_con_table[0] value
-    //     if (allSensors[i].sensor_id == ADC_con_table[0])
-    //     {
-    //       // add the selected attribute to that option
-    //       dropdown_adc += "<option value='" + String(int(allSensors[i].sensor_id)) + "' selected>" + allSensors[i].sensor_name + "</option>";
-    //     }
-    //     else
-    //     {
-    //       // otherwise, add a normal option without the selected attribute
-    //       dropdown_adc += "<option value='" + String(int(allSensors[i].sensor_id)) + "'>" + allSensors[i].sensor_name + "</option>";
-    //     }
-    //   }
-    // }
 
     TimeConfHTML += generateDropdown("ADC", ADC_con_table[0]);
 
     TimeConfHTML += "<td><label for='onewire_1'>1-Wire_1</label>";
 
     TimeConfHTML += "<select id='onewire_1' name='onewire_1'>";
-
-    // String dropdown_1wire = "<option value='-1'>NO</option>";
-
-    // for (int i = 0; i < SENSORS_NUM; i++)
-    // {
-    //   if (allSensors[i].con_typ == "ONE_WIRE")
-    //   {
-    //     dropdown_1wire += "<option value='" + String(int(allSensors[i].sensor_id)) + "'>" + allSensors[i].sensor_name + "</option>";
-    //   }
-    // }
-
-    // dropdown_1wire += "</select>";
-    // dropdown_1wire += "</td>";
 
     TimeConfHTML += generateDropdown("ONE_WIRE", OneWire_con_table[0]);
 

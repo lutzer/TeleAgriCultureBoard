@@ -108,7 +108,7 @@ const char *kits_ca =
 #define MISO 37
 #define MOSI 35
 #define SPI_CON_CS 38
-#define TFT_CS 15 // on teleAgriCulture Board V2.0 it is I2C_5V SDA pin
+#define TFT_CS 15 // on teleAgriCulture Board V2.0 it is I2C_5V SDA pin  CHANGE THIS TO 38(SPI CON CS)
 #define TFT_RST 1 // on teleAgriCulture Board V2.0 it is part of J3 CON
 #define TFT_DC 2  // on teleAgriCulture Board V2.0 it is part of J3 CON
 #define TFT_BL 48 // on teleAgriCulture Board V2.0 it is part of J4 CON

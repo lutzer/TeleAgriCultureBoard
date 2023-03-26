@@ -21,13 +21,40 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
+ * 
+ * 
+ * 
  *
- * For Board ID, API KEY, GPIOs and implemented Sensors see sensor_Board.h
+ * For defines, GPIOs and implemented Sensors see sensor_Board.hpp
+ * 
+ * Config Portal Access Point:   SSID: TeleAgriCulture Board
+ *                               pasword: enter123
+ * 
+ * main() handles Config Accesspoint, WiFi, LoRa, load, save and display UI
+ * 
+ * Global vector to store connected Sensor data:
+ * std::vector<Sensor> sensorVector;
+ * std::vector<Measurement> show_measurements;
 \*/
 
 /*
-      First UPLOAD: create Connectors Table, after this it can be commented out (loads from SPIFF)
+   to add new Sensors
+   -> sensor_Board.hpp
+   -> add new SensorName to ENUM SensorsImplemented (use Name that has no conflicts with your sensor library)
+   -> add new Sensor to json styled proto_sensors (use same format)
 
+   -> include SENSOR library to sensor_Read.hpp
+   -> add implementation to   readI2C_Connectors()
+                              readADC_Connectors()
+                              readOneWire_Connectors()
+                              readI2C_5V_Connector()
+                              readSPI_Connector()
+                              readEXTRA_Connectors()
+      corresponding to your Sensortype with case statement using your Sensor ENUM
+*/
+
+
+/*
       TODO: change CA handling than both errors are gone (MBEDTLS is configured in espressif IDE and precompiled)
       two errors show up: httpClient.cpp : (if _cacert==NULL) --> comment out .... wc.insecure()  .... just the else path is used
                           ssl_client.cpp : comment out ---> #ifndef MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED #endif

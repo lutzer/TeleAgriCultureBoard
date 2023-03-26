@@ -1,295 +1,321 @@
 [
-    {
-      "sensor-id": 1,
-      "name": "BM280",
-      "con_typ": "I2C",
-      "returnCount": 3,
-      "measurements": [
-        {
-          "value": 56,
-          "unit": "%",
-          "data_name": "hum"
-        },
-        {
-          "value": 20.3,
-          "unit": "°C",
-          "data_name": "temp"
-        },
-        {
-          "value": 1000.5,
-          "unit": "hPa",
-          "data_name": "press"
-        }
-      ],
-      "i2c_add": "0x76",
-      "possible_i2c_add": [
-        {
-          "standard": "0x76"
-        },
-        {
-          "alt_1": "0x77"
-        }
-      ]
-    },
-    {
-      "sensor-id": 2,
-      "name": "Level",
-      "con_typ": "I2C",
-      "returnCount": 1,
-      "measurements": [
-        {
-          "value": 14.5,
-          "unit": "mm",
-          "data_name": "height"
-        }
-      ],
-      "i2c_add": "0x78",
-      "possible_i2c_add": [
-        {
-          "standard": "0x78"
-        },
-        {
-          "alt_1": "0x77"
-        }
-      ]
-    },
-    {
-      "sensor-id": 3,
-      "name": "VELM7700",
-      "con_typ": "I2C",
-      "returnCount": 2,
-      "measurements": [
-        {
-          "value": 1122,
-          "unit": "lux",
-          "data_name": "lux"
-        },
-        {
-          "value": 55200,
-          "unit": ".",
-          "data_name": "ambient"
-        }
-      ],
-      "i2c_add": "0x10",
-      "possible_i2c_add": [
-        {
-          "standard": "0x10"
-        }
-      ]
-    },
-    {
-      "sensor-id": 4,
-      "name": "TDS",
-      "con_typ": "ADC",
-      "returnCount": 1,
-      "measurements": [
-        {
-          "value": 300,
-          "unit": "ppm",
-          "data_name": "TDS"
-        }
-      ]
-    },
-    {
-      "sensor-id": 5,
-      "name": "CAP Soil",
-      "con_typ": "ADC",
-      "returnCount": 1,
-      "measurements": [
-        {
-          "value": 300,
-          "unit": ".",
-          "data_name": "mois"
-        }
-      ]
-    },
-    {
-      "sensor-id": 6,
-      "name": "CAP Groove",
-      "con_typ": "ADC",
-      "returnCount": 1,
-      "measurements": [
-        {
-          "value": 300,
-          "unit": ".",
-          "data_name": "mois"
-        }
-      ]
-    },
-    {
-      "sensor-id": 7,
-      "name": "DHT22",
-      "con_typ": "ONE_WIRE",
-      "returnCount": 2,
-      "measurements": [
-        {
-          "value": 20.2,
-          "unit": "°C",
-          "data_name": "temp"
-        },
-        {
-          "value": 55,
-          "unit": "%",
-          "data_name": "hum"
-        }
-      ]
-    },
-    {
-      "sensor-id": 8,
-      "name": "DS18B20",
-      "con_typ": "ONE_WIRE",
-      "returnCount": 1,
-      "measurements": [
-        {
-          "value": 20.2,
-          "unit": "°C",
-          "data_name": "temp"
-        }
-      ]
-    },
-    {
-      "sensor-id": 9,
-      "name": "MultiGasV2",
-      "con_typ": "I2C_5V",
-      "returnCount": 2,
-      "measurements": [
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "CO"
-        },
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "NO2"
-        }
-      ],
-      "i2c_add": "0x08",
-      "possible_i2c_add": [
-        {
-          "standard": "0x08"
-        },
-        {
-          "alt_1": "0x55"
-        }
-      ]
-    },
-    {
-      "sensor-id": 10,
-      "name": "MultiGasV1",
-      "con_typ": "I2C_5V",
-      "returnCount": 8,
-      "measurements": [
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "CO"
-        },
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "NO2"
-        },
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "NH3"
-        },
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "C3H8"
-        },
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "C4H10"
-        },
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "CH4"
-        },
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "H2"
-        },
-        {
-          "value": 5,
-          "unit": "ppm",
-          "data_name": "C2H5OH"
-        }
-      ],
-      "i2c_add": "0x04",
-      "possible_i2c_add": [
-        {
-          "standard": "0x04"
-        },
-        {
-          "alt_1": "0x19"
-        }
-      ]
-    },
-    {
-      "sensor-id": 11,
-      "name": "RTC DS3231",
-      "con_typ": "I2C",
-      "returnCount": 1,
-      "measurements": [
-        {
-          "value": 200,
-          "unit": "°C",
-          "data_name": "Temp"
-        }
-      ],
-      "i2c_add": "0x68",
-      "possible_i2c_add": [
-        {
-          "standard": "0x04"
-        },
-        {
-          "alt_1": "0x08"
-        }
-      ]
-    },
-    {
-      "sensor-id": 12,
-      "name": "Battery",
-      "con_typ": "EXTRA",
-      "returnCount": 1,
-      "measurements": [
-        {
-          "value": 3.7,
-          "unit": "V",
-          "data_name": "Volt"
-        }
-      ]
-    },
-    {
-      "sensor-id": 13,
-      "name": "WS2812",
-      "con_typ": "EXTRA",
-      "returnCount": 1,
-      "measurements": [
-        {
-          "value": 1,
-          "unit": "OK",
-          "data_name": "LED"
-        }
-      ]
-    },
-    {
-      "sensor-id": 14,
-      "name": "Servo",
-      "con_typ": "EXTRA",
-      "returnCount": 1,
-      "measurements": [
-        {
-          "value": 90,
-          "unit": "°",
-          "data_name": "angle"
-        }
-      ]
-    }
-  ]
+  {
+    "sensor-id": 1,
+    "name": "BM280",
+    "con_typ": "I2C",
+    "returnCount": 3,
+    "measurements": [
+      {
+        "value": 56,
+        "loraSend": "HUMI",
+        "unit": "%",
+        "data_name": "hum"
+      },
+      {
+        "value": 20.3,
+        "loraSend": "TEMP",
+        "unit": "°C",
+        "data_name": "temp"
+      },
+      {
+        "value": 1000.5,
+        "loraSend": "RAWFLOAT",
+        "unit": "hPa",
+        "data_name": "press"
+      }
+    ],
+    "i2c_add": "0x76",
+    "possible_i2c_add": [
+      {
+        "standard": "0x76"
+      },
+      {
+        "alt_1": "0x77"
+      }
+    ]
+  },
+  {
+    "sensor-id": 2,
+    "name": "Level",
+    "con_typ": "I2C",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 14.5,
+        "loraSend": "TEMP",
+        "unit": "mm",
+        "data_name": "height"
+      }
+    ],
+    "i2c_add": "0x78",
+    "possible_i2c_add": [
+      {
+        "standard": "0x78"
+      },
+      {
+        "alt_1": "0x77"
+      }
+    ]
+  },
+  {
+    "sensor-id": 3,
+    "name": "VELM7700",
+    "con_typ": "I2C",
+    "returnCount": 2,
+    "measurements": [
+      {
+        "value": 11255,
+        "loraSend": "UINT16",
+        "unit": "lux",
+        "data_name": "lux"
+      },
+      {
+        "value": 55200,
+        "loraSend": "UINT16",
+        "unit": ".",
+        "data_name": "ambient"
+      }
+    ],
+    "i2c_add": "0x10",
+    "possible_i2c_add": [
+      {
+        "standard": "0x10"
+      }
+    ]
+  },
+  {
+    "sensor-id": 4,
+    "name": "TDS",
+    "con_typ": "ADC",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 300,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "TDS"
+      }
+    ]
+  },
+  {
+    "sensor-id": 5,
+    "name": "CAP Soil",
+    "con_typ": "ADC",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 300,
+        "loraSend": "UINT16",
+        "unit": ".",
+        "data_name": "mois"
+      }
+    ]
+  },
+  {
+    "sensor-id": 6,
+    "name": "CAP Groove",
+    "con_typ": "ADC",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 300,
+        "loraSend": "UINT16",
+        "unit": ".",
+        "data_name": "mois"
+      }
+    ]
+  },
+  {
+    "sensor-id": 7,
+    "name": "DHT22",
+    "con_typ": "ONE_WIRE",
+    "returnCount": 2,
+    "measurements": [
+      {
+        "value": 20.2,
+        "loraSend": "TEMP",
+        "unit": "°C",
+        "data_name": "temp"
+      },
+      {
+        "value": 55,
+        "loraSend": "HUMI",
+        "unit": "%",
+        "data_name": "hum"
+      }
+    ]
+  },
+  {
+    "sensor-id": 8,
+    "name": "DS18B20",
+    "con_typ": "ONE_WIRE",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 20.2,
+        "loraSend": "TEMP",
+        "unit": "°C",
+        "data_name": "temp"
+      }
+    ]
+  },
+  {
+    "sensor-id": 9,
+    "name": "MultiGasV2",
+    "con_typ": "I2C_5V",
+    "returnCount": 2,
+    "measurements": [
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "CO"
+      },
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "NO2"
+      }
+    ],
+    "i2c_add": "0x08",
+    "possible_i2c_add": [
+      {
+        "standard": "0x08"
+      },
+      {
+        "alt_1": "0x55"
+      }
+    ]
+  },
+  {
+    "sensor-id": 10,
+    "name": "MultiGasV1",
+    "con_typ": "I2C_5V",
+    "returnCount": 8,
+    "measurements": [
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "CO"
+      },
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "NO2"
+      },
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "NH3"
+      },
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "C3H8"
+      },
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "C4H10"
+      },
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "CH4"
+      },
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "H2"
+      },
+      {
+        "value": 5,
+        "loraSend": "UINT16",
+        "unit": "ppm",
+        "data_name": "C2H5OH"
+      }
+    ],
+    "i2c_add": "0x04",
+    "possible_i2c_add": [
+      {
+        "standard": "0x04"
+      },
+      {
+        "alt_1": "0x19"
+      }
+    ]
+  },
+  {
+    "sensor-id": 11,
+    "name": "RTC DS3231",
+    "con_typ": "I2C",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 20,
+        "loraSend": "TEMP",
+        "unit": "°C",
+        "data_name": "Temp"
+      }
+    ],
+    "i2c_add": "0x68",
+    "possible_i2c_add": [
+      {
+        "standard": "0x04"
+      },
+      {
+        "alt_1": "0x08"
+      }
+    ]
+  },
+  {
+    "sensor-id": 12,
+    "name": "Battery",
+    "con_typ": "EXTRA",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 3.7,
+        "loraSend": "RAWFLOAT",
+        "unit": "V",
+        "data_name": "Volt"
+      }
+    ]
+  },
+  {
+    "sensor-id": 13,
+    "name": "WS2812",
+    "con_typ": "EXTRA",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 1,
+        "loraSend": "UINT8",
+        "unit": "OK",
+        "data_name": "LED"
+      }
+    ]
+  },
+  {
+    "sensor-id": 14,
+    "name": "Servo",
+    "con_typ": "EXTRA",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 90,
+        "loraSend": "UINT8",
+        "unit": "°",
+        "data_name": "angle"
+      }
+    ]
+  }
+]

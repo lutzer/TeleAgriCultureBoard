@@ -36,7 +36,6 @@
 
 /*
  *
- *
  * For defines, GPIOs and implemented Sensors see sensor_Board.hpp
  *
  * Config Portal Access Point:   SSID: TeleAgriCulture Board
@@ -46,8 +45,9 @@
  *
  * Global vector to store connected Sensor data:
  * std::vector<Sensor> sensorVector;
+ * Global vector to store Measurement data:
  * std::vector<Measurement> show_measurements;
-\*/
+/*/
 
 /*
    to add new Sensors
@@ -1567,12 +1567,12 @@ void lora_sendData(void)
 
    for (int i = 0; i < sensorVector.size(); ++i)
    {
-      int k = static_cast<uint8_t>(sensorVector[i].sensor_id);    // send Sensor ID as UINT8
+      int k = static_cast<uint8_t>(sensorVector[i].sensor_id); // send Sensor ID as UINT8
       encoder.writeUint8(k);
 
       for (int j = 0; j < sensorVector[i].returnCount; j++)
       {
-         switch (sensorVector[i].measurements[j].loraSend)        // send Measurment values as different packeges
+         switch (sensorVector[i].measurements[j].loraSend) // send Measurment values as different packeges
          {
          case UNIXTIME:
             encoder.writeUnixtime(static_cast<uint32_t>(round(sensorVector[i].measurements[j].value)));

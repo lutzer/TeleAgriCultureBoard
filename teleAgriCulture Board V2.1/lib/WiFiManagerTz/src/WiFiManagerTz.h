@@ -456,6 +456,11 @@ namespace WiFiManagerNS
       I2C_con_table[3] = atoi(_wifiManager->server->arg("i2c_4").c_str());
     }
 
+    if (_wifiManager->server->hasArg("I2C_5V"))
+    {
+      I2C_5V_con_table[0] = atoi(_wifiManager->server->arg("I2C_5V").c_str());
+    }
+
     if (_wifiManager->server->hasArg("adc_1"))
     {
       ADC_con_table[0] = atoi(_wifiManager->server->arg("adc_1").c_str());
@@ -486,12 +491,10 @@ namespace WiFiManagerNS
       OneWire_con_table[2] = atoi(_wifiManager->server->arg("onewire_3").c_str());
     }
 
-    // save_Connectors();
-    // Serial.println("Saved Connectors");
-
     if (_wifiManager->server->hasArg("boardID"))
     {
       boardID = atoi(_wifiManager->server->arg("BoardID").c_str());
+      Serial.println("arg: BoardID");
     }
 
     if (_wifiManager->server->hasArg("battery"))
@@ -549,8 +552,8 @@ namespace WiFiManagerNS
       OTAA_APPKEY = _wifiManager->server->arg("OTAA_APPKEY").c_str();
     }
 
-    // save_Config();
-    // Serial.println("Saved Config");
+    save_Connectors();
+    save_Config();
 
     const char *successResp = "<script>parent.location.href = '/';</script>";
     const char *failureResp = "<script>parent.alert('fail');</script>";

@@ -302,7 +302,6 @@ void setup()
 
    load_Connectors(); // Connectors lookup table
    load_Config();     // loade config Data
-   Serial.println();
 
    // checkLoadedStuff();
 
@@ -367,18 +366,6 @@ void setup()
       }
    }
    stopBlinking();
-
-   if (!connectorsSaved)
-   {
-      save_Connectors();
-      connectorsSaved = true;
-   }
-
-   if (!configSaved)
-   {
-      save_Config();
-      configSaved = true;
-   }
 
    // Serial.println("");
    // Serial.println("WiFi connected");
@@ -814,7 +801,6 @@ void save_Connectors()
 {
    // save the custom parameters to FS
 
-   Serial.println("saving Connectors");
    StaticJsonDocument<800> doc;
 
    JsonArray jsonI2C_connectors = doc[0].createNestedArray("I2C_connectors");
@@ -846,11 +832,7 @@ void save_Connectors()
    {
       Serial.println("failed to open config file for writing");
    }
-
-   serializeJson(doc, Serial);
    serializeJson(doc, connectorsFile);
-
-   Serial.println("\nConnector Table Saved!");
 
    connectorsFile.close();
    // end save
@@ -1412,10 +1394,7 @@ void save_Config(void)
       Serial.println("failed to open config file for writing");
    }
 
-   serializeJson(doc, Serial);
    serializeJson(doc, configFile);
-
-   Serial.println("\nConfig File Saved!");
 
    configFile.close();
    // end save

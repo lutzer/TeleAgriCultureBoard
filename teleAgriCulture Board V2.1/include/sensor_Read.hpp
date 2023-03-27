@@ -48,6 +48,8 @@
 
         TODO: implementing sensor_Calibrate ... just a few have to be calibrated
 
+        TODO: finding a way to name sensor readeings if multible readings
+
 */
 
 Sensor allSensors[SENSORS_NUM];

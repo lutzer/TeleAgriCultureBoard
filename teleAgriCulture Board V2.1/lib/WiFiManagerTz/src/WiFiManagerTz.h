@@ -206,7 +206,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "<b>WiFi Data</b>";
     TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type=“text” id='BoardID' name='BoardID' pattern='^(1[0-9]{3}|199[0-9])$' title='Enter 4 digit Board ID' value=" + String(boardID) + " required>";
     TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type=“text” name='API_KEY' pattern='^[A-Za-z0-9]{32}$' title=' Enter Bearer token' value=" + API_KEY + " required>";
-    // TimeConfHTML += "<br><br><label for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type=checkbox name='use-WPA_enterprise' id='use-WPA_enterprise'><br>";
+    TimeConfHTML += "<br><br><label for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type=checkbox name='use-WPA_enterprise' id='use-WPA_enterprise'><br>";
     TimeConfHTML += "<div class='enterprise'><label for='User_name'>User Name</label><input type='text' name='User_name' title='Enter User Name' value=" + user_name + " required><br><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS' title='Enter anonym id' value=" + anonym + " required>";
     TimeConfHTML += "<br><br><label for='certificate'>Please paste your CA server certificate here:</label><textarea id='certificate' name='certificate' rows='23' cols='63' placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----'></textarea></div></div>";
     TimeConfHTML += "<div id='Lora' style='display:none'><br><BR><b>LoRa Data</b><BR>";
@@ -291,7 +291,9 @@ namespace WiFiManagerNS
     TimeConfHTML += "<select id='onewire_3' name='onewire_3'>";
 
     TimeConfHTML += generateDropdown("ONE_WIRE", OneWire_con_table[2]);
-    TimeConfHTML += "</tr></tbody></table><BR>";
+    TimeConfHTML += "</tr></tbody><label for='I2C_5V'>I2C_5V Con</label><select id='I2C_5V' name='I2C_5V'>";
+    TimeConfHTML += generateDropdown("I2C_5V", I2C_5V_con_table[0]);
+    TimeConfHTML += " </table><BR>";
 
     TimeConfHTML += "<BR><h2>Time Settings</h2>";
 
@@ -484,7 +486,7 @@ namespace WiFiManagerNS
       OneWire_con_table[2] = atoi(_wifiManager->server->arg("onewire_3").c_str());
     }
 
-    save_Connectors();
+    // save_Connectors();
     // Serial.println("Saved Connectors");
 
     if (_wifiManager->server->hasArg("boardID"))
@@ -547,7 +549,7 @@ namespace WiFiManagerNS
       OTAA_APPKEY = _wifiManager->server->arg("OTAA_APPKEY").c_str();
     }
 
-    save_Config();
+    // save_Config();
     // Serial.println("Saved Config");
 
     const char *successResp = "<script>parent.location.href = '/';</script>";

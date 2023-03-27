@@ -185,6 +185,7 @@ Button downButton(RIGHT_BUTTON_PIN);
 char test_input[6];
 bool portalRunning = false;
 bool _enteredConfigMode = false;
+bool connectorsSaved = false;
 bool configSaved = false;
 
 int currentPage = 0;
@@ -274,29 +275,29 @@ void setup()
 
    // ---  Test DATA for connected Sensors ---> comes from Web Config normaly or out of SPIFF
    // commented out after first upload
-   
-      // I2C_con_table[0] = NO;
-      // I2C_con_table[1] = NO;
-      // I2C_con_table[2] = NO;
-      // I2C_con_table[3] = NO;
 
-      // ADC_con_table[0] = CAP_SOIL;
-      // ADC_con_table[1] = TDS;
-      // ADC_con_table[2] = NO;
+   // I2C_con_table[0] = NO;
+   // I2C_con_table[1] = NO;
+   // I2C_con_table[2] = NO;
+   // I2C_con_table[3] = NO;
 
-      // OneWire_con_table[0] = DS18B20;
-      // OneWire_con_table[1] = DS18B20;
-      // OneWire_con_table[2] = DHT_22;
+   // ADC_con_table[0] = CAP_SOIL;
+   // ADC_con_table[1] = TDS;
+   // ADC_con_table[2] = NO;
 
-      // SPI_con_table[0] = NO;
+   // OneWire_con_table[0] = DS18B20;
+   // OneWire_con_table[1] = DS18B20;
+   // OneWire_con_table[2] = DHT_22;
 
-      // I2C_5V_con_table[0] = NO;
+   // SPI_con_table[0] = NO;
 
-      // EXTRA_con_table[0] = NO;
-      // EXTRA_con_table[1] = NO;
+   // I2C_5V_con_table[0] = NO;
 
-      // save_Connectors(); // <------------------ called normaly after Web Config
-    
+   // EXTRA_con_table[0] = NO;
+   // EXTRA_con_table[1] = NO;
+
+   // save_Connectors(); // <------------------ called normaly after Web Config
+
    // Test DATA for connected Sensors ---> come from Web Config normaly
 
    load_Connectors(); // Connectors lookup table
@@ -366,6 +367,18 @@ void setup()
       }
    }
    stopBlinking();
+
+   if (!connectorsSaved)
+   {
+      save_Connectors();
+      connectorsSaved = true;
+   }
+
+   if (!configSaved)
+   {
+      save_Config();
+      configSaved = true;
+   }
 
    // Serial.println("");
    // Serial.println("WiFi connected");
@@ -837,7 +850,7 @@ void save_Connectors()
    serializeJson(doc, Serial);
    serializeJson(doc, connectorsFile);
 
-   Serial.println("Connector Table Saved!");
+   Serial.println("\nConnector Table Saved!");
 
    connectorsFile.close();
    // end save
@@ -1386,8 +1399,8 @@ void save_Config(void)
    doc["useDisplay"] = useDisplay;
    doc["API_KEY"] = API_KEY;
    doc["upload"] = upload;
-   doc["user_name"] = user_name;
-   doc["anonym"] = anonym;
+   // doc["user_name"] = user_name;
+   // doc["anonym"] = anonym;
    doc["lora_fqz"] = lora_fqz;
    doc["OTAA_DEVEUI"] = OTAA_DEVEUI;
    doc["OTAA_APPEUI"] = OTAA_APPEUI;
@@ -1399,9 +1412,10 @@ void save_Config(void)
       Serial.println("failed to open config file for writing");
    }
 
+   serializeJson(doc, Serial);
    serializeJson(doc, configFile);
 
-   Serial.println("Connector Table Saved!");
+   Serial.println("\nConfig File Saved!");
 
    configFile.close();
    // end save

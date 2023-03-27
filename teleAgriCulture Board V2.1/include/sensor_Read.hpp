@@ -33,7 +33,9 @@
 #include <MiCS6814-I2C.h>
 #include <DHT.h>
 #include <OneWire.h>
-#include <DallasTemperature.h>
+#include "OneWireNg_CurrentPlatform.h"
+#include "drivers/DSTherm.h"
+#include "utils/Placeholder.h"
 #include <GravityTDS.h>
 
 #define DHTTYPE DHT22
@@ -92,6 +94,11 @@ void getLow8SectionValue(void);
 #define SCOUNT 30 // sum of sample point
 int getMedianNum(int bArray[], int iFilterLen);
 // TDS Sensor
+
+// OneWireNG
+static bool printId(const OneWireNg::Id &id);
+static void printScratchpad(const DSTherm::Scratchpad &scrpd);
+// OneWireNg
 
 void sensorRead()
 {
@@ -428,32 +435,32 @@ void readADC_Connectors()
 
 void readOneWire_Connectors()
 {
-    for (int i = 0; i < ONEWIRE_NUM; i++)
+    for (int OWi = 0; OWi < ONEWIRE_NUM; OWi++)
     {
-        switch (OneWire_con_table[i])
+        switch (OneWire_con_table[OWi])
         {
         case NO:
         {
             Serial.print("\nNo Sensor attaches at ");
             Serial.print("1-Wire_");
-            Serial.println(i + 1);
+            Serial.println(OWi + 1);
         }
         break;
 
         case DHT_22:
         {
             int dht22SensorPin;
-            if (i == 0)
+            if (OWi == 0)
             {
                 dht22SensorPin = ONEWIRE_1;
             }
 
-            if (i == 1)
+            if (OWi == 1)
             {
                 dht22SensorPin = ONEWIRE_2;
             }
 
-            if (i == 2)
+            if (OWi == 2)
             {
                 dht22SensorPin = ONEWIRE_3;
             }
@@ -463,6 +470,9 @@ void readOneWire_Connectors()
             delay(2000);
 
             Sensor newSensor = allSensors[DHT_22];
+
+            newSensor.measurements[0].data_name = newSensor.measurements[0].data_name + (OWi + 1);
+            newSensor.measurements[1].data_name = newSensor.measurements[1].data_name + (OWi + 1);
             newSensor.measurements[0].value = dht.readTemperature();
             newSensor.measurements[1].value = dht.readHumidity();
 
@@ -472,47 +482,64 @@ void readOneWire_Connectors()
 
         case DS18B20:
         {
+
+#define PARASITE_POWER_ARG false
+
             int ds18b20SensorPin;
-            if (i == 0)
+            if (OWi == 0)
             {
                 ds18b20SensorPin = ONEWIRE_1;
             }
 
-            if (i == 1)
+            if (OWi == 1)
             {
                 ds18b20SensorPin = ONEWIRE_2;
             }
 
-            if (i == 2)
+            if (OWi == 2)
             {
                 ds18b20SensorPin = ONEWIRE_3;
             }
 
-            DeviceAddress DS18B20_Address;
-            OneWire oneWire(ds18b20SensorPin);
-            DallasTemperature sensors(&oneWire);
-            sensors.begin();
+            static Placeholder<OneWireNg_CurrentPlatform> ow;
+            new (&ow) OneWireNg_CurrentPlatform(ds18b20SensorPin, false);
+            DSTherm drv(ow);
 
-            Serial.println("DS12B20 read");
-            Serial.println(sensors.getDeviceCount(), DEC);
-            Serial.println();
+#if (CONFIG_MAX_SEARCH_FILTERS > 0)
+            drv.filterSupportedSlaves();
+#endif
 
-            // Für jeden Sensor die Bitauflösung auf 12 Bit programmieren
-            for (byte i = 0; i < sensors.getDeviceCount(); i++)
+            /* convert temperature on all sensors connected... */
+            drv.convertTempAll(DSTherm::MAX_CONV_TIME, PARASITE_POWER_ARG);
+
+            /* read sensors one-by-one */
+            Placeholder<DSTherm::Scratchpad> scrpd;
+
+            // for (const auto &id : *ow)
+            // {
+            //     if (printId(id))
+            //     {
+            //         if (drv.readScratchpad(id, scrpd) == OneWireNg::EC_SUCCESS)
+            //             printScratchpad(scrpd);
+            //         else
+            //             Serial.println("  Read scratchpad error.");
+            //     }
+            // }
+
+            /* read sensors one-by-one and print temperature */
+            for (const auto &id : *ow)
             {
-                if (sensors.getAddress(DS18B20_Address, i))
+                if (drv.readScratchpad(id, scrpd) == OneWireNg::EC_SUCCESS)
                 {
-                    sensors.setResolution(DS18B20_Address, 12);
+                    /* get temperature and print */
+                    long temp = scrpd->getTemp();
+                    Sensor newSensor = allSensors[DS18B20];
+
+                    newSensor.measurements[0].data_name = newSensor.measurements[0].data_name + (OWi + 1);
+                    newSensor.measurements[0].value = static_cast<double>(temp) / 1000.0;
+                    sensorVector.push_back(newSensor);
                 }
             }
-
-            sensors.requestTemperatures();
-
-            Sensor newSensor = allSensors[DS18B20];
-            newSensor.measurements[0].data_name = newSensor.measurements[0].data_name + (i + 1);
-            newSensor.measurements[0].value = sensors.getTempCByIndex(0);
-
-            sensorVector.push_back(newSensor);
         }
         break;
 
@@ -741,4 +768,60 @@ int getMedianNum(int bArray[], int iFilterLen)
     else
         bTemp = (bTab[iFilterLen / 2] + bTab[iFilterLen / 2 - 1]) / 2;
     return bTemp;
+}
+
+/* returns false if not supported */
+static bool printId(const OneWireNg::Id &id)
+{
+    const char *name = DSTherm::getFamilyName(id);
+
+    Serial.print(id[0], HEX);
+    for (size_t i = 1; i < sizeof(OneWireNg::Id); i++)
+    {
+        Serial.print(':');
+        Serial.print(id[i], HEX);
+    }
+    if (name)
+    {
+        Serial.print(" -> ");
+        Serial.print(name);
+    }
+    Serial.println();
+
+    return (name != NULL);
+}
+
+static void printScratchpad(const DSTherm::Scratchpad &scrpd)
+{
+    const uint8_t *scrpd_raw = scrpd.getRaw();
+
+    Serial.print("  Scratchpad:");
+    for (size_t i = 0; i < DSTherm::Scratchpad::LENGTH; i++)
+    {
+        Serial.print(!i ? ' ' : ':');
+        Serial.print(scrpd_raw[i], HEX);
+    }
+
+    Serial.print("; Th:");
+    Serial.print(scrpd.getTh());
+
+    Serial.print("; Tl:");
+    Serial.print(scrpd.getTl());
+
+    Serial.print("; Resolution:");
+    Serial.print(9 + (int)(scrpd.getResolution() - DSTherm::RES_9_BIT));
+
+    long temp = scrpd.getTemp();
+    Serial.print("; Temp:");
+    if (temp < 0)
+    {
+        temp = -temp;
+        Serial.print('-');
+    }
+    Serial.print(temp / 1000);
+    Serial.print('.');
+    Serial.print(temp % 1000);
+    Serial.print(" C");
+
+    Serial.println();
 }

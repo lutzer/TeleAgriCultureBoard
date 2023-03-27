@@ -274,29 +274,29 @@ void setup()
 
    // ---  Test DATA for connected Sensors ---> comes from Web Config normaly or out of SPIFF
    // commented out after first upload
-   /*
-      I2C_con_table[0] = BM280;
-      I2C_con_table[1] = NO;
-      I2C_con_table[2] = NO;
-      I2C_con_table[3] = NO;
+   
+      // I2C_con_table[0] = NO;
+      // I2C_con_table[1] = NO;
+      // I2C_con_table[2] = NO;
+      // I2C_con_table[3] = NO;
 
-      ADC_con_table[0] = CAP_SOIL;
-      ADC_con_table[1] = TDS;
-      ADC_con_table[2] = NO;
+      // ADC_con_table[0] = CAP_SOIL;
+      // ADC_con_table[1] = TDS;
+      // ADC_con_table[2] = NO;
 
-      OneWire_con_table[0] = DS18B20;
-      OneWire_con_table[1] = DS18B20;
-      OneWire_con_table[2] = DHT_22;
+      // OneWire_con_table[0] = DS18B20;
+      // OneWire_con_table[1] = DS18B20;
+      // OneWire_con_table[2] = DHT_22;
 
-      SPI_con_table[0] = NO;
+      // SPI_con_table[0] = NO;
 
-      I2C_5V_con_table[0] = MULTIGAS_V1;
+      // I2C_5V_con_table[0] = NO;
 
-      EXTRA_con_table[0] = NO;
-      EXTRA_con_table[1] = NO;
+      // EXTRA_con_table[0] = NO;
+      // EXTRA_con_table[1] = NO;
 
-      save_Connectors(); // <------------------ called normaly after Web Config
-    */
+      // save_Connectors(); // <------------------ called normaly after Web Config
+    
    // Test DATA for connected Sensors ---> come from Web Config normaly
 
    load_Connectors(); // Connectors lookup table

@@ -129,8 +129,7 @@ void mainPage(void);
 void I2C_ConnectorPage(void);
 void ADC_ConnectorPage(void);
 void OneWire_ConnectorPage(void);
-void measurementsPage_one(void);
-void measurementsPage_two(void);
+void measurementsPage(int page);
 void checkButton(void);
 LoraSendType getLoraSendTypeFromString(String str);
 void load_Sensors(void);
@@ -179,14 +178,15 @@ Ticker blinker;
 Button upButton(LEFT_BUTTON_PIN);
 Button downButton(RIGHT_BUTTON_PIN);
 
-#define NUM_PAGES 5
-#define NUM_PERPAGE 9
+#define NUM_PAGES 4   // pages with out the measurement pages
+#define NUM_PERPAGE 9 // max measurement values per page
 
 char test_input[6];
 bool portalRunning = false;
 bool _enteredConfigMode = false;
 bool connectorsSaved = false;
 bool configSaved = false;
+int total_measurement_pages = 0;
 
 int currentPage = 0;
 int lastPage = -1; // Store the last page to avoid refreshing unnecessarily
@@ -283,15 +283,15 @@ void setup()
 
    // ADC_con_table[0] = CAP_SOIL;
    // ADC_con_table[1] = TDS;
-   // ADC_con_table[2] = NO;
+   // ADC_con_table[2] = TDS;
 
-   // OneWire_con_table[0] = DS18B20;
-   // OneWire_con_table[1] = DS18B20;
+   // OneWire_con_table[0] = DHT_22;
+   // OneWire_con_table[1] = DHT_22;
    // OneWire_con_table[2] = DHT_22;
 
    // SPI_con_table[0] = NO;
 
-   // I2C_5V_con_table[0] = NO;
+   // I2C_5V_con_table[0] = MULTIGAS_V1;
 
    // EXTRA_con_table[0] = NO;
    // EXTRA_con_table[1] = NO;
@@ -407,25 +407,21 @@ void loop()
       }
    }
 
-   if (show_measurements.size() > NUM_PERPAGE)
+   total_measurement_pages = ceil(show_measurements.size() / NUM_PERPAGE) + 1;
+
+   num_pages = NUM_PAGES + total_measurement_pages;
+
+   if (downButton.pressed())
    {
-      num_pages = NUM_PAGES + 1;
-   }
-   else
-   {
-      num_pages = NUM_PAGES;
+      currentPage = (currentPage + 1) % num_pages;
+      backlight_pwm = 250;
    }
 
    if (upButton.pressed())
    {
-      currentPage = (currentPage + 1) % num_pages;
-      backlight_pwm = 250;
-      upButtonsMillis = millis();
-   }
-   if (downButton.pressed())
-   {
       currentPage = (currentPage - 1 + num_pages) % num_pages;
       backlight_pwm = 250;
+      upButtonsMillis = millis();
    }
 
    if (upButton.released())
@@ -841,26 +837,25 @@ void save_Connectors()
 void renderPage(int page)
 {
    // Update the TFT display with content for the specified page
-   switch (page)
+   if (page == 0)
    {
-   case 0:
       mainPage();
-      break;
-   case 1:
+   }
+   if (page == 1)
+   {
       I2C_ConnectorPage();
-      break;
-   case 2:
+   }
+   if (page == 2)
+   {
       ADC_ConnectorPage();
-      break;
-   case 3:
+   }
+   if (page == 3)
+   {
       OneWire_ConnectorPage();
-      break;
-   case 4:
-      measurementsPage_one();
-      break;
-   case 5:
-      measurementsPage_two();
-      break;
+   }
+   if (page > NUM_PAGES - 1)
+   {
+      measurementsPage(page);
    }
 }
 
@@ -1160,7 +1155,7 @@ void I2C_ConnectorPage()
    tft.print("I2C Con");
 
    tft.setTextSize(1);
-   int cursor_y = 45;
+   int cursor_y = 35;
 
    for (int i = 0; i < I2C_NUM; i++)
    {
@@ -1181,6 +1176,31 @@ void I2C_ConnectorPage()
          tft.print(allSensors[I2C_con_table[i]].sensor_name);
       }
       cursor_y += 10;
+   }
+   cursor_y += 10;
+   tft.setTextSize(2);
+   tft.setCursor(10, cursor_y);
+   tft.setTextColor(ST7735_WHITE);
+   tft.print("I2C_5V Con");
+
+   cursor_y += 25;
+
+   tft.setTextSize(1);
+   tft.setCursor(5, cursor_y);
+   tft.setTextColor(ST7735_YELLOW);
+
+   tft.print("I2C_5V");
+
+   tft.setCursor(80, cursor_y);
+   if (I2C_5V_con_table[0] == -1)
+   {
+      tft.setTextColor(ST7735_RED);
+      tft.print("NO");
+   }
+   else
+   {
+      tft.setTextColor(ST7735_GREEN);
+      tft.print(allSensors[I2C_5V_con_table[0]].sensor_name);
    }
 }
 
@@ -1253,7 +1273,7 @@ void OneWire_ConnectorPage()
    }
 }
 
-void measurementsPage_one()
+void measurementsPage(int page)
 {
    tft.fillScreen(ST7735_BLACK);
    tft.setTextSize(2);
@@ -1262,63 +1282,17 @@ void measurementsPage_one()
    tft.print("Sensor Data");
 
    tft.setTextSize(1);
-   tft.print(" 1");
+
    int cursor_y = 35;
 
-   for (int i = 0; i < show_measurements.size(); i++)
+   int startIndex = (page - NUM_PAGES) * NUM_PERPAGE;
+   int endIndex = startIndex + NUM_PERPAGE;
+   if (endIndex > show_measurements.size())
    {
-      if (i >= NUM_PERPAGE)
-      {
-         break;
-      }
-
-      tft.setCursor(5, cursor_y);
-      tft.setTextColor(ST7735_BLUE);
-      tft.print(show_measurements[i].data_name);
-      tft.print(": ");
-
-      tft.setCursor(60, cursor_y);
-      tft.setTextColor(ST7735_YELLOW);
-
-      if (!isnan(show_measurements[i].value))
-      {
-         tft.print(show_measurements[i].value);
-      }
-      else
-      {
-         tft.print("NAN");
-      }
-
-      tft.print(" ");
-
-      if (!(show_measurements[i].unit == "°C"))
-      {
-         tft.print(show_measurements[i].unit);
-      }
-      else
-      {
-         tft.drawChar(tft.getCursorX(), tft.getCursorY(), 0xF8, ST7735_YELLOW, ST7735_BLACK, 1);
-         tft.setCursor(tft.getCursorX() + 7, tft.getCursorY());
-         tft.print("C");
-      }
-      cursor_y += 10;
+      endIndex = show_measurements.size();
    }
-}
 
-void measurementsPage_two()
-{
-   tft.fillScreen(ST7735_BLACK);
-   tft.setTextSize(2);
-   tft.setCursor(10, 10);
-   tft.setTextColor(ST7735_WHITE);
-   tft.print("Sensor Data");
-
-   tft.setTextSize(1);
-   tft.print(" 2");
-
-   int cursor_y = 35;
-
-   for (int i = NUM_PERPAGE; i < show_measurements.size(); i++)
+   for (int i = startIndex; i < endIndex; i++)
    {
       tft.setCursor(5, cursor_y);
       tft.setTextColor(ST7735_BLUE);

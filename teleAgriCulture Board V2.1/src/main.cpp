@@ -123,6 +123,7 @@ void on_time_available(struct timeval *t);
 void configModeCallback(WiFiManager *myWiFiManager);
 void printDigits(int digits);
 void digitalClockDisplay(int x, int y, bool date);
+void drawBattery(int x, int y);
 void renderPage(int page);
 int countMeasurements(const std::vector<Sensor> &sensors);
 void mainPage(void);
@@ -395,6 +396,7 @@ void loop()
    {
       backlight_pwm = 5; // turns Backlight down
       previousMillis = currentMillis;
+      Serial.println(analogRead(BATSENS));
    }
 
    show_measurements.clear();
@@ -546,9 +548,9 @@ void digitalClockDisplay(int x, int y, bool date)
 {
    tft.setTextSize(1);
    tft.setCursor(x, y);
-   tft.setTextColor(ST7735_BLACK);
+   tft.setTextColor(ST7735_WHITE);
 
-   tft.fillRect(x - 5, y - 2, 60, 10, background_color);
+   tft.fillRect(x - 5, y - 2, 60, 10, ST7735_BLACK);
 
    tft.print(hour());
    printDigits(minute());
@@ -564,6 +566,41 @@ void digitalClockDisplay(int x, int y, bool date)
       tft.print(year());
       tft.println();
    }
+}
+
+void drawBattery(int x, int y)
+{
+   int bat = BL.getBatteryChargeLevel();
+   tft.setCursor(x, y);
+   tft.setTextColor(0xCED7);
+   tft.print("Bat: ");
+   if (bat < 1)
+   {
+      tft.setTextColor(ST7735_WHITE);
+      tft.print("NO");
+   }
+   if (bat > 1 && bat < 20)
+   {
+      tft.setTextColor(ST7735_RED);
+   }
+   if (bat >= 20 && bat < 40)
+   {
+      tft.setTextColor(ST7735_ORANGE);
+   }
+   if (bat >= 40 && bat < 60)
+   {
+      tft.setTextColor(ST7735_YELLOW);
+   }
+   if (bat >= 60 && bat < 80)
+   {
+      tft.setTextColor(0xAEB2);
+   }
+   if (bat >= 80)
+   {
+      tft.setTextColor(ST7735_GREEN);
+   }
+   tft.print(bat);
+   tft.print(" %");
 }
 
 void printDigits(int digits)
@@ -871,8 +908,8 @@ int countMeasurements(const std::vector<Sensor> &sensors)
 
 void mainPage()
 {
-   tft.fillScreen(background_color);
-   tft.setTextColor(ST7735_BLACK);
+   tft.fillScreen(ST7735_BLACK);
+   tft.setTextColor(0x9E6F);
    tft.setFont(&FreeSans9pt7b);
    tft.setTextSize(1);
    tft.setCursor(5, 17);
@@ -888,15 +925,20 @@ void mainPage()
    tft.print(boardID);
    tft.setCursor(5, 55);
    tft.print(version);
-   tft.setTextColor(ST7735_BLACK);
+   tft.setTextColor(0xCED7);
    tft.setCursor(5, 65);
    tft.print("WiFI: ");
+   tft.setTextColor(ST7735_WHITE);
    tft.print(WiFi.SSID());
    tft.setCursor(5, 75);
+   tft.setTextColor(0xCED7);
    tft.print("IP: ");
+   tft.setTextColor(ST7735_WHITE);
    tft.print(WiFi.localIP());
    tft.setCursor(5, 85);
+   tft.setTextColor(0xCED7);
    tft.print("MAC: ");
+   tft.setTextColor(ST7735_WHITE);
    tft.print(WiFi.macAddress());
 
    digitalClockDisplay(5, 95, true);
@@ -904,7 +946,11 @@ void mainPage()
    tft.setCursor(5, 105);
    tft.print("last data UPLOAD: ");
    tft.setTextColor(ST7735_ORANGE);
-   tft.print("WiFi");
+   tft.print(upload);
+
+   drawBattery(83, 115);
+
+   tft.setTextColor(ST7735_ORANGE);
    tft.setCursor(5, 115);
    tft.print(lastUpload);
 }
@@ -1607,8 +1653,8 @@ void configModeCallback(WiFiManager *myWiFiManager)
    // Serial.print("Config IP Address: ");
    // Serial.println(WiFi.softAPIP());
 
-   tft.fillScreen(background_color);
-   tft.setTextColor(ST7735_BLACK);
+   tft.fillScreen(ST7735_BLACK);
+   tft.setTextColor(ST7735_WHITE);
    tft.setFont(&FreeSans9pt7b);
    tft.setTextSize(1);
    tft.setCursor(5, 17);
@@ -1621,7 +1667,7 @@ void configModeCallback(WiFiManager *myWiFiManager)
    tft.setTextSize(2);
    tft.setCursor(5, 50);
    tft.print("Config MODE");
-   tft.setTextColor(ST7735_BLACK);
+   tft.setTextColor(ST7735_WHITE);
    tft.setTextSize(1);
    tft.setCursor(5, 73);
    tft.print("SSID:");

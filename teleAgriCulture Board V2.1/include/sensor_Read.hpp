@@ -37,6 +37,7 @@
 #include "drivers/DSTherm.h"
 #include "utils/Placeholder.h"
 #include <GravityTDS.h>
+#include <Pangodream_18650_CL.h>
 
 #define DHTTYPE DHT22
 
@@ -69,6 +70,7 @@ Adafruit_BME280 bme;
 Adafruit_VEML7700 veml = Adafruit_VEML7700();
 
 GravityTDS gravityTds;
+Pangodream_18650_CL BL(BATSENS, 29.06, 10);
 
 float temperature = 22, tdsValue = 0;
 
@@ -132,13 +134,9 @@ void sensorRead()
         }
     }
 
-    // battery measurement
-    // TODO: scale to volts
-
-    // pinMode(BATSENS, INPUT);
-    // Sensor newSensor = allSensors[BATTERY];
-    // newSensor.measurements->value = analogRead(BATSENS);
-    // sensorVector.push_back(newSensor);
+    Sensor newSensor = allSensors[BATTERY];
+    newSensor.measurements->value = BL.getBatteryVolts();
+    sensorVector.push_back(newSensor);
 
     Serial.println("SensorRead.....");
     Serial.println();

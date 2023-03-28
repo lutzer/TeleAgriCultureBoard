@@ -59,7 +59,7 @@ String version = "Firmware Version 0.82";
 bool useBattery= false;
 bool useDisplay = true;
 
-String upload = "wifi";
+String upload = "WIFI";
 String user_name = "user@example.com";
 String anonym = "anonymus@example.com";
 String lora_fqz = "EU";

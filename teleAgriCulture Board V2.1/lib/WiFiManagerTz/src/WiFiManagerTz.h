@@ -179,8 +179,8 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<div><form action='/save-tz' target='dummyframe' method='POST'><legend>Please select your data upload method:</legend>";
     TimeConfHTML += "<table style='width:100%'><tr>";
-    TimeConfHTML += "<td><input type='radio' id='wificheck' name='upload' value='wifi' onchange='showDiv()' checked /><label for='upload1'> WiFi</label></td>";
-    TimeConfHTML += "<td><input type='radio' id='loracheck' name='upload' value='lora' onchange='showDiv()' /><label for='upload2'> LoRa</label></td>";
+    TimeConfHTML += "<td><input type='radio' id='wificheck' name='upload' value='WIFI' onchange='showDiv()' checked /><label for='upload1'> WiFi</label></td>";
+    TimeConfHTML += "<td><input type='radio' id='loracheck' name='upload' value='LORA' onchange='showDiv()' /><label for='upload2'> LoRa</label></td>";
     TimeConfHTML += "</tr></table><br>";
 
     if (useBattery)

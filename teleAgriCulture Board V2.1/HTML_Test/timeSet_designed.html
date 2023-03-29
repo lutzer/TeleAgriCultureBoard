@@ -42,9 +42,9 @@
     </script>
     <script type="text/javascript">
         function chooseCustomNTP() {
-            var customNtp = document.getElementById("custom_ntp");
+            var customNtp = document.getElementById("custom_ntp_enable");
             var ntpList = document.getElementById("ntp_list");
-            var checkBox = document.getElementById("dhc_ntp_enable");
+            var checkBox = document.getElementById("custom_ntp_enable");
             if (checkBox.checked == true) {
                 customNtp.style.display = "block";
                 ntpList.style.display = "none";
@@ -940,8 +940,8 @@
                     <label for='enable-dst'>Auto-adjust clock for DST</label>
                     <input value='1' type=checkbox name='enable-dst' id='enable-dst' checked>
                     <br>
-                    <label for='dhc_ntp_enable'>Custom NTP Server</label>
-                    <input value='1' type=checkbox name='dhc_ntp_enable' id='dhc_ntp_enable'
+                    <label for='custom_ntp_enable'>Custom NTP Server</label>
+                    <input value='1' type=checkbox name='custom_ntp_enable' id='custom_ntp_enable'
                         onchange='chooseCustomNTP()'>
                     <br>
 
@@ -952,7 +952,7 @@
                         please enter a valide NTP Server IP Address:<br>
                         <input type='text'
                             pattern='([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5]).([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5]).([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5]).([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$'
-                            title='Please enter a valid NTP IP address' name='dhc_ntp' value='0.0.0.0'>
+                            title='Please enter a valid NTP server address' name='custom_ntp' value='0.0.0.0'>
                     </div>
                     <div id="ntp_list">
                         <select id='ntp-server-list' name='ntp-server'>

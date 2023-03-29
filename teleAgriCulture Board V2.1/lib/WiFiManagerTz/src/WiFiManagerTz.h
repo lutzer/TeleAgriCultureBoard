@@ -33,6 +33,7 @@ ntp-server-interval: 60
 #include "prefs.hpp"
 #include "NTP.hpp"
 #include "TZ.hpp"
+#include <servers.h>
 
 void save_Connectors();
 void save_Config();
@@ -74,7 +75,10 @@ namespace WiFiManagerNS
   {
     const char *tz = TZ::getTzByLocation(TZ::tzName);
     Serial.printf("Setting up time: NTPServer=%s, TZ-Name=%s, TZ=%s\n", NTP::server(), TZ::tzName, tz);
-    TZ::configTimeWithTz(tz, NTP::server());
+    String tempServer = NTP::server();
+    char char_array[tempServer.length() + 1];
+    tempServer.toCharArray(char_array, tempServer.length() + 1);
+    TZ::configTimeWithTz(tz, char_array);
   }
 
   enum Element_t
@@ -335,13 +339,17 @@ namespace WiFiManagerNS
     TimeConfHTML += "<label for='ntp-server'>Server:</label>";
     // TimeConfHTML += "<input list='ntp-server-list' id='ntp-server' name='ntp-server' placeholder='pool.ntp.org'";
     // TimeConfHTML += " value='"+ NTP::server() +"'>";
-   TimeConfHTML+="<input type='text' pattern='([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$' title='Please enter a valid NTP IP address' />";
+    TimeConfHTML += "<input type='text' pattern='[A-Za-z0-9]{1,15}' maxlength='15' title='Please enter a valid NTP server address' />";
     TimeConfHTML += "<select id='ntp-server-list' name='ntp-server'>";
-    size_t servers_count = sizeof(NTP::Servers) / sizeof(NTP::Server);
+    size_t servers_count = NTP::NTP_Servers.size();
     uint8_t server_id = NTP::getServerId();
     for (int i = 0; i < servers_count; i++)
     {
-      TimeConfHTML += "<option value='" + String(i) + "'" + String(i == server_id ? "selected" : "") + ">" + String(NTP::Servers[i].name) + "(" + String(NTP::Servers[i].addr) + ")</option>";
+      TimeConfHTML += "<option value='" + String(i) + "'" + String(i == server_id ? "selected" : "") + ">";
+      TimeConfHTML += NTP::NTP_Servers[i].name.c_str();
+      TimeConfHTML += "(";
+      TimeConfHTML += NTP::NTP_Servers[i].addr.c_str();
+      TimeConfHTML += ")</option>";
     }
     TimeConfHTML += "</select><br>";
 
@@ -368,7 +376,9 @@ namespace WiFiManagerNS
   {
     bool success = true;
     bool _NTPEnabled = NTPEnabled;
+
     Serial.println("[HTTP] handle route Values");
+
     if (_wifiManager->server->hasArg("use-ntp-server"))
     {
       String UseNtpServer = _wifiManager->server->arg("use-ntp-server");
@@ -386,6 +396,24 @@ namespace WiFiManagerNS
       prefs::setBool("NTPEnabled", NTPEnabled);
     }
 
+    if (_wifiManager->server->hasArg("custom_ntp_enable"))
+    {
+      uint8_t useC_NTP = atoi((_wifiManager->server->arg("custom_ntp_enable")).c_str());
+      useCustomNTP = useC_NTP == 1;
+    }
+    else
+    {
+      useCustomNTP = false;
+    }
+
+    if (_wifiManager->server->hasArg("custom_ntp"))
+    {
+      customNTPaddress = _wifiManager->server->arg("custom_ntp").c_str();
+      const std::string constStr = customNTPaddress.c_str();
+      NTP_Server newServer = {constStr, constStr};
+      NTP::NTP_Servers.push_back(newServer);
+    }
+
     if (_wifiManager->server->hasArg("timezone"))
     {
       String timezoneStr = _wifiManager->server->arg("timezone");
@@ -400,7 +428,10 @@ namespace WiFiManagerNS
 
       TZ::setTzName(timezone.c_str());
       const char *tz = TZ::getTzByLocation(TZ::tzName);
-      TZ::configTimeWithTz(tz, NTP::server());
+      String tempServer = NTP::server();
+      char char_array[tempServer.length() + 1];
+      tempServer.toCharArray(char_array, tempServer.length() + 1);
+      TZ::configTimeWithTz(tz, char_array);
     }
 
     if (NTPEnabled)
@@ -515,7 +546,7 @@ namespace WiFiManagerNS
     }
     else
     {
-      useBattery = false;
+      useDisplay = false;
     }
 
     if (_wifiManager->server->hasArg("upload"))

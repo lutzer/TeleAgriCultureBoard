@@ -25,21 +25,22 @@
 \*/
 
 #include "prefs.hpp"
+#include <servers.h>
 #include "NTP.hpp"
 #include "sntp.h"
 
+#define NUM_NTP_SERVER 8
 
 namespace WiFiManagerNS
 {
 
   namespace NTP
   {
+    const char *NVS_DST_KEY = "DST";
+    const char *NVS_NTPZONE_KEY = "NTPZONE";
+    const char *NVS_NTP_DELAYMIN = "NTPDELAY";
 
-    const char* NVS_DST_KEY      = "DST";
-    const char* NVS_NTPZONE_KEY  = "NTPZONE";
-    const char* NVS_NTP_DELAYMIN = "NTPDELAY";
-
-    const char* defaultServer = "pool.ntp.org";
+    const char *defaultServer = "pool.ntp.org";
     uint8_t currentServer = 0;
     unsigned int sync_delay = 60; // minutes
 
@@ -48,14 +49,15 @@ namespace WiFiManagerNS
       return sync_delay;
     }
 
-    void setSyncDelay( unsigned int minutes )
+    void setSyncDelay(unsigned int minutes)
     {
-      if( sync_delay != minutes ) {
-        log_d("Setting NTP sync delay to #%d minutes", minutes );
-        prefs::setUInt(  NVS_NTP_DELAYMIN, minutes );
+      if (sync_delay != minutes)
+      {
+        log_d("Setting NTP sync delay to #%d minutes", minutes);
+        prefs::setUInt(NVS_NTP_DELAYMIN, minutes);
       }
       sync_delay = minutes;
-      sntp_set_sync_interval(sync_delay*60*1000);
+      sntp_set_sync_interval(sync_delay * 60 * 1000);
     }
 
     // Callback function (get's called when time adjusts via NTP)
@@ -67,61 +69,57 @@ namespace WiFiManagerNS
       Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
     }
 
-
     onTimeAvailable_fn timeavailable = &timeavailable_default;
 
-    void onTimeAvailable( onTimeAvailable_fn fn )
+    void onTimeAvailable(onTimeAvailable_fn fn)
     {
       log_d("Settting custom time notifier");
       timeavailable = fn;
     }
 
-
-    bool setServer( uint8_t id )
+    bool setServer(uint8_t id)
     {
-      size_t servers_count = sizeof( Servers ) / sizeof( Server );
+      size_t servers_count = NTP_Servers.size();
 
-      if( id < servers_count ) {
-        if( id != currentServer ) {
+      if (id < servers_count)
+      {
+        if (id != currentServer)
+        {
           currentServer = id;
-          log_d("Setting NTP server to #%d ( %s / %s )", currentServer, Servers[currentServer].name, Servers[currentServer].addr );
-          prefs::setUChar( NVS_NTPZONE_KEY, currentServer );
+          log_d("Setting NTP server to #%d ( %s / %s )", currentServer, Servers[currentServer].name, Servers[currentServer].addr);
+          prefs::setUChar(NVS_NTPZONE_KEY, currentServer);
         }
         return true;
       }
-      log_d("Invalid NTP requested: #%d", id );
+      log_d("Invalid NTP requested: #%d", id);
       return false;
     }
-
 
     uint8_t getServerId()
     {
       return currentServer;
     }
 
-
-    const char* server()
+    String server()
     {
       uint8_t server_id = getServerId();
-      uint8_t servers_count = sizeof(Servers)/sizeof(Server);
-      if( servers_count <= server_id ) {
-        // uh-oh, server list is messed up, return default
+      uint8_t servers_count = NTP_Servers.size();
+      if (servers_count <= server_id)
+      {
         return "pool.ntp.org";
       }
-      return Servers[getServerId()].addr;
+      return NTP_Servers[getServerId()].addr.c_str();
     }
-
 
     void loadPrefs()
     {
-      prefs::getUChar( NVS_NTPZONE_KEY,  &currentServer, currentServer );
-      prefs::getUInt(  NVS_NTP_DELAYMIN, &sync_delay,    sync_delay );
-      if( timeavailable )
-        sntp_set_time_sync_notification_cb( timeavailable );
-      sntp_set_sync_interval(sync_delay*60*1000);
+      prefs::getUChar(NVS_NTPZONE_KEY, &currentServer, currentServer);
+      prefs::getUInt(NVS_NTP_DELAYMIN, &sync_delay, sync_delay);
+      if (timeavailable)
+        sntp_set_time_sync_notification_cb(timeavailable);
+      sntp_set_sync_interval(sync_delay * 60 * 1000);
     }
 
   };
-
 
 };

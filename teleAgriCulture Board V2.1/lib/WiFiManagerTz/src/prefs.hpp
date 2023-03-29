@@ -49,5 +49,4 @@ namespace WiFiManagerNS
     void getUInt( const char *name, unsigned int *dest, unsigned int default_value );
 
   };
-
 }

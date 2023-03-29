@@ -93,6 +93,12 @@ namespace WiFiManagerNS
     {
       log_d("tzCstr=%s, server=%s", tz, ntp_addr );
       configTime(0, 0, ntp_addr, "pool.ntp.org" );
+
+// esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG_MULTIPLE(0, {} );
+// config.start = false;                       // start SNTP service explicitly
+// config.server_from_dhcp = true;             // accept NTP offer from DHCP server
+// esp_netif_sntp_init(&config);
+
       setenv("TZ", tz, 1);
       tzset();
     }

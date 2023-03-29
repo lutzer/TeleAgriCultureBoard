@@ -56,8 +56,9 @@ String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // TODO: after all the test
 
 String version = "Firmware Version 0.92";
 
-bool useBattery= false;
+bool useBattery = false;
 bool useDisplay = true;
+bool useCustomNTP = false;
 
 String upload = "WIFI";
 String anonym = "anonymus@example.com";
@@ -66,6 +67,7 @@ String lora_fqz = "EU";
 String OTAA_DEVEUI = "70B3D57ED005A8F4";
 String OTAA_APPEUI = "70B3D57ED005A8F4";
 String OTAA_APPKEY = "DF6B2A4AC0930BCA55141564D751D578";
+String customNTPaddress = "129.6.15.28";
 
 // ***  initial values  ***
 

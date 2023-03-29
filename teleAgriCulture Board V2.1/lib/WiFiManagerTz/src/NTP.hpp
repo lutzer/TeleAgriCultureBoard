@@ -69,7 +69,7 @@ namespace WiFiManagerNS
       { "North America", "north-america.pool.ntp.org" },
       { "Oceania",       "oceania.pool.ntp.org" },
       { "South America", "south-america.pool.ntp.org" },
-      // { "DHCP",          "0.0.0.0" }, // TODO: enable private NTP servers
+      { "DHCP",          "0.0.0.0" }, // TODO: enable private NTP servers
     };
 
   };

@@ -54,14 +54,14 @@ int EXTRA_con_table[EXTRA_NUM];
 int boardID = 1003;
 String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // TODO: after all the testing has to be masked in the gitlab and changed in the app
 
-String version = "Firmware Version 0.82";
+String version = "Firmware Version 0.92";
 
 bool useBattery= false;
 bool useDisplay = true;
 
 String upload = "WIFI";
-String user_name = "user@example.com";
 String anonym = "anonymus@example.com";
+String user_CA = "-----BEGIN CERTIFICATE----- optional -----END CERTIFICATE-----";
 String lora_fqz = "EU";
 String OTAA_DEVEUI = "70B3D57ED005A8F4";
 String OTAA_APPEUI = "70B3D57ED005A8F4";

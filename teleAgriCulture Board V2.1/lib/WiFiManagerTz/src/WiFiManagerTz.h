@@ -161,7 +161,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "document.getElementById('set-time').value = adjustedDate.toISOString().substring(0,16); });";
     TimeConfHTML += "</script>";
 
-    TimeConfHTML += "<script>function showDiv() {var checked = document.querySelector('input[name=upload]:checked');var div = document.getElementById('Lora');if (checked && checked.value == 'lora') {div.style.display = 'block'; var checkbox = document.getElementById('use-WPA_enterprise'); checkbox.checked = false; var div = document.getElementById('use_NTP'); div.style.display = 'none'; var div = document.getElementById('no_NTP'); div.style.display = 'block';";
+    TimeConfHTML += "<script>function showDiv() {var checked = document.querySelector('input[name=upload]:checked');var div = document.getElementById('Lora');if (checked && checked.value == 'LORA') {div.style.display = 'block'; var checkbox = document.getElementById('use-WPA_enterprise'); checkbox.checked = false; var div = document.getElementById('use_NTP'); div.style.display = 'none'; var div = document.getElementById('no_NTP'); div.style.display = 'block';";
     TimeConfHTML += "} else {div.style.display = 'none'; var div = document.getElementById('use_NTP'); div.style.display = 'block'; var div = document.getElementById('no_NTP'); div.style.display = 'none'; }}</script>";
     TimeConfHTML += getTemplate(HTML_STYLE);
     TimeConfHTML += "<style>input[type='checkbox'][name='use-WPA_enterprise']:not(:checked)~.enterprise { display: none; }</style>";
@@ -207,7 +207,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "<div><label for='BoardID'>Board ID:</label><input type=“text” id='BoardID' name='BoardID' pattern='^(1[0-9]{3}|199[0-9])$' title='Enter 4 digit Board ID' value=" + String(boardID) + " required>";
     TimeConfHTML += "<label for='API_KEY'>API KEY:</label><input type=“text” name='API_KEY' pattern='^[A-Za-z0-9]{32}$' title=' Enter Bearer token' value=" + API_KEY + " required>";
     TimeConfHTML += "<br><br><label for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type=checkbox name='use-WPA_enterprise' id='use-WPA_enterprise'><br>";
-    TimeConfHTML += "<div class='enterprise'><label for='User_name'>User Name</label><input type='text' name='User_name' title='Enter User Name' value=" + user_name + " required><br><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS' title='Enter anonym id' value=" + anonym + " required>";
+    TimeConfHTML += "<div class='enterprise'><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS' title='Enter anonym id' value=" + anonym + " required>";
     TimeConfHTML += "<br><br><label for='certificate'>Please paste your CA server certificate here:</label><textarea id='certificate' name='certificate' rows='23' cols='63' placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----'></textarea></div></div>";
     TimeConfHTML += "<div id='Lora' style='display:none'><br><BR><b>LoRa Data</b><BR>";
 
@@ -335,6 +335,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "<label for='ntp-server'>Server:</label>";
     // TimeConfHTML += "<input list='ntp-server-list' id='ntp-server' name='ntp-server' placeholder='pool.ntp.org'";
     // TimeConfHTML += " value='"+ NTP::server() +"'>";
+   TimeConfHTML+="<input type='text' pattern='([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])\.([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])$' title='Please enter a valid NTP IP address' />";
     TimeConfHTML += "<select id='ntp-server-list' name='ntp-server'>";
     size_t servers_count = sizeof(NTP::Servers) / sizeof(NTP::Server);
     uint8_t server_id = NTP::getServerId();
@@ -530,6 +531,11 @@ namespace WiFiManagerNS
     if (_wifiManager->server->hasArg("ANONYMUS"))
     {
       anonym = _wifiManager->server->arg("ANONYMUS").c_str();
+    }
+
+    if (_wifiManager->server->hasArg("certificate"))
+    {
+      user_CA = _wifiManager->server->arg("certificate").c_str();
     }
 
     if (_wifiManager->server->hasArg("lora_fqz"))

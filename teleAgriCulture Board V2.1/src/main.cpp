@@ -396,7 +396,6 @@ void loop()
    {
       backlight_pwm = 5; // turns Backlight down
       previousMillis = currentMillis;
-      Serial.println(analogRead(BATSENS));
    }
 
    show_measurements.clear();
@@ -927,7 +926,7 @@ void mainPage()
    tft.print(version);
    tft.setTextColor(0xCED7);
    tft.setCursor(5, 65);
-   tft.print("WiFI: ");
+   tft.print("WiFi: ");
    tft.setTextColor(ST7735_WHITE);
    tft.print(WiFi.SSID());
    tft.setCursor(5, 75);
@@ -1394,15 +1393,15 @@ void checkLoadedStuff(void)
 
 void save_Config(void)
 {
-   StaticJsonDocument<400> doc;
+   StaticJsonDocument<2000> doc;
 
    doc["BoardID"] = boardID;
    doc["useBattery"] = useBattery;
    doc["useDisplay"] = useDisplay;
    doc["API_KEY"] = API_KEY;
    doc["upload"] = upload;
-   // doc["user_name"] = user_name;
-   // doc["anonym"] = anonym;
+   doc["anonym"] = anonym;
+   doc["user_CA"] = user_CA;
    doc["lora_fqz"] = lora_fqz;
    doc["OTAA_DEVEUI"] = OTAA_DEVEUI;
    doc["OTAA_APPEUI"] = OTAA_APPEUI;
@@ -1438,7 +1437,7 @@ void load_Config(void)
 
             configFile.readBytes(buf.get(), size);
 
-            StaticJsonDocument<540> doc;
+            StaticJsonDocument<2000> doc;
             auto deserializeError = deserializeJson(doc, buf.get());
 
             if (!deserializeError)
@@ -1448,8 +1447,8 @@ void load_Config(void)
                useDisplay = doc[useDisplay];
                API_KEY = doc["API_KEY"].as<String>();
                upload = doc["upload"].as<String>();
-               user_name = doc["user_name"].as<String>();
                anonym = doc["anonym"].as<String>();
+               user_CA = doc["user_CA"].as<String>();
                lora_fqz = doc["lora_fqz"].as<String>();
                OTAA_DEVEUI = doc["OTAA_DEVEUI"].as<String>();
                OTAA_APPEUI = doc["OTAA_APPEUI"].as<String>();

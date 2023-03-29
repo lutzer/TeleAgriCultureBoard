@@ -70,7 +70,7 @@ Adafruit_BME280 bme;
 Adafruit_VEML7700 veml = Adafruit_VEML7700();
 
 GravityTDS gravityTds;
-Pangodream_18650_CL BL(BATSENS, 29.06, 10);
+Pangodream_18650_CL BL(BATSENS, 3.1, 10);
 
 float temperature = 22, tdsValue = 0;
 

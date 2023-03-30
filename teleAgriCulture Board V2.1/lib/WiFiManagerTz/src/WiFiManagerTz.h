@@ -339,7 +339,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "<label for='ntp-server'>Server:</label>";
     // TimeConfHTML += "<input list='ntp-server-list' id='ntp-server' name='ntp-server' placeholder='pool.ntp.org'";
     // TimeConfHTML += " value='"+ NTP::server() +"'>";
-    TimeConfHTML += "<input type='text' pattern='[A-Za-z0-9]{1,15}' maxlength='15' title='Please enter a valid NTP server address' />";
+    TimeConfHTML += "<input type='text' pattern='[A-Za-z0-9\\\\.]{1,15}' maxlength='15' title='Please enter a valid NTP server address' />";
     TimeConfHTML += "<select id='ntp-server-list' name='ntp-server'>";
     size_t servers_count = NTP::NTP_Servers.size();
     uint8_t server_id = NTP::getServerId();

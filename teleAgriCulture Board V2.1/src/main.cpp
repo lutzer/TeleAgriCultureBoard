@@ -90,6 +90,7 @@
 #define ESP_DRD_USE_SPIFFS true
 #include <ESP_DoubleResetDetector.h>
 #include <Button.h>
+#include <servers.h>
 #include <WiFiManager.h>
 #include <WiFiManagerTz.h>
 
@@ -242,20 +243,45 @@ void setup()
    Serial.setTxTimeoutMs(5); // set USB CDC Time TX
    Serial.begin(115200);     // start Serial for debuging
 
+   bool forceConfig = false;
+
+   /* ------------  Test DATA for connected Sensors  --------------------------
+   
+       ---> comes from Web Config normaly or out of SPIFF
+
+   I2C_con_table[0] = NO;
+   I2C_con_table[1] = NO;
+   I2C_con_table[2] = NO;
+   I2C_con_table[3] = NO;
+   ADC_con_table[0] = CAP_SOIL;
+   ADC_con_table[1] = TDS;
+   ADC_con_table[2] = TDS;
+   OneWire_con_table[0] = DHT_22;
+   OneWire_con_table[1] = DHT_22;
+   OneWire_con_table[2] = DHT_22;
+   SPI_con_table[0] = NO;
+   I2C_5V_con_table[0] = MULTIGAS_V1;
+   EXTRA_con_table[0] = NO;
+   EXTRA_con_table[1] = NO;
+
+   save_Connectors(); // <------------------ called normaly after Web Config
+
+   Test DATA for connected Sensors ---> come from Web Config normaly 
+   
+   ---------------------------------------------------------------------------------*/
+
    // Increment boot number and print it every reboot
    ++bootCount;
-   Serial.println("Boot number: " + String(bootCount));
+   Serial.println("\nBoot number: " + String(bootCount));
 
    // Print the wakeup reason for ESP32
    print_wakeup_reason();
    print_GPIO_wake_up();
 
-   bool forceConfig = false;
-
    drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
    if (drd->detectDoubleReset())
    {
-      Serial.println(F("Forcing config mode as there was a Double reset detected"));
+      Serial.println(F("\nForcing config mode as there was a Double reset detected"));
       forceConfig = true;
    }
 
@@ -263,61 +289,40 @@ void setup()
    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
    Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) + " Seconds");
 
-   load_Sensors(); // Prototypes get loaded
-
    // Initialize SPIFFS file system
    if (!SPIFFS.begin(true))
    {
       Serial.println("Failed to mount SPIFFS file system");
       return;
    }
+   listDir(SPIFFS, "/", 0);
+   Serial.println();
 
-   // listDir(SPIFFS, "/", 0);
-   // Serial.println();
-
-   // ---  Test DATA for connected Sensors ---> comes from Web Config normaly or out of SPIFF
-   // commented out after first upload
-
-   // I2C_con_table[0] = NO;
-   // I2C_con_table[1] = NO;
-   // I2C_con_table[2] = NO;
-   // I2C_con_table[3] = NO;
-
-   // ADC_con_table[0] = CAP_SOIL;
-   // ADC_con_table[1] = TDS;
-   // ADC_con_table[2] = TDS;
-
-   // OneWire_con_table[0] = DHT_22;
-   // OneWire_con_table[1] = DHT_22;
-   // OneWire_con_table[2] = DHT_22;
-
-   // SPI_con_table[0] = NO;
-
-   // I2C_5V_con_table[0] = MULTIGAS_V1;
-
-   // EXTRA_con_table[0] = NO;
-   // EXTRA_con_table[1] = NO;
-
-   // save_Connectors(); // <------------------ called normaly after Web Config
-
-   // Test DATA for connected Sensors ---> come from Web Config normaly
-
+   load_Sensors();    // Prototypes get loaded
    load_Connectors(); // Connectors lookup table
    load_Config();     // loade config Data
 
-   // checkLoadedStuff();
+   checkLoadedStuff();
 
-   // reset settings - wipe stored credentials for testing
-   // these are stored by the esp library
-   // wifiManager.resetSettings();
-   wifiManager.setDebugOutput(false);
-
+   if (useCustomNTP)
+   {
+      if (WiFiManagerNS::NTP::NTP_Servers.size() == NUM_PREDIFINED_NTP)
+      {
+         const std::string constStr = customNTPaddress.c_str();
+         WiFiManagerNS::NTP::NTP_Server newServer = {"Custom NTP Server", constStr};
+         WiFiManagerNS::NTP::NTP_Servers.push_back(newServer);
+      }
+   }
    // optionally attach external RTC update callback
    WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
-
    // attach board-setup page to the WiFi Manager
    WiFiManagerNS::init(&wifiManager);
 
+   // reset settings - wipe stored credentials for testing
+   // these are stored by the WiFiManager library
+   // wifiManager.resetSettings();
+   
+   wifiManager.setDebugOutput(false);
    wifiManager.setHostname(hostname.c_str());
    wifiManager.setTitle("Board Config");
    wifiManager.setCustomHeadElement(custom_Title_Html.c_str());
@@ -334,15 +339,7 @@ void setup()
 
    // wifiManager.setShowInfoUpdate(false);
    wifiManager.setDarkMode(true);
-   // wifiManager.setSaveConfigCallback([]()
-   //                                   { configSaved = true; }); // restart on credentials save, ESP32 doesn't like to switch between AP/STA
-
-   // some WiFi AP test parameters
-   // wifiManager.addParameter(&p_lineBreak_text); // linebreak
-   // wifiManager.addParameter(&p_wifi);
-   // wifiManager.addParameter(&p_lora);
-   // wifiManager.addParameter(&p_lineBreak_notext); // linebreak
-   // wifiManager.addParameter(&p_Test_Input);
+   // wifiManager.setSaveConfigCallback([]() { configSaved = true; }); // restart on credentials save, ESP32 doesn't like to switch between AP/STA
 
    startBlinking();
    if (forceConfig)
@@ -368,11 +365,6 @@ void setup()
       }
    }
    stopBlinking();
-
-   // Serial.println("");
-   // Serial.println("WiFi connected");
-   // Serial.println("IP address: ");
-   // Serial.println(WiFi.localIP());
 
    delay(100);
    if (WiFi.status() == WL_CONNECTED)
@@ -479,7 +471,7 @@ void loop()
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 {
-   Serial.printf("Listing directory: %s\r\n", dirname);
+   Serial.printf("\nListing directory: %s\r\n", dirname);
 
    File root = fs.open(dirname);
    if (!root)
@@ -785,7 +777,7 @@ void load_Connectors()
             // DynamicJsonDocument json(CON_BUFFER);
             StaticJsonDocument<800> doc;
             auto deserializeError = deserializeJson(doc, buf.get());
-            serializeJson(doc, Serial);
+            // serializeJson(doc, Serial);
             if (!deserializeError)
             {
                Serial.println("\nparsed json");
@@ -1375,9 +1367,8 @@ void measurementsPage(int page)
 
 void checkLoadedStuff(void)
 {
+   Serial.println();
    Serial.println("---------------Prototype Sensors loaded -----------");
-   // sensorRead();
-
    printProtoSensors();
    Serial.println();
    Serial.println("---------------Connector table loaded -----------");
@@ -1388,6 +1379,40 @@ void checkLoadedStuff(void)
    printConnectors(ConnectorType::I2C_5V);
    printConnectors(ConnectorType::SPI_CON);
    printConnectors(ConnectorType::EXTRA);
+
+   Serial.println();
+   Serial.println("---------------Config loaded -----------");
+
+   Serial.print("\nBoard ID: ");
+   Serial.println(boardID);
+   Serial.print("Battery powered: ");
+   Serial.println(useBattery);
+   Serial.print("Display: ");
+   Serial.println(useDisplay);
+   Serial.print("use Enterprise WPA: ");
+   Serial.println(useEnterpriseWPA);
+   Serial.print("use Custom NTP: ");
+   Serial.println(useCustomNTP);
+   Serial.print("API Key: ");
+   Serial.println(API_KEY);
+   Serial.print("Upload: ");
+   Serial.println(upload);
+   Serial.print("Anonym ID: ");
+   Serial.println(anonym);
+   Serial.print("\nUser CA: ");
+   Serial.println(user_CA);
+   Serial.print("Custom NTP Address: ");
+   Serial.println(customNTPaddress);
+   Serial.print("Lora Frequency: ");
+   Serial.println(lora_fqz);
+   Serial.print("OTAA DEVEUI: ");
+   Serial.println(OTAA_DEVEUI);
+   Serial.print("OTAA APPEUI: ");
+   Serial.println(OTAA_APPEUI);
+   Serial.print("OTAA APPKEY: ");
+   Serial.println(OTAA_APPKEY);
+
+   Serial.println("\n---------------DEBUGG END -----------");
 
    Serial.println();
 }
@@ -1449,7 +1474,7 @@ void load_Config(void)
                boardID = doc["BoardID"];
                useBattery = doc["useBattery"];
                useDisplay = doc["useDisplay"];
-               useEnterpriseWPA =doc["useEnzerpriseWPA"];
+               useEnterpriseWPA = doc["useEnzerpriseWPA"];
                useCustomNTP = doc["useCustomNTP"];
                API_KEY = doc["API_KEY"].as<String>();
                upload = doc["upload"].as<String>();

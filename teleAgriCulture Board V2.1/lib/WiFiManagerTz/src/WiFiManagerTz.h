@@ -162,7 +162,7 @@ namespace WiFiManagerNS
       if(NTP::NTP_Servers.size() == NUM_PREDIFINED_NTP)
       {
         const std::string constStr = customNTPaddress.c_str();
-      NTP_Server newServer = {"Custom NTP Server", constStr};
+      NTP::NTP_Server newServer = {"Custom NTP Server", constStr};
       NTP::NTP_Servers.push_back(newServer);
       }
     }
@@ -446,7 +446,7 @@ namespace WiFiManagerNS
         NTP::NTP_Servers.pop_back();
       }
       const std::string constStr = customNTPaddress.c_str();
-      NTP_Server newServer = {"Custom NTP", constStr};
+      NTP::NTP_Server newServer = {"Custom NTP", constStr};
       NTP::NTP_Servers.push_back(newServer);
     }
 

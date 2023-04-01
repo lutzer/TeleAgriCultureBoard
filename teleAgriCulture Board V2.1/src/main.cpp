@@ -239,7 +239,8 @@ void setup()
    // ----- Initiate the TFT display  and Start Image----- //
 
    delay(1000);
-   Serial.begin(115200); // start Serial for debuging
+   Serial.setTxTimeoutMs(5); // set USB CDC Time TX
+   Serial.begin(115200);     // start Serial for debuging
 
    // Increment boot number and print it every reboot
    ++bootCount;
@@ -309,7 +310,7 @@ void setup()
    // reset settings - wipe stored credentials for testing
    // these are stored by the esp library
    // wifiManager.resetSettings();
-   // wifiManager.setDebugOutput(false);
+   wifiManager.setDebugOutput(false);
 
    // optionally attach external RTC update callback
    WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
@@ -1398,10 +1399,13 @@ void save_Config(void)
    doc["BoardID"] = boardID;
    doc["useBattery"] = useBattery;
    doc["useDisplay"] = useDisplay;
+   doc["useEnterpriseWPA"] = useEnterpriseWPA;
+   doc["useCustomNTP"] = useCustomNTP;
    doc["API_KEY"] = API_KEY;
    doc["upload"] = upload;
    doc["anonym"] = anonym;
    doc["user_CA"] = user_CA;
+   doc["customNTPadress"] = customNTPaddress;
    doc["lora_fqz"] = lora_fqz;
    doc["OTAA_DEVEUI"] = OTAA_DEVEUI;
    doc["OTAA_APPEUI"] = OTAA_APPEUI;
@@ -1443,12 +1447,15 @@ void load_Config(void)
             if (!deserializeError)
             {
                boardID = doc["BoardID"];
-               useBattery = doc[useBattery];
-               useDisplay = doc[useDisplay];
+               useBattery = doc["useBattery"];
+               useDisplay = doc["useDisplay"];
+               useEnterpriseWPA =doc["useEnzerpriseWPA"];
+               useCustomNTP = doc["useCustomNTP"];
                API_KEY = doc["API_KEY"].as<String>();
                upload = doc["upload"].as<String>();
                anonym = doc["anonym"].as<String>();
                user_CA = doc["user_CA"].as<String>();
+               customNTPaddress = doc["customNTPadress"].as<String>();
                lora_fqz = doc["lora_fqz"].as<String>();
                OTAA_DEVEUI = doc["OTAA_DEVEUI"].as<String>();
                OTAA_APPEUI = doc["OTAA_APPEUI"].as<String>();

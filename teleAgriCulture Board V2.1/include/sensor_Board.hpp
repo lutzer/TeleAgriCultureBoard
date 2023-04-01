@@ -58,6 +58,7 @@ String version = "Firmware Version 0.92";
 
 bool useBattery = false;
 bool useDisplay = true;
+bool useEnterpriseWPA = false;
 bool useCustomNTP = false;
 
 String upload = "WIFI";

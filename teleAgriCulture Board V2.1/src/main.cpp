@@ -246,7 +246,7 @@ void setup()
    bool forceConfig = false;
 
    /* ------------  Test DATA for connected Sensors  --------------------------
-   
+
        ---> comes from Web Config normaly or out of SPIFF
 
    I2C_con_table[0] = NO;
@@ -266,8 +266,8 @@ void setup()
 
    save_Connectors(); // <------------------ called normaly after Web Config
 
-   Test DATA for connected Sensors ---> come from Web Config normaly 
-   
+   Test DATA for connected Sensors ---> come from Web Config normaly
+
    ---------------------------------------------------------------------------------*/
 
    // Increment boot number and print it every reboot
@@ -304,7 +304,7 @@ void setup()
 
    checkLoadedStuff();
 
-   if (useCustomNTP)
+   if (customNTPaddress != NULL)
    {
       if (WiFiManagerNS::NTP::NTP_Servers.size() == NUM_PREDIFINED_NTP)
       {
@@ -321,7 +321,7 @@ void setup()
    // reset settings - wipe stored credentials for testing
    // these are stored by the WiFiManager library
    // wifiManager.resetSettings();
-   
+
    wifiManager.setDebugOutput(false);
    wifiManager.setHostname(hostname.c_str());
    wifiManager.setTitle("Board Config");

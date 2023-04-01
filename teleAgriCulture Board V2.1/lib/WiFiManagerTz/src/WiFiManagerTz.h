@@ -84,6 +84,20 @@ namespace WiFiManagerNS
     TZ::configTimeWithTz(tz, char_array);
   }
 
+void setEsp32Time(const char* timeStr) {
+    struct tm t;
+    strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
+    tmElements_t tm;
+    tm.Hour = t.tm_hour;
+    tm.Minute = t.tm_min;
+    tm.Second = 0;
+    tm.Day = t.tm_mday;
+    tm.Month = t.tm_mon + 1;
+    tm.Year = t.tm_year - 30; // Adjust for the year offset
+    time_t epochTime = makeTime(tm);
+    setTime(hour(epochTime), minute(epochTime), second(epochTime), day(epochTime), month(epochTime), year(epochTime));
+}
+
   enum Element_t
   {
     HTML_HEAD_START,
@@ -357,7 +371,7 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<div id='use_NTP'>";
     TimeConfHTML += "<label for='use-ntp-server'>Enable NTP Client</label> ";
-    TimeConfHTML += "<input value='1' type=checkbox name='use-ntp-server' id='use-ntp-server' onchange='chooseNTP()'>";
+    TimeConfHTML += "<input value='1' type=checkbox name='use-ntp-server' id='use-ntp-server' " + String(NTPEnabled ? "checked" : "") + " onchange='chooseNTP()'>";
     TimeConfHTML += "<br>";
 
     TimeConfHTML += "<div id='ntp_Settings' style='display:none;'><h2>NTP Client Setup</h2><label for='enable-dst'>Auto-adjust clock for DST </label>";
@@ -632,6 +646,12 @@ namespace WiFiManagerNS
     if (_wifiManager->server->hasArg("OTAA_APPKEY"))
     {
       OTAA_APPKEY = _wifiManager->server->arg("OTAA_APPKEY").c_str();
+    }
+
+    if (_wifiManager->server->hasArg("set-time"))
+    {
+      setTime_value = _wifiManager->server->arg("set-time").c_str();
+      setEsp32Time(setTime_value.c_str());
     }
 
     save_Connectors();

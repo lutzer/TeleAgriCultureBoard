@@ -69,6 +69,7 @@ String OTAA_DEVEUI = "70B3D57ED005A8F4";
 String OTAA_APPEUI = "70B3D57ED005A8F4";
 String OTAA_APPKEY = "DF6B2A4AC0930BCA55141564D751D578";
 String customNTPaddress = "129.6.15.28";
+String setTime_value ="";
 
 // ***  initial values  ***
 

@@ -76,6 +76,7 @@
 #include <WiFiClientSecure.h>
 #include <ESPmDNS.h>
 #include <time.h>
+#include <sys/time.h>
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -103,7 +104,7 @@
 
 // ----- Deep Sleep related -----//
 #define BUTTON_PIN_BITMASK 0x10001 // GPIOs 0 and 16
-#define uS_TO_S_FACTOR 1000000     /* Conversion factor for micro seconds to seconds */
+#define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP 20           /* Time ESP32 will go to sleep (in seconds) */
 
 RTC_DATA_ATTR int bootCount = 0;
@@ -147,6 +148,8 @@ void printMeassurments(void);
 void printSensors(void);
 void wifi_sendData(void);
 void lora_sendData(void);
+void get_time_in_timezone(const char *timezone);
+int seconds_to_next_hour();
 void toggleLED(void);
 void startBlinking(void);
 void stopBlinking(void);
@@ -286,8 +289,9 @@ void setup()
    }
 
    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
-   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-   Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) + " Seconds");
+   esp_sleep_enable_timer_wakeup(seconds_to_next_hour() * uS_TO_S_FACTOR);
+   Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour()) + " Seconds");
+   //esp_deep_sleep_start();
 
    // Initialize SPIFFS file system
    if (!SPIFFS.begin(true))
@@ -1650,6 +1654,31 @@ void lora_sendData(void)
    }
 
    // TODO: lora send message
+}
+
+void get_time_in_timezone(const char *timezone)
+{
+   struct timeval tv;
+   gettimeofday(&tv, NULL);
+   time_t now = tv.tv_sec;
+   struct tm *local = localtime(&now);
+   setenv("TZ", timezone, 1);
+   tzset();
+   struct tm *gmt = gmtime(&now);
+   int diff_hours = (local->tm_hour - gmt->tm_hour);
+   int diff_minutes = (local->tm_min - gmt->tm_min);
+   Serial.printf("Timezone: %s\n", timezone);
+   Serial.printf("Current time: %02d:%02d\n", local->tm_hour, local->tm_min);
+   Serial.printf("GMT time: %02d:%02d\n", gmt->tm_hour, gmt->tm_min);
+   Serial.printf("Difference from GMT: %d:%02d\n", diff_hours, diff_minutes);
+}
+
+int seconds_to_next_hour()
+{
+   time_t now = time(NULL);
+   struct tm *tm_now = localtime(&now);
+   int seconds = (60 - tm_now->tm_sec) + (59 - tm_now->tm_min) * 60;
+   return seconds;
 }
 
 void startBlinking()

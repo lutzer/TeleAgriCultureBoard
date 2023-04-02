@@ -27,6 +27,8 @@
 #include "prefs.hpp"
 #include <TZ.hpp>
 
+void get_time_in_timezone(const char* timezone);
+
 
 namespace WiFiManagerNS
 {
@@ -98,6 +100,11 @@ namespace WiFiManagerNS
 // config.start = false;                       // start SNTP service explicitly
 // config.server_from_dhcp = true;             // accept NTP offer from DHCP server
 // esp_netif_sntp_init(&config);
+
+      Serial.println("\nTimezone: ");
+      Serial.println(tz);
+
+      get_time_in_timezone(tz);
 
       setenv("TZ", tz, 1);
       tzset();

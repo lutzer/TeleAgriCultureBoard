@@ -291,7 +291,7 @@ void setup()
    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
    esp_sleep_enable_timer_wakeup(seconds_to_next_hour() * uS_TO_S_FACTOR);
    Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour()) + " Seconds");
-   //esp_deep_sleep_start();
+   // esp_deep_sleep_start();
 
    // Initialize SPIFFS file system
    if (!SPIFFS.begin(true))
@@ -307,6 +307,11 @@ void setup()
    load_Config();     // loade config Data
 
    checkLoadedStuff();
+
+   Serial.println("\nTimezone: ");
+   Serial.println(timeZone);
+
+   get_time_in_timezone(timeZone.c_str());
 
    if (customNTPaddress != NULL)
    {
@@ -1399,6 +1404,8 @@ void checkLoadedStuff(void)
    Serial.println(useCustomNTP);
    Serial.print("API Key: ");
    Serial.println(API_KEY);
+    Serial.print("Timezone: ");
+   Serial.println(timeZone);
    Serial.print("Upload: ");
    Serial.println(upload);
    Serial.print("Anonym ID: ");
@@ -1423,7 +1430,7 @@ void checkLoadedStuff(void)
 
 void save_Config(void)
 {
-   StaticJsonDocument<2000> doc;
+   StaticJsonDocument<2500> doc;
 
    doc["BoardID"] = boardID;
    doc["useBattery"] = useBattery;
@@ -1435,6 +1442,7 @@ void save_Config(void)
    doc["anonym"] = anonym;
    doc["user_CA"] = user_CA;
    doc["customNTPadress"] = customNTPaddress;
+   doc["timeZone"] = timeZone;
    doc["lora_fqz"] = lora_fqz;
    doc["OTAA_DEVEUI"] = OTAA_DEVEUI;
    doc["OTAA_APPEUI"] = OTAA_APPEUI;
@@ -1470,7 +1478,7 @@ void load_Config(void)
 
             configFile.readBytes(buf.get(), size);
 
-            StaticJsonDocument<2000> doc;
+            StaticJsonDocument<2500> doc;
             auto deserializeError = deserializeJson(doc, buf.get());
 
             if (!deserializeError)
@@ -1485,6 +1493,7 @@ void load_Config(void)
                anonym = doc["anonym"].as<String>();
                user_CA = doc["user_CA"].as<String>();
                customNTPaddress = doc["customNTPadress"].as<String>();
+               timeZone = doc["timeZone"].as<String>();
                lora_fqz = doc["lora_fqz"].as<String>();
                OTAA_DEVEUI = doc["OTAA_DEVEUI"].as<String>();
                OTAA_APPEUI = doc["OTAA_APPEUI"].as<String>();

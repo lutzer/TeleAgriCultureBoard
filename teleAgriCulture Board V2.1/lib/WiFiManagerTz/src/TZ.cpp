@@ -101,11 +101,6 @@ namespace WiFiManagerNS
 // config.server_from_dhcp = true;             // accept NTP offer from DHCP server
 // esp_netif_sntp_init(&config);
 
-      Serial.println("\nTimezone: ");
-      Serial.println(tz);
-
-      get_time_in_timezone(tz);
-
       setenv("TZ", tz, 1);
       tzset();
     }

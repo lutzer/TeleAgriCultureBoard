@@ -185,7 +185,7 @@ void setEsp32Time(const char* timeStr) {
     TimeConfHTML += getTemplate(HTML_HEAD_START);
     TimeConfHTML.replace(FPSTR(T_v), "TeleAgriCulture Board Setup");
     TimeConfHTML += custom_Title_Html;
-    TimeConfHTML += getTemplate(HTML_SCRIPT);
+    //TimeConfHTML += getTemplate(HTML_SCRIPT);
 
     TimeConfHTML += "<script>";
     TimeConfHTML += "window.addEventListener('load', function() { var now = new Date(); var offset = now.getTimezoneOffset() * 60000; var adjustedDate = new Date(now.getTime() - offset);";
@@ -213,10 +213,13 @@ void setEsp32Time(const char* timeStr) {
 
     TimeConfHTML += getTemplate(HTML_STYLE);
     TimeConfHTML += "<style>input[type='checkbox'][name='use-WPA_enterprise']:not(:checked)~.enterprise { display: none; }</style>";
+    // TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:not(:checked) ~.ntp_Settings { display:none; }</style>";
+    // TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:not(:checked) ~.no_NTP { display:block; }</style>";
+    // TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:checked       ~.ntp_Settings   { display:block; }</style>";
+    // TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:checked       ~.no_NTP   { display:none; }</style>";
 
     TimeConfHTML += getTemplate(HTML_HEAD_END);
     TimeConfHTML.replace(FPSTR(T_c), "invert"); // add class str
-
     //------------- HTML Body start ------- //
 
     TimeConfHTML += "<h2>Board Setup</h2>";
@@ -233,20 +236,20 @@ void setEsp32Time(const char* timeStr) {
 
     if (useBattery)
     {
-      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='battery' checked /><label for='battery'> powerd by battery</label><br><br>";
+      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='1' checked /><label for='battery'> powerd by battery</label><br><br>";
     }
     else
     {
-      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='battery'/><label for='battery'> powerd by battery</label><br><br>";
+      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='1'/><label for='battery'> powerd by battery</label><br><br>";
     }
 
     if (useDisplay)
     {
-      TimeConfHTML += "<input type='checkbox' id='display' name='display' value='display' checked /><label for='display'> show display</label>";
+      TimeConfHTML += "<input type='checkbox' id='display' name='display' value='1' checked /><label for='display'> show display</label>";
     }
     else
     {
-      TimeConfHTML += "<input type='checkbox' id='display' name='display' value='display'/><label for='display'> show display</label>";
+      TimeConfHTML += "<input type='checkbox' id='display' name='display' value='1'/><label for='display'> show display</label>";
     }
 
     TimeConfHTML += "</div><BR><div><BR>";
@@ -371,13 +374,13 @@ void setEsp32Time(const char* timeStr) {
 
     TimeConfHTML += "<div id='use_NTP'>";
     TimeConfHTML += "<label for='use-ntp-server'>Enable NTP Client</label> ";
-    TimeConfHTML += "<input value='1' type=checkbox name='use-ntp-server' id='use-ntp-server' " + String(NTPEnabled ? "checked" : "") + " onchange='chooseNTP()'>";
+    TimeConfHTML += "<input value='1' type='checkbox' name='use-ntp-server' id='use-ntp-server' " + String(NTPEnabled ? "checked" : "") + " onchange='chooseNTP()'>";
     TimeConfHTML += "<br>";
 
     TimeConfHTML += "<div id='ntp_Settings' style='display:none;'><h2>NTP Client Setup</h2><label for='enable-dst'>Auto-adjust clock for DST </label>";
-    TimeConfHTML += "<input value='1' type=checkbox name='enable-dst' id='enable-dst'" + String(DSTEnabled ? "checked" : "") + "><br>";
+    TimeConfHTML += "<input value='1' type='checkbox' name='enable-dst' id='enable-dst'" + String(DSTEnabled ? "checked" : "") + "><br>";
     TimeConfHTML += "<label for='custom_ntp_enable'>Custom NTP Server </label>";
-    TimeConfHTML += "<input value='1' type=checkbox name='custom_ntp_enable' id='custom_ntp_enable' onchange='chooseCustomNTP()'><br><br>";
+    TimeConfHTML += "<input value='1' type='checkbox' name='custom_ntp_enable' id='custom_ntp_enable' onchange='chooseCustomNTP()'><br><br>";
 
     TimeConfHTML += "<label for='ntp-server'>Server:</label>";
 
@@ -453,8 +456,6 @@ void setEsp32Time(const char* timeStr) {
     if (_wifiManager->server->hasArg("custom_ntp"))
     {
       customNTPaddress = _wifiManager->server->arg("custom_ntp").c_str();
-      Serial.print("\nnummer of servers: ");
-      Serial.println(NTP::NTP_Servers.size());
       if (NTP::NTP_Servers.size() > NUM_PREDIFINED_NTP)
       {
         NTP::NTP_Servers.pop_back();
@@ -482,6 +483,7 @@ void setEsp32Time(const char* timeStr) {
       char char_array[tempServer.length() + 1];
       tempServer.toCharArray(char_array, tempServer.length() + 1);
       TZ::configTimeWithTz(tz, char_array);
+      timeZone=tz;
     }
 
     if (NTPEnabled)

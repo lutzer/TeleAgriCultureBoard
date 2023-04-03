@@ -77,7 +77,7 @@ namespace WiFiManagerNS
   void configTime()
   {
     const char *tz = TZ::getTzByLocation(TZ::tzName);
-    Serial.printf("Setting up time: NTPServer=%s, TZ-Name=%s, TZ=%s\n", NTP::server(), TZ::tzName, tz);
+    Serial.printf("\nSetting up time: NTPServer=%s, TZ-Name=%s, TZ=%s\n", NTP::server(), TZ::tzName, tz);
     String tempServer = NTP::server();
     char char_array[tempServer.length() + 1];
     tempServer.toCharArray(char_array, tempServer.length() + 1);

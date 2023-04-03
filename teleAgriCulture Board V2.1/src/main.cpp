@@ -94,6 +94,7 @@
 #include <servers.h>
 #include <WiFiManager.h>
 #include <WiFiManagerTz.h>
+#include <HttpDateTime.h>
 
 #include <Wire.h>
 #include <SPI.h>
@@ -319,6 +320,19 @@ void setup()
          WiFiManagerNS::NTP::NTP_Servers.push_back(newServer);
       }
    }
+
+   // HTTPClient http;
+   // http.begin("http://www.teleagriculture.org");
+   // int httpCode = http.GET();
+
+   // if (httpCode > 0)
+   // {
+   //    String dateTime = HttpDateTime.getDateTime(http);
+   //    Serial.println(dateTime);
+   // }
+
+   http.end();
+
    // optionally attach external RTC update callback
    WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
    // attach board-setup page to the WiFi Manager

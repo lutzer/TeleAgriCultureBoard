@@ -152,16 +152,6 @@ const char *kits_ca =
 
 // ---- Classes and Enum ---- //
 
-struct stHttpDT{
-  int dayOfWeek;
-  int day;
-  int month;
-  int year;
-  int hour;
-  int minute;
-  int second;
-};
-
 enum class ConnectorType : uint8_t
 {
   I2C,

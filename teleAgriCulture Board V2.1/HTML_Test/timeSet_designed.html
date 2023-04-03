@@ -79,6 +79,14 @@
         }
     </script>
 
+    <script>
+        document.addEventListener('DOMContentLoaded',
+            function () {
+                chooseNTP();
+            }
+        );
+    </script>
+
     <style>
         .c,
         body {
@@ -301,25 +309,27 @@
         input[type='checkbox'][name='use-WPA_enterprise']:not(:checked)~.enterprise {
             display: none;
         }
+
+        input[type='checkbox'][name='use-WPA_enterprise']:checked~.enterprise {
+            display: block;
+        }
     </style>
 
     <!-- <style>
-        input[type='checkbox'][name='use-ntp-server']:not(:checked)~.ntp_Settings {
+        input[type='checkbox'][name='use-ntp-server']:not(:checked)~#ntp_Settings {
             display: none;
         }
-    </style>
-    <style>
-        input[type='checkbox'][name='use-ntp-server']:not(:checked)~.no_NTP {
+
+        input[type='checkbox'][name='use-ntp-server']:not(:checked)~#no_NTP {
             display: block;
         }
     </style>
     <style>
-        input[type='checkbox'][name='use-ntp-server']:checked~.ntp_Settings {
+        input[type='checkbox'][name='use-ntp-server']:checked~ #ntp_Settings {
             display: block;
         }
-    </style>
-    <style>
-        input[type='checkbox'][name='use-ntp-server']:checked~.no_NTP {
+
+        input[type='checkbox'][name='use-ntp-server']:checked~ #no_NTP {
             display: none;
         }
     </style> -->

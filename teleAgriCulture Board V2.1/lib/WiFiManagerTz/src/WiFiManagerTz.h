@@ -84,7 +84,8 @@ namespace WiFiManagerNS
     TZ::configTimeWithTz(tz, char_array);
   }
 
-void setEsp32Time(const char* timeStr) {
+  void setEsp32Time(const char *timeStr)
+  {
     struct tm t;
     strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
     tmElements_t tm;
@@ -96,7 +97,7 @@ void setEsp32Time(const char* timeStr) {
     tm.Year = t.tm_year - 30; // Adjust for the year offset
     time_t epochTime = makeTime(tm);
     setTime(hour(epochTime), minute(epochTime), second(epochTime), day(epochTime), month(epochTime), year(epochTime));
-}
+  }
 
   enum Element_t
   {
@@ -173,11 +174,11 @@ void setEsp32Time(const char* timeStr) {
 
     if (useCustomNTP)
     {
-      if(NTP::NTP_Servers.size() == NUM_PREDIFINED_NTP)
+      if (NTP::NTP_Servers.size() == NUM_PREDIFINED_NTP)
       {
         const std::string constStr = customNTPaddress.c_str();
-      NTP::NTP_Server newServer = {"Custom NTP Server", constStr};
-      NTP::NTP_Servers.push_back(newServer);
+        NTP::NTP_Server newServer = {"Custom NTP Server", constStr};
+        NTP::NTP_Servers.push_back(newServer);
       }
     }
 
@@ -185,7 +186,7 @@ void setEsp32Time(const char* timeStr) {
     TimeConfHTML += getTemplate(HTML_HEAD_START);
     TimeConfHTML.replace(FPSTR(T_v), "TeleAgriCulture Board Setup");
     TimeConfHTML += custom_Title_Html;
-    //TimeConfHTML += getTemplate(HTML_SCRIPT);
+    // TimeConfHTML += getTemplate(HTML_SCRIPT);
 
     TimeConfHTML += "<script>";
     TimeConfHTML += "window.addEventListener('load', function() { var now = new Date(); var offset = now.getTimezoneOffset() * 60000; var adjustedDate = new Date(now.getTime() - offset);";
@@ -210,14 +211,14 @@ void setEsp32Time(const char* timeStr) {
     TimeConfHTML += "if (checkBox.checked == true) {useNTP.style.display = 'block';noNTP.style.display = 'none';}";
     TimeConfHTML += "else {useNTP.style.display = 'none';noNTP.style.display = 'block';}}";
     TimeConfHTML += "</script>";
+    TimeConfHTML += "<script type='text/javascript'>";
+    TimeConfHTML += "document.addEventListener('DOMContentLoaded', function () { chooseNTP();});";
+    TimeConfHTML += "</script>";
 
     TimeConfHTML += getTemplate(HTML_STYLE);
-    TimeConfHTML += "<style>input[type='checkbox'][name='use-WPA_enterprise']:not(:checked)~.enterprise { display: none; }</style>";
-    // TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:not(:checked) ~.ntp_Settings { display:none; }</style>";
-    // TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:not(:checked) ~.no_NTP { display:block; }</style>";
-    // TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:checked       ~.ntp_Settings   { display:block; }</style>";
-    // TimeConfHTML += "<style> input[type='checkbox'][name='use-ntp-server']:checked       ~.no_NTP   { display:none; }</style>";
-
+    TimeConfHTML += "<style>input[type='checkbox'][name='use-WPA_enterprise']:not(:checked)~.enterprise { display: none; }";
+    TimeConfHTML += "input[type='checkbox'][name='use-WPA_enterprise']:checked~.enterprise {display: block;}</style>";
+    
     TimeConfHTML += getTemplate(HTML_HEAD_END);
     TimeConfHTML.replace(FPSTR(T_c), "invert"); // add class str
     //------------- HTML Body start ------- //
@@ -483,7 +484,7 @@ void setEsp32Time(const char* timeStr) {
       char char_array[tempServer.length() + 1];
       tempServer.toCharArray(char_array, tempServer.length() + 1);
       TZ::configTimeWithTz(tz, char_array);
-      timeZone=tz;
+      timeZone = tz;
     }
 
     if (NTPEnabled)

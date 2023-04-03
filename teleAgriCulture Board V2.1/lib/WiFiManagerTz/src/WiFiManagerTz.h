@@ -218,7 +218,7 @@ namespace WiFiManagerNS
     TimeConfHTML += getTemplate(HTML_STYLE);
     TimeConfHTML += "<style>input[type='checkbox'][name='use-WPA_enterprise']:not(:checked)~.enterprise { display: none; }";
     TimeConfHTML += "input[type='checkbox'][name='use-WPA_enterprise']:checked~.enterprise {display: block;}</style>";
-    
+
     TimeConfHTML += getTemplate(HTML_HEAD_END);
     TimeConfHTML.replace(FPSTR(T_c), "invert"); // add class str
     //------------- HTML Body start ------- //
@@ -433,10 +433,12 @@ namespace WiFiManagerNS
       log_d("UseNtpServer: %s", UseNtpServer.c_str());
       uint8_t useNtpServer = atoi(UseNtpServer.c_str());
       NTPEnabled = useNtpServer == 1;
+      useNTP = true;
     }
     else
     {
       NTPEnabled = false;
+      useNTP = false;
     }
 
     if (_NTPEnabled != NTPEnabled)

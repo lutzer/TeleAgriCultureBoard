@@ -183,6 +183,8 @@ Ticker blinker;
 Button upButton(LEFT_BUTTON_PIN);
 Button downButton(RIGHT_BUTTON_PIN);
 
+WiFiManager wifiManager;
+
 #define NUM_PAGES 4   // pages with out the measurement pages
 #define NUM_PERPAGE 9 // max measurement values per page
 
@@ -205,8 +207,6 @@ bool sendDataWifi = false;
 unsigned long previousMillis = 0;
 unsigned long upButtonsMillis = 0;
 const long interval = 200000; // screen backlight darken time 20s
-
-WiFiManager wifiManager;
 
 // WiFiManagerParameter p_lineBreak_notext("<p></p>");
 // WiFiManagerParameter p_lineBreak_text("<p>Choose one of the following options:</p>");
@@ -307,9 +307,6 @@ void setup()
    load_Config();     // loade config Data
 
    checkLoadedStuff();
-
-   Serial.println("\nTimezone: ");
-   Serial.println(timeZone);
 
    get_time_in_timezone(timeZone.c_str());
 
@@ -1402,9 +1399,11 @@ void checkLoadedStuff(void)
    Serial.println(useEnterpriseWPA);
    Serial.print("use Custom NTP: ");
    Serial.println(useCustomNTP);
+   Serial.print("use NTP: ");
+   Serial.println(useNTP);
    Serial.print("API Key: ");
    Serial.println(API_KEY);
-    Serial.print("Timezone: ");
+   Serial.print("Timezone: ");
    Serial.println(timeZone);
    Serial.print("Upload: ");
    Serial.println(upload);
@@ -1437,6 +1436,7 @@ void save_Config(void)
    doc["useDisplay"] = useDisplay;
    doc["useEnterpriseWPA"] = useEnterpriseWPA;
    doc["useCustomNTP"] = useCustomNTP;
+   doc["useNTP"] = useNTP;
    doc["API_KEY"] = API_KEY;
    doc["upload"] = upload;
    doc["anonym"] = anonym;
@@ -1488,6 +1488,7 @@ void load_Config(void)
                useDisplay = doc["useDisplay"];
                useEnterpriseWPA = doc["useEnzerpriseWPA"];
                useCustomNTP = doc["useCustomNTP"];
+               useNTP = doc["useNTP"];
                API_KEY = doc["API_KEY"].as<String>();
                upload = doc["upload"].as<String>();
                anonym = doc["anonym"].as<String>();

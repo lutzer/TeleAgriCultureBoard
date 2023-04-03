@@ -59,6 +59,7 @@ String version = "Firmware Version 0.92";
 bool useBattery = false;
 bool useDisplay = true;
 bool useEnterpriseWPA = false;
+bool useNTP = false;
 bool useCustomNTP = false;
 
 String upload = "WIFI";
@@ -77,6 +78,10 @@ String timeZone = "";
 String hostname = "TeleAgriCulture Board";
 String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
 String api_Bearer = "Bearer " + API_KEY;
+const char GET_Time_SERVER[30] = "www.teleagriculture.org";
+String GET_Time_Address = "https://www.teleagriculture.org";
+const int SSL_PORT =443;
+const unsigned long TIMEOUT = 2500;
 
 // TODO: have to change the POST to insecure ... no checking the Server CA
 
@@ -146,6 +151,16 @@ const char *kits_ca =
 // ----- Define Pins ----- //
 
 // ---- Classes and Enum ---- //
+
+struct stHttpDT{
+  int dayOfWeek;
+  int day;
+  int month;
+  int year;
+  int hour;
+  int minute;
+  int second;
+};
 
 enum class ConnectorType : uint8_t
 {

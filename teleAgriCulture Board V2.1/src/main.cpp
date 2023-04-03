@@ -94,7 +94,6 @@
 #include <servers.h>
 #include <WiFiManager.h>
 #include <WiFiManagerTz.h>
-#include <HttpDateTime.h>
 
 #include <Wire.h>
 #include <SPI.h>
@@ -154,6 +153,11 @@ int seconds_to_next_hour();
 void toggleLED(void);
 void startBlinking(void);
 void stopBlinking(void);
+
+String get_header();
+String getDateTime(String header);
+time_t convertDateTime(String dateTimeStr);
+void setEsp32Time(const char *timeStr);
 // ----- Function declaration -----//
 
 // ----- Initialize TFT ----- //
@@ -223,6 +227,10 @@ const long interval = 200000; // screen backlight darken time 20s
 //    digitalWrite(LED, ledState);
 //    ledState = !ledState;
 // }
+
+#define HOST_WEBSITE "teamtrees.org"
+
+WiFiClientSecure client;
 
 void setup()
 {
@@ -307,9 +315,9 @@ void setup()
    load_Connectors(); // Connectors lookup table
    load_Config();     // loade config Data
 
-   checkLoadedStuff();
+   // checkLoadedStuff();
 
-   get_time_in_timezone(timeZone.c_str());
+   // get_time_in_timezone(timeZone.c_str());
 
    if (customNTPaddress != NULL)
    {
@@ -320,18 +328,6 @@ void setup()
          WiFiManagerNS::NTP::NTP_Servers.push_back(newServer);
       }
    }
-
-   // HTTPClient http;
-   // http.begin("http://www.teleagriculture.org");
-   // int httpCode = http.GET();
-
-   // if (httpCode > 0)
-   // {
-   //    String dateTime = HttpDateTime.getDateTime(http);
-   //    Serial.println(dateTime);
-   // }
-
-   http.end();
 
    // optionally attach external RTC update callback
    WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
@@ -394,6 +390,14 @@ void setup()
 
    upButton.begin();
    downButton.begin();
+
+   String header = get_header();
+   Serial.println(header);
+
+   String Time1 = getDateTime(header);
+   Serial.println(Time1);
+
+   Serial.println(convertDateTime(Time1));
 }
 
 time_t prevDisplay = 0; // when the digital clock was displayed
@@ -1810,4 +1814,99 @@ LoraSendType getLoraSendTypeFromString(String str)
    {
       return NOT;
    }
+}
+
+String get_header()
+{
+   WiFiClientSecure client;
+
+   // makes a HTTP request
+   unsigned long timeNow;
+   bool HeaderComplete = false;
+   bool currentLineIsBlank = true;
+   String header = "";
+   client.stop(); // Close any connection before send a new request.  This will free the socket on the WiFi
+   if (client.connect(GET_Time_SERVER, SSL_PORT))
+   { // if there's a successful connection:
+      client.println("GET " + GET_Time_Address + " HTTP/1.1");
+      client.print("HOST: ");
+      client.println(GET_Time_SERVER);
+      client.println();
+      timeNow = millis();
+      while (millis() - timeNow < TIMEOUT)
+      {
+         while (client.available())
+         {
+            char c = client.read();
+            if (!HeaderComplete)
+            {
+               if (currentLineIsBlank && c == '\n')
+               {
+                  HeaderComplete = true;
+               }
+               else
+               {
+                  header = header + c;
+               }
+            }
+            if (c == '\n')
+            {
+               currentLineIsBlank = true;
+            }
+            else if (c != '\r')
+            {
+               currentLineIsBlank = false;
+            }
+         }
+         if (HeaderComplete)
+            break;
+      }
+   }
+   else
+   {
+      Serial.println("Connection failed");
+   }
+   if (client.connected())
+   {
+      client.stop();
+   }
+   return header;
+}
+
+time_t convertDateTime(String dateTimeStr)
+{
+   struct tm tm;
+   memset(&tm, 0, sizeof(struct tm));
+   strptime(dateTimeStr.c_str(), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+   time_t t = mktime(&tm);
+   return t;
+}
+
+String getDateTime(String header)
+{
+   int index = header.indexOf("Date:");
+   if (index == -1)
+   {
+      return "";
+   }
+   String dateTimeStr = header.substring(index + 6, index + 31);
+   time_t t = convertDateTime(dateTimeStr);
+   char buf[20];
+   strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M", localtime(&t));
+   return String(buf);
+}
+
+void setEsp32Time(const char *timeStr)
+{
+   struct tm t;
+   strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
+   tmElements_t tm;
+   tm.Hour = t.tm_hour;
+   tm.Minute = t.tm_min;
+   tm.Second = 0;
+   tm.Day = t.tm_mday;
+   tm.Month = t.tm_mon + 1;
+   tm.Year = t.tm_year - 30; // Adjust for the year offset
+   time_t epochTime = makeTime(tm);
+   setTime(hour(epochTime), minute(epochTime), second(epochTime), day(epochTime), month(epochTime), year(epochTime));
 }

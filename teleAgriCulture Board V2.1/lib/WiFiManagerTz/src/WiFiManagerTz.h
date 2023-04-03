@@ -40,6 +40,7 @@ ntp-server-interval: 60
 
 void save_Connectors();
 void save_Config();
+void setEsp32Time(const char *timeStr);
 
 namespace WiFiManagerNS
 {
@@ -84,20 +85,6 @@ namespace WiFiManagerNS
     TZ::configTimeWithTz(tz, char_array);
   }
 
-  void setEsp32Time(const char *timeStr)
-  {
-    struct tm t;
-    strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
-    tmElements_t tm;
-    tm.Hour = t.tm_hour;
-    tm.Minute = t.tm_min;
-    tm.Second = 0;
-    tm.Day = t.tm_mday;
-    tm.Month = t.tm_mon + 1;
-    tm.Year = t.tm_year - 30; // Adjust for the year offset
-    time_t epochTime = makeTime(tm);
-    setTime(hour(epochTime), minute(epochTime), second(epochTime), day(epochTime), month(epochTime), year(epochTime));
-  }
 
   enum Element_t
   {

@@ -581,18 +581,21 @@ void digitalClockDisplay(int x, int y, bool date)
 
    tft.fillRect(x - 5, y - 2, 60, 10, ST7735_BLACK);
 
-   tft.print(hour());
-   printDigits(minute());
-   printDigits(second());
+   struct tm timeinfo;
+   getLocalTime(&timeinfo);
+
+   tft.print(timeinfo.tm_hour);
+   printDigits(timeinfo.tm_min);
+   printDigits(timeinfo.tm_sec);
 
    if (date)
    {
       tft.print("   ");
-      tft.print(day());
+      tft.print(timeinfo.tm_mday);
       tft.print(" ");
-      tft.print(month());
+      tft.print(timeinfo.tm_mon);
       tft.print(" ");
-      tft.print(year());
+      tft.print(timeinfo.tm_year);
       tft.println();
    }
 }
@@ -1912,26 +1915,26 @@ String getDateTime(String header)
 void setEsp32Time(const char *timeStr)
 {
    struct tm t;
-   struct tm test;
+   struct tm now;
    strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
-   test.tm_hour = t.tm_hour;
-   test.tm_min = t.tm_min;
-   test.tm_sec = 0;
-   test.tm_mday = t.tm_mday;
-   test.tm_mon = t.tm_mon;
-   test.tm_year = t.tm_year;
+   now.tm_hour = t.tm_hour;
+   now.tm_min = t.tm_min;
+   now.tm_sec = 0;
+   now.tm_mday = t.tm_mday;
+   now.tm_mon = t.tm_mon;
+   now.tm_year = t.tm_year;
 
    delay(100);
 
-   const time_t sec = mktime(&test); // make time_t
-   
+   const time_t sec = mktime(&now); // make time_t
+   Serial.printf("Setting time: %s", asctime(&now));
+
    setTime(sec);
    setenv("TZ", timeZone.c_str(), 1);
    tzset();
 
    struct tm timeinfo;
    getLocalTime(&timeinfo);
-   Serial.printf("Setting time: %s", asctime(&test));
 
    Serial.println("\nESP Time set via HTTP get:");
    Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");

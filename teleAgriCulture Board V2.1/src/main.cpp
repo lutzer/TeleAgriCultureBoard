@@ -213,23 +213,6 @@ unsigned long previousMillis = 0;
 unsigned long upButtonsMillis = 0;
 const long interval = 200000; // screen backlight darken time 20s
 
-// WiFiManagerParameter p_lineBreak_notext("<p></p>");
-// WiFiManagerParameter p_lineBreak_text("<p>Choose one of the following options:</p>");
-// WiFiManagerParameter p_Test_Input("testInput", "Test Input", test_input, 5);
-// WiFiManagerParameter p_wifi("wifi", "wifi", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
-// WiFiManagerParameter p_lora("lora", "lora", "T", 2, "type=\"checkbox\" ", WFM_LABEL_AFTER);
-// ----- WiFiManager section ---- //
-
-// ----- Hardware Timer ---- //
-// void IRAM_ATTR onTimer(void *arg)
-// {
-//    static bool ledState = false;
-//    digitalWrite(LED, ledState);
-//    ledState = !ledState;
-// }
-
-#define HOST_WEBSITE "teamtrees.org"
-
 WiFiClientSecure client;
 
 void setup()
@@ -329,11 +312,14 @@ void setup()
       }
    }
 
-   // optionally attach external RTC update callback
-   WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
    // attach board-setup page to the WiFi Manager
    WiFiManagerNS::init(&wifiManager);
 
+   if (WiFiManagerNS::NTPEnabled)
+   {
+      // optionally attach external RTC update callback
+      WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
+   }
    // reset settings - wipe stored credentials for testing
    // these are stored by the WiFiManager library
    // wifiManager.resetSettings();
@@ -383,21 +369,48 @@ void setup()
    stopBlinking();
 
    delay(100);
-   if (WiFi.status() == WL_CONNECTED)
+
+   if (WiFiManagerNS::NTPEnabled)
    {
-      WiFiManagerNS::configTime();
+      if (WiFi.status() == WL_CONNECTED)
+      {
+         WiFiManagerNS::configTime();
+         struct tm timeInfo;
+         getLocalTime(&timeInfo, 1000);
+         Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+         setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
+
+         // every hour
+         sendDataWifi = true;
+
+         lastUpload = "";
+
+         if (timeInfo.tm_hour < 10)
+            lastUpload += '0';
+         lastUpload += String(timeInfo.tm_hour) + ':';
+
+         if (timeInfo.tm_min < 10)
+            lastUpload += '0';
+         lastUpload += String(timeInfo.tm_min) + ':';
+
+         if (timeInfo.tm_sec < 10)
+            lastUpload += '0';
+
+         lastUpload += String(timeInfo.tm_sec);
+      }
+   }
+   else
+   {
+      String header = get_header();
+      String Time1 = getDateTime(header);
+      Serial.println(header);
+      Serial.println();
+      Serial.println(Time1);
+      setEsp32Time(Time1.c_str());
    }
 
    upButton.begin();
    downButton.begin();
-
-   String header = get_header();
-   Serial.println(header);
-
-   String Time1 = getDateTime(header);
-   Serial.println(Time1);
-
-   Serial.println(convertDateTime(Time1));
 }
 
 time_t prevDisplay = 0; // when the digital clock was displayed
@@ -488,7 +501,7 @@ void loop()
       sendDataWifi = false;
       renderPage(currentPage);
    }
-   // Serial.println("Going to sleep now");
+
    // Serial.flush();
    // esp_deep_sleep_start();
 }
@@ -1899,14 +1912,42 @@ String getDateTime(String header)
 void setEsp32Time(const char *timeStr)
 {
    struct tm t;
+   struct tm test;
    strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
-   tmElements_t tm;
-   tm.Hour = t.tm_hour;
-   tm.Minute = t.tm_min;
-   tm.Second = 0;
-   tm.Day = t.tm_mday;
-   tm.Month = t.tm_mon + 1;
-   tm.Year = t.tm_year - 30; // Adjust for the year offset
-   time_t epochTime = makeTime(tm);
-   setTime(hour(epochTime), minute(epochTime), second(epochTime), day(epochTime), month(epochTime), year(epochTime));
+   test.tm_hour = t.tm_hour;
+   test.tm_min = t.tm_min;
+   test.tm_sec = 0;
+   test.tm_mday = t.tm_mday;
+   test.tm_mon = t.tm_mon;
+   test.tm_year = t.tm_year;
+
+   delay(100);
+
+   const time_t sec = mktime(&test); // make time_t
+   
+   setTime(sec);
+   setenv("TZ", timeZone.c_str(), 1);
+   tzset();
+
+   struct tm timeinfo;
+   getLocalTime(&timeinfo);
+   Serial.printf("Setting time: %s", asctime(&test));
+
+   Serial.println("\nESP Time set via HTTP get:");
+   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+
+   lastUpload = "";
+
+   if (timeinfo.tm_hour < 10)
+      lastUpload += '0';
+   lastUpload += String(timeinfo.tm_hour) + ':';
+
+   if (timeinfo.tm_min < 10)
+      lastUpload += '0';
+   lastUpload += String(timeinfo.tm_min) + ':';
+
+   if (timeinfo.tm_sec < 10)
+      lastUpload += '0';
+
+   lastUpload += String(timeinfo.tm_sec);
 }

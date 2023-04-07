@@ -149,7 +149,7 @@ void sensorRead()
     readI2C_5V_Connector();
     readEXTRA_Connectors();
 
-    digitalWrite(SW_3V3, LOW);
+   // digitalWrite(SW_3V3, LOW);
     digitalWrite(SW_5V, LOW);
     digitalWrite(LED, LOW);
 }

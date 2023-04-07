@@ -108,6 +108,9 @@
 #include <Fonts/FreeSans9pt7b.h>
 #include <Adafruit_ST7735.h>
 
+#undef CFG_eu868
+#define CFG_eu868 1
+
 // ----- Deep Sleep related -----//
 #define BUTTON_PIN_BITMASK 0x10001 // GPIOs 0 and 16
 #define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
@@ -179,13 +182,13 @@ static const u1_t PROGMEM APPEUI[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 void os_getArtEui(u1_t *buf) { memcpy_P(buf, APPEUI, 8); }
 
 // This should also be in little endian format, see above.
-static const u1_t PROGMEM DEVEUI[8] = {0xF4, 0xA8, 0x05, 0xD0, 0x7E, 0xD5, 0xB3, 0x70};
+static const u1_t PROGMEM DEVEUI[8] = {0x04, 0xC6, 0x05, 0xD0, 0x7E, 0xD5, 0xB3, 0x70};
 void os_getDevEui(u1_t *buf) { memcpy_P(buf, DEVEUI, 8); }
 
 // This key should be in big endian format (or, since it is not really a
 // number but a block of memory, endianness does not really apply). In
 // practice, a key taken from ttnctl can be copied as-is.
-static const u1_t PROGMEM APPKEY[16] = {0xDF, 0x6B, 0x2A, 0x4A, 0xC0, 0x93, 0x0B, 0xCA, 0x55, 0x14, 0x15, 0x64, 0xD7, 0x51, 0xD5, 0x78};
+static const u1_t PROGMEM APPKEY[16] = {0x84, 0x5D, 0x30, 0x02, 0x41, 0x3D, 0x4D, 0x0E, 0xA4, 0x9E, 0x72, 0x65, 0x05, 0x6A, 0x47, 0x53};
 void os_getDevKey(u1_t *buf) { memcpy_P(buf, APPKEY, 16); }
 
 static uint8_t mydata[] = "Hello, world!";
@@ -269,7 +272,11 @@ void setup()
    pinMode(TFT_BL, OUTPUT);
    pinMode(LED, OUTPUT);
    pinMode(LORA_CS, OUTPUT);
-   digitalWrite(LORA_CS, 1);
+   pinMode(SW_3V3, OUTPUT);
+   pinMode(SW_5V, OUTPUT);
+
+   digitalWrite(SW_3V3, HIGH);
+   digitalWrite(LORA_CS, HIGH);
 
    // ----- Initiate the TFT display and Start Image----- //
    tft.initR(INITR_GREENTAB); // work around to set protected offset values

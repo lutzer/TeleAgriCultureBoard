@@ -24,6 +24,15 @@
  *
  *
 
+//TODO: LoRa send to TTN
+//TODO: TTN decoder
+//TODO: LoRa frequency change based on UI
+//TODO: Cert read and set
+//TODO: WiFISecure Cert check
+//TODO: Battery optimation
+//TODO: Sensor test
+
+
 /*
  *
  * For defines, GPIOs and implemented Sensors see sensor_Board.hpp
@@ -258,6 +267,7 @@ void setup()
    pinMode(TFT_BL, OUTPUT);
    pinMode(LED, OUTPUT);
    pinMode(LORA_CS, OUTPUT);
+   
    
    // ----- Initiate the TFT display and Start Image----- //
    tft.initR(INITR_GREENTAB); // work around to set protected offset values

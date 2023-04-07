@@ -202,7 +202,9 @@ const lmic_pinmap lmic_pins = {
     .rxtx = LMIC_UNUSED_PIN,
     .rst = LORA_RST,
     .dio = {LORA_DI0, LORA_DI1, LMIC_UNUSED_PIN},
-    .spi_freq = 8000000,
+    .rxtx_rx_active = 0,
+    .rssi_cal = 10,
+    .spi_freq = 8000000, /* 8MHz */
 };
 
 // ----- Initialize TFT ----- //
@@ -267,8 +269,8 @@ void setup()
    pinMode(TFT_BL, OUTPUT);
    pinMode(LED, OUTPUT);
    pinMode(LORA_CS, OUTPUT);
-   
-   
+   digitalWrite(LORA_CS, 1);
+
    // ----- Initiate the TFT display and Start Image----- //
    tft.initR(INITR_GREENTAB); // work around to set protected offset values
    tft.initR(INITR_BLACKTAB); // change the colormode back, offset values stay as "green display"

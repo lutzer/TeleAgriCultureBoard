@@ -114,9 +114,9 @@ const char *kits_ca =
 #define I2C_SDA 8 // on teleAgriCulture Board V2.0 I2C_5V SDA is GPIO 15
 #define I2C_SCL 9 // on teleAgriCulture Board V2.0 I2C_5V SCL is GPIO 16
 
-#define SCLK 36
-#define MISO 37
-#define MOSI 35
+#define TFT_SCLK 36
+#define TFT_MISO 37
+#define TFT_MOSI 35
 #define SPI_CON_CS 38
 #define TFT_CS 15 // on teleAgriCulture Board V2.0 it is I2C_5V SDA pin  CHANGE THIS TO 38(SPI CON CS)
 #define TFT_RST 1 // on teleAgriCulture Board V2.0 it is part of J3 CON
@@ -124,9 +124,9 @@ const char *kits_ca =
 #define TFT_BL 48 // on teleAgriCulture Board V2.0 it is part of J4 CON
 
 #define LORA_CS 10
-#define LORA_MOSI 11
-#define LORA_CLK 12
-#define LORA_MISO 13
+#define MOSI 11
+#define SCLK 12
+#define MISO 13
 #define LORA_RST 17
 #define LORA_DI0 18
 #define LORA_DI1 14 // on teleAgriCulture Board V2.0 it has to be briged to the LORA Module Connector!

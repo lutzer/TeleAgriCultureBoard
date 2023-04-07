@@ -124,9 +124,11 @@ const char *kits_ca =
 #define TFT_BL 48 // on teleAgriCulture Board V2.0 it is part of J4 CON
 
 #define LORA_CS 10
-#define MOSI 11
-#define SCLK 12
-#define MISO 13
+#define LORA_SPI_HOST      SPI2_HOST
+#define LORA_SPI_DMA_CHAN  SPI_DMA_DISABLED
+#define LORA_MOSI 11
+#define LORA_SCLK 12
+#define LORA_MISO 13
 #define LORA_RST 17
 #define LORA_DI0 18
 #define LORA_DI1 14 // on teleAgriCulture Board V2.0 it has to be briged to the LORA Module Connector!

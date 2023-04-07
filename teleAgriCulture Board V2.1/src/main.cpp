@@ -23,17 +23,7 @@
  * SOFTWARE.
  *
  *
- /*         COMPILER ERRORS !!!
-
-      TODO: change CA handling than both errors are gone (MBEDTLS is configured in espressif IDE and precompiled)
-
-      two errors show up:
-
-      httpClient.cpp : (if _cacert==NULL) --> comment out .... wc.insecure()  .... just the else path is used
-      ssl_client.cpp : comment out ---> #ifndef MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED #endif
-
-*/
-
+ 
 /*
  *
  * For defines, GPIOs and implemented Sensors see sensor_Board.hpp
@@ -64,6 +54,8 @@
                               readEXTRA_Connectors()
       corresponding to your Sensortype with case statement using your Sensor ENUM
 */
+
+//TODO: Power and timing optimisation on battery power
 
 #include <Arduino.h>
 #include <FS.h>
@@ -207,7 +199,8 @@ int num_pages = NUM_PAGES;
 String lastUpload;
 bool initialState; // state of the LED
 bool ledState = false;
-bool sendDataWifi = false;
+bool sendDataWifi = true;
+bool gotoSleep = true;
 
 unsigned long previousMillis = 0;
 unsigned long upButtonsMillis = 0;
@@ -267,7 +260,7 @@ void setup()
 
    // Increment boot number and print it every reboot
    ++bootCount;
-   Serial.println("\nBoot number: " + String(bootCount));
+   // Serial.println("\nBoot number: " + String(bootCount));
 
    // Print the wakeup reason for ESP32
    print_wakeup_reason();
@@ -281,9 +274,6 @@ void setup()
    }
 
    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
-   esp_sleep_enable_timer_wakeup(seconds_to_next_hour() * uS_TO_S_FACTOR);
-   Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour()) + " Seconds");
-   // esp_deep_sleep_start();
 
    // Initialize SPIFFS file system
    if (!SPIFFS.begin(true))
@@ -291,16 +281,14 @@ void setup()
       Serial.println("Failed to mount SPIFFS file system");
       return;
    }
-   listDir(SPIFFS, "/", 0);
-   Serial.println();
+   // listDir(SPIFFS, "/", 0);
+   // Serial.println();
 
    load_Sensors();    // Prototypes get loaded
    load_Connectors(); // Connectors lookup table
    load_Config();     // loade config Data
 
    // checkLoadedStuff();
-
-   // get_time_in_timezone(timeZone.c_str());
 
    if (customNTPaddress != NULL)
    {
@@ -370,43 +358,45 @@ void setup()
 
    delay(100);
 
-   if (WiFiManagerNS::NTPEnabled)
+   if (upload == "WIFI")
    {
-      if (WiFi.status() == WL_CONNECTED)
+      if (WiFiManagerNS::NTPEnabled)
       {
-         WiFiManagerNS::configTime();
-         struct tm timeInfo;
-         getLocalTime(&timeInfo, 1000);
-         Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-         setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
+         if (WiFi.status() == WL_CONNECTED)
+         {
+            WiFiManagerNS::configTime();
+            struct tm timeInfo;
+            getLocalTime(&timeInfo, 1000);
+            Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+            setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
 
-         // every hour
-         sendDataWifi = true;
+            // every hour
+            sendDataWifi = true;
 
-         lastUpload = "";
+            lastUpload = "";
 
-         if (timeInfo.tm_hour < 10)
-            lastUpload += '0';
-         lastUpload += String(timeInfo.tm_hour) + ':';
+            if (timeInfo.tm_hour < 10)
+               lastUpload += '0';
+            lastUpload += String(timeInfo.tm_hour) + ':';
 
-         if (timeInfo.tm_min < 10)
-            lastUpload += '0';
-         lastUpload += String(timeInfo.tm_min) + ':';
+            if (timeInfo.tm_min < 10)
+               lastUpload += '0';
+            lastUpload += String(timeInfo.tm_min) + ':';
 
-         if (timeInfo.tm_sec < 10)
-            lastUpload += '0';
+            if (timeInfo.tm_sec < 10)
+               lastUpload += '0';
 
-         lastUpload += String(timeInfo.tm_sec);
+            lastUpload += String(timeInfo.tm_sec);
+         }
       }
-   }
-   else
-   {
-      String header = get_header();
-      String Time1 = getDateTime(header);
-      Serial.println(header);
-      Serial.println();
-      Serial.println(Time1);
-      setEsp32Time(Time1.c_str());
+      else
+      {
+         String header = get_header();
+         String Time1 = getDateTime(header);
+         setEsp32Time(Time1.c_str());
+      }
+
+      sendDataWifi = true;
    }
 
    upButton.begin();
@@ -426,6 +416,7 @@ void loop()
    {
       backlight_pwm = 5; // turns Backlight down
       previousMillis = currentMillis;
+      gotoSleep = true;
    }
 
    show_measurements.clear();
@@ -446,6 +437,7 @@ void loop()
    {
       currentPage = (currentPage + 1) % num_pages;
       backlight_pwm = 250;
+      gotoSleep = false;
    }
 
    if (upButton.pressed())
@@ -453,6 +445,7 @@ void loop()
       currentPage = (currentPage - 1 + num_pages) % num_pages;
       backlight_pwm = 250;
       upButtonsMillis = millis();
+      gotoSleep = false;
    }
 
    if (upButton.released())
@@ -478,15 +471,22 @@ void loop()
    {
       lastPage = currentPage;
       renderPage(currentPage);
+      Serial.println(seconds_to_next_hour());
    }
 
-   if (timeStatus() != timeNotSet && currentPage == 0)
+   if (currentPage == 0)
    {
       if (now() != prevDisplay)
       { // update the display only if time has changed
          prevDisplay = now();
          digitalClockDisplay(5, 95, false);
       }
+   }
+
+   if (seconds_to_next_hour() < 1)
+   {
+      // execute task
+      sendDataWifi = true;
    }
 
    if (sendDataWifi)
@@ -499,11 +499,46 @@ void loop()
       // Serial.println();
       wifi_sendData();
       sendDataWifi = false;
+
+      struct tm timeinfo;
+      getLocalTime(&timeinfo);
+
+      // Serial.println("\nESP Time set via HTTP get:");
+      // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+      if (WiFiManagerNS::NTPEnabled)
+      {
+         lastUpload = "";
+
+         if (timeinfo.tm_hour < 10)
+            lastUpload += '0';
+         lastUpload += String(timeinfo.tm_hour) + ':';
+
+         if (timeinfo.tm_min < 10)
+            lastUpload += '0';
+         lastUpload += String(timeinfo.tm_min) + ':';
+
+         if (timeinfo.tm_sec < 10)
+            lastUpload += '0';
+
+         lastUpload += String(timeinfo.tm_sec);
+      }
+      else
+      {
+         String header = get_header();
+         String Time1 = getDateTime(header);
+         setEsp32Time(Time1.c_str());
+      }
+
       renderPage(currentPage);
    }
 
-   // Serial.flush();
-   // esp_deep_sleep_start();
+   if (useBattery && gotoSleep)
+   {
+      esp_sleep_enable_timer_wakeup(seconds_to_next_hour() * uS_TO_S_FACTOR);
+      Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour()) + " Seconds");
+      Serial.flush();
+      esp_deep_sleep_start();
+   }
 }
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
@@ -555,9 +590,6 @@ void on_time_available(struct timeval *t)
    Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
    setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
 
-   // every hour
-   sendDataWifi = true;
-
    lastUpload = "";
 
    if (timeInfo.tm_hour < 10)
@@ -581,21 +613,21 @@ void digitalClockDisplay(int x, int y, bool date)
 
    tft.fillRect(x - 5, y - 2, 60, 10, ST7735_BLACK);
 
-   struct tm timeinfo;
-   getLocalTime(&timeinfo);
+   struct tm actualTime;
+   getLocalTime(&actualTime);
 
-   tft.print(timeinfo.tm_hour);
-   printDigits(timeinfo.tm_min);
-   printDigits(timeinfo.tm_sec);
+   tft.print(actualTime.tm_hour);
+   printDigits(actualTime.tm_min);
+   printDigits(actualTime.tm_sec);
 
    if (date)
    {
       tft.print("   ");
-      tft.print(timeinfo.tm_mday);
+      tft.print(actualTime.tm_mday);
       tft.print(" ");
-      tft.print(timeinfo.tm_mon);
+      tft.print(actualTime.tm_mon + 1);
       tft.print(" ");
-      tft.print(timeinfo.tm_year);
+      tft.print(actualTime.tm_year - 100 + 2000);
       tft.println();
    }
 }
@@ -687,6 +719,7 @@ void print_wakeup_reason()
    esp_sleep_wakeup_cause_t wakeup_reason;
 
    wakeup_reason = esp_sleep_get_wakeup_cause();
+   Serial.println();
 
    switch (wakeup_reason)
    {
@@ -799,15 +832,15 @@ void load_Connectors()
 {
    if (SPIFFS.begin())
    {
-      Serial.println("mounted file system");
+      // Serial.println("mounted file system");
       if (SPIFFS.exists("/connectors.json"))
       {
          // file exists, reading and loading
-         Serial.println("reading config file");
+         // Serial.println("reading config file");
          File connectorsFile = SPIFFS.open("/connectors.json", "r");
          if (connectorsFile)
          {
-            Serial.println("opened config file");
+            // Serial.println("opened config file");
             size_t size = connectorsFile.size();
             // Allocate a buffer to store contents of the file.
             std::unique_ptr<char[]> buf(new char[size]);
@@ -820,7 +853,7 @@ void load_Connectors()
             // serializeJson(doc, Serial);
             if (!deserializeError)
             {
-               Serial.println("\nparsed json");
+               // Serial.println("\nparsed json");
 
                JsonArray jsonI2C_connectors = doc[0]["I2C_connectors"];
                for (int i = 0; i < I2C_NUM; i++)
@@ -1501,11 +1534,11 @@ void load_Config(void)
       if (SPIFFS.exists("/board_config.json"))
       {
          // file exists, reading and loading
-         Serial.println("reading config file");
+         // Serial.println("reading config file");
          File configFile = SPIFFS.open("/board_config.json", "r");
          if (configFile)
          {
-            Serial.println("opened config file");
+            // Serial.println("opened config file");
             size_t size = configFile.size();
             // Allocate a buffer to store contents of the file.
             std::unique_ptr<char[]> buf(new char[size]);
@@ -1719,9 +1752,12 @@ void get_time_in_timezone(const char *timezone)
 
 int seconds_to_next_hour()
 {
-   time_t now = time(NULL);
-   struct tm *tm_now = localtime(&now);
-   int seconds = (60 - tm_now->tm_sec) + (59 - tm_now->tm_min) * 60;
+   struct tm timeinfo;
+   getLocalTime(&timeinfo);
+
+   // time_t now = time(NULL);
+   // struct tm *tm_now = localtime(&now);
+   int seconds = (60 - timeinfo.tm_sec) + (59 - timeinfo.tm_min) * 60;
    return seconds;
 }
 
@@ -1914,6 +1950,8 @@ String getDateTime(String header)
 
 void setEsp32Time(const char *timeStr)
 {
+   //TODO: fix 1h off
+
    struct tm t;
    struct tm now;
    strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
@@ -1928,8 +1966,14 @@ void setEsp32Time(const char *timeStr)
 
    const time_t sec = mktime(&now); // make time_t
    Serial.printf("Setting time: %s", asctime(&now));
+   // Serial.print("\nsec: ");
+   // Serial.println(sec);
 
-   setTime(sec);
+   struct timeval set_Time = {.tv_sec = sec};
+   settimeofday(&set_Time, NULL);
+
+   // setTime(sec);
+   // setTime(now.tm_hour, now.tm_min, now.tm_sec, now.tm_mday, now.tm_mon, now.tm_year);
    setenv("TZ", timeZone.c_str(), 1);
    tzset();
 

@@ -24,6 +24,8 @@
  *
 \*/
 
+//TODO: a system for multible simular measurments, NAMING
+
 #include <Arduino.h>
 
 #include <Adafruit_Sensor.h>

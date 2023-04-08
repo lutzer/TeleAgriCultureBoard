@@ -130,6 +130,7 @@ void print_GPIO_wake_up();
 
 // ----- Function declaration -----//
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels);
+void setUPWiFi();
 void on_time_available(struct timeval *t);
 void configModeCallback(WiFiManager *myWiFiManager);
 void printDigits(int digits);
@@ -191,7 +192,7 @@ void os_getDevEui(u1_t *buf) { memcpy_P(buf, DEVEUI, 8); }
 static const u1_t PROGMEM APPKEY[16] = {0x84, 0x5D, 0x30, 0x02, 0x41, 0x3D, 0x4D, 0x0E, 0xA4, 0x9E, 0x72, 0x65, 0x05, 0x6A, 0x47, 0x53};
 void os_getDevKey(u1_t *buf) { memcpy_P(buf, APPKEY, 16); }
 
-static uint8_t mydata[] = "Hello, world!";
+byte loraSendData[191] = "12345678"; // value for testing
 static osjob_t sendjob;
 
 // Schedule TX every this many seconds (might become longer due to duty
@@ -258,6 +259,7 @@ String lastUpload;
 bool initialState; // state of the LED
 bool ledState = false;
 bool sendDataWifi = true;
+bool sendDataLoRa = true; // for testing set to true
 bool gotoSleep = true;
 
 unsigned long previousMillis = 0;
@@ -354,125 +356,47 @@ void setup()
 
    // checkLoadedStuff();
 
-   if (customNTPaddress != NULL)
-   {
-      if (WiFiManagerNS::NTP::NTP_Servers.size() == NUM_PREDIFINED_NTP)
-      {
-         const std::string constStr = customNTPaddress.c_str();
-         WiFiManagerNS::NTP::NTP_Server newServer = {"Custom NTP Server", constStr};
-         WiFiManagerNS::NTP::NTP_Servers.push_back(newServer);
-      }
-   }
-
-   // attach board-setup page to the WiFi Manager
-   WiFiManagerNS::init(&wifiManager);
-
-   if (WiFiManagerNS::NTPEnabled)
-   {
-      // optionally attach external RTC update callback
-      WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
-   }
-   // reset settings - wipe stored credentials for testing
-   // these are stored by the WiFiManager library
-   // wifiManager.resetSettings();
-
-   wifiManager.setDebugOutput(false);
-   wifiManager.setHostname(hostname.c_str());
-   wifiManager.setTitle("Board Config");
-   wifiManager.setCustomHeadElement(custom_Title_Html.c_str());
-
-   // set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
-   wifiManager.setAPCallback(configModeCallback);
-
-   // wifiManager.setDebugOutput(false);
-   wifiManager.setCleanConnect(true);
-
-   // /!\ make sure "custom" is listed there as it's required to pull the "Board Setup" button
-   std::vector<const char *> menu = {"custom", "wifi", "info", "update", "restart", "exit"};
-   wifiManager.setMenu(menu);
-
-   // wifiManager.setShowInfoUpdate(false);
-   wifiManager.setDarkMode(true);
-   // wifiManager.setSaveConfigCallback([]() { configSaved = true; }); // restart on credentials save, ESP32 doesn't like to switch between AP/STA
-
-   startBlinking();
-   if (forceConfig)
-   {
-      if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
-      {
-         Serial.println("failed to connect and hit timeout");
-         delay(3000);
-         // reset and try again, or maybe put it to deep sleep
-         ESP.restart();
-         delay(5000);
-      }
-   }
-   else
-   {
-      if (!wifiManager.autoConnect("TeleAgriCulture Board", "enter123"))
-      {
-         Serial.println("failed to connect and hit timeout");
-         delay(3000);
-         // if we still have not connected restart and try all over again
-         ESP.restart();
-         delay(5000);
-      }
-   }
-   stopBlinking();
-
    delay(100);
 
-   if (upload == "WIFI")
+   if (upload == "WIFI" || forceConfig == true)
    {
-      if (WiFiManagerNS::NTPEnabled)
+      setUPWiFi();
+
+      startBlinking();
+      if (forceConfig)
       {
-         if (WiFi.status() == WL_CONNECTED)
+         if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
          {
-            WiFiManagerNS::configTime();
-            struct tm timeInfo;
-            getLocalTime(&timeInfo, 1000);
-            Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-            setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
-
-            // every hour
-            sendDataWifi = true;
-
-            lastUpload = "";
-
-            if (timeInfo.tm_hour < 10)
-               lastUpload += '0';
-            lastUpload += String(timeInfo.tm_hour) + ':';
-
-            if (timeInfo.tm_min < 10)
-               lastUpload += '0';
-            lastUpload += String(timeInfo.tm_min) + ':';
-
-            if (timeInfo.tm_sec < 10)
-               lastUpload += '0';
-
-            lastUpload += String(timeInfo.tm_sec);
+            Serial.println("failed to connect and hit timeout");
+            delay(3000);
+            // reset and try again, or maybe put it to deep sleep
+            ESP.restart();
+            delay(5000);
          }
       }
       else
       {
-         String header = get_header();
-         String Time1 = getDateTime(header);
-         setEsp32Time(Time1.c_str());
+         if (!wifiManager.autoConnect("TeleAgriCulture Board", "enter123"))
+         {
+            Serial.println("failed to connect and hit timeout");
+            delay(3000);
+            // if we still have not connected restart and try all over again
+            ESP.restart();
+            delay(5000);
+         }
       }
+      stopBlinking();
 
       sendDataWifi = true;
    }
 
+   if (upload == "LORA")
+   {
+      sendDataLoRa = true;
+   }
+
    upButton.begin();
    downButton.begin();
-
-   // LMIC init
-   os_init();
-   // Reset the MAC state. Session and pending data transfers will be discarded.
-   LMIC_reset();
-
-   // Start job (sending automatically starts OTAA too)
-   do_send(&sendjob);
 }
 
 time_t prevDisplay = 0; // when the digital clock was displayed
@@ -482,7 +406,7 @@ void loop()
    drd->loop();
    analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
 
-   os_runloop_once();
+  // os_runloop_once();
 
    unsigned long currentMillis = millis();
 
@@ -527,6 +451,11 @@ void loop()
       if (millis() - upButtonsMillis > 5000)
       {
          startBlinking();
+         if (upload != "WIFI")
+         {
+            setUPWiFi();
+         }
+
          if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
          {
             Serial.println("failed to connect and hit timeout");
@@ -559,8 +488,10 @@ void loop()
 
    if (seconds_to_next_hour() < 1)
    {
-      // execute task
-      sendDataWifi = true;
+      if (upload == "WIFI")
+         sendDataWifi = true;
+      if (upload == "LORA")
+         sendDataLoRa = true;
    }
 
    if (sendDataWifi)
@@ -572,38 +503,55 @@ void loop()
       // printSensors();
       // Serial.println();
       wifi_sendData();
+
       sendDataWifi = false;
 
-      struct tm timeinfo;
-      getLocalTime(&timeinfo);
+      // struct tm timeinfo;
+      // getLocalTime(&timeinfo);
 
       // Serial.println("\nESP Time set via HTTP get:");
       // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
       if (WiFiManagerNS::NTPEnabled)
       {
+         WiFiManagerNS::configTime();
+         delay(1000);
+         struct tm timeInfo;
+         getLocalTime(&timeInfo, 1000);
+         Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+         setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
+
          lastUpload = "";
 
-         if (timeinfo.tm_hour < 10)
+         if (timeInfo.tm_hour < 10)
             lastUpload += '0';
-         lastUpload += String(timeinfo.tm_hour) + ':';
+         lastUpload += String(timeInfo.tm_hour) + ':';
 
-         if (timeinfo.tm_min < 10)
+         if (timeInfo.tm_min < 10)
             lastUpload += '0';
-         lastUpload += String(timeinfo.tm_min) + ':';
+         lastUpload += String(timeInfo.tm_min) + ':';
 
-         if (timeinfo.tm_sec < 10)
+         if (timeInfo.tm_sec < 10)
             lastUpload += '0';
 
-         lastUpload += String(timeinfo.tm_sec);
+         lastUpload += String(timeInfo.tm_sec);
       }
       else
       {
          String header = get_header();
+         delay(1000);
          String Time1 = getDateTime(header);
          setEsp32Time(Time1.c_str());
       }
 
       renderPage(currentPage);
+   }
+
+   if (sendDataLoRa)
+   {
+      sensorRead();
+      lora_sendData();
+
+      sendDataLoRa = false;
    }
 
    if (useBattery && gotoSleep)
@@ -699,7 +647,7 @@ void digitalClockDisplay(int x, int y, bool date)
       tft.print("   ");
       tft.print(actualTime.tm_mday);
       tft.print(" ");
-      tft.print(actualTime.tm_mon + 1);
+      tft.print(actualTime.tm_mon);
       tft.print(" ");
       tft.print(actualTime.tm_year - 100 + 2000);
       tft.println();
@@ -1771,40 +1719,46 @@ void lora_sendData(void)
 
       for (int j = 0; j < sensorVector[i].returnCount; j++)
       {
-         switch (sensorVector[i].measurements[j].loraSend) // send Measurment values as different packeges
+         if (sensorVector[i].measurements[j].value != NAN)
          {
-         case UNIXTIME:
-            encoder.writeUnixtime(static_cast<uint32_t>(round(sensorVector[i].measurements[j].value)));
-            break;
-         // case LATLNG:
-         //    encoder.writeLatLng(sensorVector[i].measurements[j].value.latitude, sensorVector[i].measurements[j].value.longitude);
-         //    break;
-         case UINT8:
-            encoder.writeUint8(static_cast<uint8_t>(round(sensorVector[i].measurements[j].value)));
-            break;
-         case UINT16:
-            encoder.writeUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
-            break;
-         case UINT32:
-            encoder.writeUint32(static_cast<uint32_t>(round(sensorVector[i].measurements[j].value)));
-            break;
-         case TEMP:
-            encoder.writeTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
-            break;
-         case HUMI:
-            encoder.writeHumidity(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
-            break;
-         case RAWFLOAT:
-            encoder.writeRawFloat(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
-            break;
-            // case BITMAP:
-            //    encoder.writeBitmap(sensorVector[i].measurements[j].value, false, false, false, false, false, false, false);
+            switch (sensorVector[i].measurements[j].loraSend) // send Measurment values as different packeges
+            {
+            case UNIXTIME:
+               encoder.writeUnixtime(static_cast<uint32_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            // case LATLNG:
+            //    encoder.writeLatLng(sensorVector[i].measurements[j].value.latitude, sensorVector[i].measurements[j].value.longitude);
             //    break;
+            case UINT8:
+               encoder.writeUint8(static_cast<uint8_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case UINT16:
+               encoder.writeUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case UINT32:
+               encoder.writeUint32(static_cast<uint32_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case TEMP:
+               encoder.writeTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
+            case HUMI:
+               encoder.writeHumidity(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
+            case RAWFLOAT:
+               encoder.writeRawFloat(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
+               // case BITMAP:
+               //    encoder.writeBitmap(sensorVector[i].measurements[j].value, false, false, false, false, false, false, false);
+               //    break;
+            }
          }
       }
    }
-
-   // TODO: lora send message
+   if (sizeof(message) > 2)
+   {
+      memcpy(loraSendData, message, sizeof(message) + 1);
+      do_send(&sendjob);
+   }
 }
 
 void get_time_in_timezone(const char *timezone)
@@ -2024,8 +1978,6 @@ String getDateTime(String header)
 
 void setEsp32Time(const char *timeStr)
 {
-   // TODO: fix 1h off
-
    struct tm t;
    struct tm now;
    strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
@@ -2209,6 +2161,13 @@ void onEvent(ev_t ev)
 
 void do_send(osjob_t *j)
 {
+     // LMIC init
+      os_init();
+      // Reset the MAC state. Session and pending data transfers will be discarded.
+      LMIC_reset();
+
+      os_runloop_once(); // in loop() ?!?
+
    // Check if there is not a current TX/RX job running
    if (LMIC.opmode & OP_TXRXPEND)
    {
@@ -2217,8 +2176,52 @@ void do_send(osjob_t *j)
    else
    {
       // Prepare upstream data transmission at the next possible time.
-      LMIC_setTxData2(1, mydata, sizeof(mydata) - 1, 0);
+      LMIC_setTxData2(1, loraSendData, sizeof(loraSendData) - 1, 0);
       Serial.println(F("Packet queued"));
    }
    // Next TX is scheduled after TX_COMPLETE event.
+}
+
+void setUPWiFi()
+{
+   if (customNTPaddress != NULL)
+   {
+      if (WiFiManagerNS::NTP::NTP_Servers.size() == NUM_PREDIFINED_NTP)
+      {
+         const std::string constStr = customNTPaddress.c_str();
+         WiFiManagerNS::NTP::NTP_Server newServer = {"Custom NTP Server", constStr};
+         WiFiManagerNS::NTP::NTP_Servers.push_back(newServer);
+      }
+   }
+
+   // attach board-setup page to the WiFi Manager
+   WiFiManagerNS::init(&wifiManager);
+
+   if (WiFiManagerNS::NTPEnabled)
+   {
+      // optionally attach external RTC update callback
+      // WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
+   }
+   // reset settings - wipe stored credentials for testing
+   // these are stored by the WiFiManager library
+   // wifiManager.resetSettings();
+
+   wifiManager.setDebugOutput(false);
+   wifiManager.setHostname(hostname.c_str());
+   wifiManager.setTitle("Board Config");
+   wifiManager.setCustomHeadElement(custom_Title_Html.c_str());
+
+   // set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+   wifiManager.setAPCallback(configModeCallback);
+
+   // wifiManager.setDebugOutput(false);
+   wifiManager.setCleanConnect(true);
+
+   // /!\ make sure "custom" is listed there as it's required to pull the "Board Setup" button
+   std::vector<const char *> menu = {"custom", "wifi", "info", "update", "restart", "exit"};
+   wifiManager.setMenu(menu);
+
+   // wifiManager.setShowInfoUpdate(false);
+   wifiManager.setDarkMode(true);
+   // wifiManager.setSaveConfigCallback([]() { configSaved = true; }); // restart on credentials save, ESP32 doesn't like to switch between AP/STA
 }

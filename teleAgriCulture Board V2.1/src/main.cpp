@@ -502,7 +502,7 @@ void loop()
    {
       lastPage = currentPage;
       renderPage(currentPage);
-      Serial.println(seconds_to_next_hour());
+      // Serial.println(seconds_to_next_hour());
    }
 
    if (currentPage == 0)
@@ -543,7 +543,7 @@ void loop()
       {
          struct tm timeInfo;
          getLocalTime(&timeInfo, 1000);
-         Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+         // Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
          setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
       }
       else
@@ -1651,7 +1651,7 @@ void wifi_sendData(void)
    {
       for (int j = 0; j < sensorVector[i].returnCount; j++)
       {
-         if (!sensorVector[i].measurements[j].value == NAN)
+         if (!(isnan(sensorVector[i].measurements[j].value)))
          {
             docMeasures[sensorVector[i].measurements[j].data_name] = sensorVector[i].measurements[j].value;
          }
@@ -1660,12 +1660,13 @@ void wifi_sendData(void)
 
    String output;
    serializeJson(docMeasures, output);
+   Serial.println("\nsend Data via WIFI:");
+   Serial.print("Board ID: ");
+   Serial.println(boardID);
+   serializeJson(docMeasures, Serial);
 
    if (output != NULL)
    {
-      Serial.println("\nsend Data via WIFI:");
-      serializeJson(docMeasures, Serial);
-
       // Check WiFi connection status
       if (WiFi.status() == WL_CONNECTED)
       {
@@ -1687,6 +1688,10 @@ void wifi_sendData(void)
 
          serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
          api_Bearer = "Bearer " + API_KEY;
+
+         // Serial.println();
+         // Serial.println(api_Bearer);
+         // Serial.println(serverName);
 
          https.begin(client, serverName);
 
@@ -1727,7 +1732,7 @@ void lora_sendData(void)
 
       for (int j = 0; j < sensorVector[i].returnCount; j++)
       {
-         if (sensorVector[i].measurements[j].value != NAN)
+         if (!(isnan(sensorVector[i].measurements[j].value)))
          {
             switch (sensorVector[i].measurements[j].loraSend) // send Measurment values as different packeges
             {
@@ -2016,9 +2021,6 @@ void setUploadTime()
 {
    struct tm timeinfo;
    getLocalTime(&timeinfo);
-
-   Serial.println("\nESP Time set:");
-   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
 
    lastUpload = "";
 

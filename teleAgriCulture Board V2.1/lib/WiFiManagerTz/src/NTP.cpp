@@ -63,7 +63,7 @@ namespace WiFiManagerNS
     // Callback function (get's called when time adjusts via NTP)
     void timeavailable_default(struct timeval *t)
     {
-      Serial.println("Got time adjustment from NTP!");
+      Serial.println("\nGot time adjustment from NTP!");
       struct tm timeInfo;
       getLocalTime(&timeInfo, 1000);
       Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");

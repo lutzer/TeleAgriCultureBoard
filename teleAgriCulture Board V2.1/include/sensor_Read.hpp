@@ -165,9 +165,9 @@ void readI2C_Connectors()
         {
         case NO:
         {
-            Serial.print("\nNo Sensor attaches at ");
-            Serial.print("I2C_");
-            Serial.println(j + 1);
+            // Serial.print("\nNo Sensor attaches at ");
+            // Serial.print("I2C_");
+            // Serial.println(j + 1);
         }
         break;
 
@@ -294,9 +294,9 @@ void readADC_Connectors()
         {
         case NO:
         {
-            Serial.print("\nNo Sensor attaches at ");
-            Serial.print("ADC_");
-            Serial.println(i + 1);
+            // Serial.print("\nNo Sensor attaches at ");
+            // Serial.print("ADC_");
+            // Serial.println(i + 1);
         }
         break;
 
@@ -443,9 +443,9 @@ void readOneWire_Connectors()
         {
         case NO:
         {
-            Serial.print("\nNo Sensor attaches at ");
-            Serial.print("1-Wire_");
-            Serial.println(OWi + 1);
+            // Serial.print("\nNo Sensor attaches at ");
+            // Serial.print("1-Wire_");
+            // Serial.println(OWi + 1);
         }
         break;
 
@@ -681,8 +681,8 @@ void readI2C_5V_Connector()
     }
     else
     {
-        Serial.print("\nNo Sensor attaches at ");
-        Serial.println("I2C_5V");
+        // Serial.print("\nNo Sensor attaches at ");
+        // Serial.println("I2C_5V");
     }
 }
 
@@ -694,8 +694,8 @@ void readSPI_Connector()
     }
     else
     {
-        Serial.print("\nNo Sensor attaches at ");
-        Serial.println("SPI_CON");
+        // Serial.print("\nNo Sensor attaches at ");
+        // Serial.println("SPI_CON");
     }
 }
 

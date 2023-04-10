@@ -108,9 +108,6 @@
 #include <Fonts/FreeSans9pt7b.h>
 #include <Adafruit_ST7735.h>
 
-#undef CFG_eu868
-#define CFG_eu868 1
-
 // ----- Deep Sleep related -----//
 #define BUTTON_PIN_BITMASK 0x10001 // GPIOs 0 and 16
 #define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
@@ -135,6 +132,7 @@ void on_time_available(struct timeval *t);
 void configModeCallback(WiFiManager *myWiFiManager);
 void printDigits(int digits);
 void digitalClockDisplay(int x, int y, bool date);
+void setUploadTime();
 void drawBattery(int x, int y);
 void renderPage(int page);
 int countMeasurements(const std::vector<Sensor> &sensors);
@@ -172,6 +170,9 @@ void setEsp32Time(const char *timeStr);
 void printHex2(unsigned v);
 void onEvent(ev_t ev);
 void do_send(osjob_t *j);
+void user_request_network_time_callback(void *pVoidUserUTCTime, int flagSuccess);
+void convertTo_LSB_EUI(char *input, uint8_t *output);
+void convertTo_MSB_APPKEY(char *input, uint8_t *output);
 
 // ----- Function declaration -----//
 
@@ -193,6 +194,7 @@ static const u1_t PROGMEM APPKEY[16] = {0x84, 0x5D, 0x30, 0x02, 0x41, 0x3D, 0x4D
 void os_getDevKey(u1_t *buf) { memcpy_P(buf, APPKEY, 16); }
 
 byte loraSendData[191] = "12345678"; // value for testing
+uint32_t userUTCTime;                // Seconds since the UTC epoch // LoRa requested time
 static osjob_t sendjob;
 
 // Schedule TX every this many seconds (might become longer due to duty
@@ -207,7 +209,6 @@ const lmic_pinmap lmic_pins = {
     .rst = LORA_RST,
     .dio = {LORA_DI0, LORA_DI1, LMIC_UNUSED_PIN},
     .rxtx_rx_active = 0,
-    .rssi_cal = 10,
     .spi_freq = 8000000, /* 8MHz */
 };
 
@@ -258,9 +259,10 @@ int num_pages = NUM_PAGES;
 String lastUpload;
 bool initialState; // state of the LED
 bool ledState = false;
-bool sendDataWifi = true;
-bool sendDataLoRa = true; // for testing set to true
+bool sendDataWifi = false;
+bool sendDataLoRa = false;
 bool gotoSleep = true;
+bool forceConfig = false; // if no config file or DoubleReset detected
 
 unsigned long previousMillis = 0;
 unsigned long upButtonsMillis = 0;
@@ -297,32 +299,30 @@ void setup()
    Serial.setTxTimeoutMs(5); // set USB CDC Time TX
    Serial.begin(115200);     // start Serial for debuging
 
-   bool forceConfig = false;
-
    /* ------------  Test DATA for connected Sensors  --------------------------
 
-       ---> comes from Web Config normaly or out of SPIFF
+      ---> comes from Web Config normaly or out of SPIFF
 
-   I2C_con_table[0] = NO;
-   I2C_con_table[1] = NO;
-   I2C_con_table[2] = NO;
-   I2C_con_table[3] = NO;
-   ADC_con_table[0] = CAP_SOIL;
-   ADC_con_table[1] = TDS;
-   ADC_con_table[2] = TDS;
-   OneWire_con_table[0] = DHT_22;
-   OneWire_con_table[1] = DHT_22;
-   OneWire_con_table[2] = DHT_22;
-   SPI_con_table[0] = NO;
-   I2C_5V_con_table[0] = MULTIGAS_V1;
-   EXTRA_con_table[0] = NO;
-   EXTRA_con_table[1] = NO;
+  I2C_con_table[0] = NO;
+  I2C_con_table[1] = NO;
+  I2C_con_table[2] = NO;
+  I2C_con_table[3] = NO;
+  ADC_con_table[0] = CAP_SOIL;
+  ADC_con_table[1] = TDS;
+  ADC_con_table[2] = TDS;
+  OneWire_con_table[0] = DHT_22;
+  OneWire_con_table[1] = DHT_22;
+  OneWire_con_table[2] = DHT_22;
+  SPI_con_table[0] = NO;
+  I2C_5V_con_table[0] = MULTIGAS_V1;
+  EXTRA_con_table[0] = NO;
+  EXTRA_con_table[1] = NO;
 
-   save_Connectors(); // <------------------ called normaly after Web Config
+  save_Connectors(); // <------------------ called normaly after Web Config
 
-   Test DATA for connected Sensors ---> come from Web Config normaly
+  Test DATA for connected Sensors ---> come from Web Config normaly
 
-   ---------------------------------------------------------------------------------*/
+  ---------------------------------------------------------------------------------*/
 
    // Increment boot number and print it every reboot
    ++bootCount;
@@ -373,6 +373,11 @@ void setup()
             ESP.restart();
             delay(5000);
          }
+         if (WiFiManagerNS::NTPEnabled)
+         {
+            WiFiManagerNS::configTime();
+            delay(1000);
+         }
       }
       else
       {
@@ -384,14 +389,34 @@ void setup()
             ESP.restart();
             delay(5000);
          }
+         if (WiFiManagerNS::NTPEnabled)
+         {
+            WiFiManagerNS::configTime();
+            delay(1000);
+         }
       }
-      stopBlinking();
 
       sendDataWifi = true;
+      stopBlinking();
    }
 
    if (upload == "LORA")
    {
+      // LMIC init
+      os_init();
+      // Reset the MAC state. Session and pending data transfers will be discarded.
+      LMIC_reset();
+
+      // LMIC_setLinkCheckMode(0);
+      //  Set the data rate to Spreading Factor 7.  This is the fastest supported rate for 125 kHz channels, and it
+      //  minimizes air time and battery power. Set the transmission power to 14 dBi (25 mW).
+      LMIC_setDrTxpow(EU868_DR_SF7, 14);
+
+      // in the US, with TTN, it saves join time if we start on subband 1 (channels 8-15). This will
+      // get overridden after the join by parameters from the network. If working with other
+      // networks or in other regions, this will need to be changed.
+      // LMIC_selectSubBand(1);
+
       sendDataLoRa = true;
    }
 
@@ -406,7 +431,10 @@ void loop()
    drd->loop();
    analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
 
-  // os_runloop_once();
+   if (upload == "LORA")
+   {
+      os_runloop_once();
+   }
 
    unsigned long currentMillis = millis();
 
@@ -513,27 +541,10 @@ void loop()
       // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
       if (WiFiManagerNS::NTPEnabled)
       {
-         WiFiManagerNS::configTime();
-         delay(1000);
          struct tm timeInfo;
          getLocalTime(&timeInfo, 1000);
          Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
          setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
-
-         lastUpload = "";
-
-         if (timeInfo.tm_hour < 10)
-            lastUpload += '0';
-         lastUpload += String(timeInfo.tm_hour) + ':';
-
-         if (timeInfo.tm_min < 10)
-            lastUpload += '0';
-         lastUpload += String(timeInfo.tm_min) + ':';
-
-         if (timeInfo.tm_sec < 10)
-            lastUpload += '0';
-
-         lastUpload += String(timeInfo.tm_sec);
       }
       else
       {
@@ -542,7 +553,7 @@ void loop()
          String Time1 = getDateTime(header);
          setEsp32Time(Time1.c_str());
       }
-
+      setUploadTime();
       renderPage(currentPage);
    }
 
@@ -552,6 +563,9 @@ void loop()
       lora_sendData();
 
       sendDataLoRa = false;
+
+      setUploadTime();
+      renderPage(currentPage);
    }
 
    if (useBattery && gotoSleep)
@@ -647,7 +661,7 @@ void digitalClockDisplay(int x, int y, bool date)
       tft.print("   ");
       tft.print(actualTime.tm_mday);
       tft.print(" ");
-      tft.print(actualTime.tm_mon);
+      tft.print(actualTime.tm_mon + 1);
       tft.print(" ");
       tft.print(actualTime.tm_year - 100 + 2000);
       tft.println();
@@ -905,6 +919,7 @@ void load_Connectors()
             else
             {
                Serial.println("failed to load json config");
+               forceConfig = true;
             }
             connectorsFile.close();
          }
@@ -913,6 +928,7 @@ void load_Connectors()
    else
    {
       Serial.println("failed to mount FS");
+      forceConfig = true;
    }
    // end read
 }
@@ -1593,6 +1609,7 @@ void load_Config(void)
          else
          {
             Serial.println("failed to load json config");
+            forceConfig = true;
          }
          configFile.close();
       }
@@ -1600,6 +1617,7 @@ void load_Config(void)
    else
    {
       Serial.println("failed to mount FS");
+      forceConfig = true;
    }
 }
 
@@ -1623,84 +1641,71 @@ void printMeassurments()
 
 void wifi_sendData(void)
 {
-   // ----- code later used to post measurements
-
    DynamicJsonDocument docMeasures(2000);
 
    for (int i = 0; i < sensorVector.size(); ++i)
    {
       for (int j = 0; j < sensorVector[i].returnCount; j++)
       {
-         docMeasures[sensorVector[i].measurements[j].data_name] = sensorVector[i].measurements[j].value;
+         if (!sensorVector[i].measurements[j].value == NAN)
+         {
+            docMeasures[sensorVector[i].measurements[j].data_name] = sensorVector[i].measurements[j].value;
+         }
       }
    }
 
    String output;
    serializeJson(docMeasures, output);
 
-   // Serial.println("\nsend Data:");
-   // serializeJson(docMeasures, Serial);
-
-   // --------------------------   test all hard coded ....
-
-   // Check WiFi connection status
-   if (WiFi.status() == WL_CONNECTED)
+   if (sizeof(output) > 2)
    {
-      // WiFiClient client;
-      WiFiClientSecure client;
-      client.setCACert(kits_ca);
+      Serial.println("\nsend Data via WIFI:");
+      serializeJson(docMeasures, Serial);
 
-      HTTPClient https;
+      // Check WiFi connection status
+      if (WiFi.status() == WL_CONNECTED)
+      {
+         // WiFiClient client;
+         WiFiClientSecure client;
+         client.setCACert(kits_ca);
 
-      //    StaticJsonDocument<100> doc;
+         HTTPClient https;
 
-      //    doc["test"] = 16;
+         // https://gitlab.com/teleagriculture/community/-/blob/main/API.md
 
-      //    String output;
+         // python example
+         // https://gitlab.com/teleagriculture/community/-/blob/main/RPI/tacserial.py
 
-      //    serializeJson(doc, output);
+         // should show up there:
+         // https://kits.teleagriculture.org/kits/1003
+         // Sensor: test
 
-      //    Serial.print("\njson Data for POST: ");
-      //    serializeJson(doc, Serial);
+         // https.begin(client, "https://kits.teleagriculture.org/api/kits/1003/measurements");
 
-      //    Serial.println();
+         serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
+         api_Bearer = "Bearer " + API_KEY;
 
-      // https://gitlab.com/teleagriculture/community/-/blob/main/API.md
+         https.begin(client, serverName);
 
-      // python example
-      // https://gitlab.com/teleagriculture/community/-/blob/main/RPI/tacserial.py
+         https.addHeader("Content-Type", "application/json");
+         https.addHeader("Authorization", api_Bearer);
 
-      // should show up there:
-      // https://kits.teleagriculture.org/kits/1003
-      // Sensor: test
+         int httpResponseCode = https.POST(output);
 
-      // https.begin(client, "https://kits.teleagriculture.org/api/kits/1003/measurements");
-      https.begin(client, serverName);
+         Serial.print("\nHTTP Response code: ");
+         Serial.println(httpResponseCode);
+         Serial.println();
 
-      https.addHeader("Content-Type", "application/json");
-      https.addHeader("Authorization", api_Bearer);
+         // Free resources
+         https.end();
+      }
+      else
+      {
+         Serial.println("WiFi Disconnected");
+      }
 
-      int httpResponseCode = https.POST(output);
-
-      Serial.print("\nHTTP Response code: ");
-      Serial.println(httpResponseCode);
-      Serial.println();
-
-      // if (httpResponseCode > 0)
-      // {
-      //    String payload = https.getString();
-      //    Serial.println(payload);
-      // }
-
-      // Free resources
-      https.end();
+      DynamicJsonDocument deallocate(docMeasures);
    }
-   else
-   {
-      Serial.println("WiFi Disconnected");
-   }
-
-   DynamicJsonDocument deallocate(docMeasures);
 
    Serial.println();
 }
@@ -2002,11 +2007,14 @@ void setEsp32Time(const char *timeStr)
    // setTime(now.tm_hour, now.tm_min, now.tm_sec, now.tm_mday, now.tm_mon, now.tm_year);
    setenv("TZ", timeZone.c_str(), 1);
    tzset();
+}
 
+void setUploadTime()
+{
    struct tm timeinfo;
    getLocalTime(&timeinfo);
 
-   Serial.println("\nESP Time set via HTTP get:");
+   Serial.println("\nESP Time set:");
    Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
 
    lastUpload = "";
@@ -2161,12 +2169,20 @@ void onEvent(ev_t ev)
 
 void do_send(osjob_t *j)
 {
-     // LMIC init
-      os_init();
-      // Reset the MAC state. Session and pending data transfers will be discarded.
-      LMIC_reset();
+   // // LMIC init
+   // os_init();
+   // // Reset the MAC state. Session and pending data transfers will be discarded.
+   // LMIC_reset();
 
-      os_runloop_once(); // in loop() ?!?
+   // LMIC_setLinkCheckMode(0);
+   // // Set the data rate to Spreading Factor 7.  This is the fastest supported rate for 125 kHz channels, and it
+   // // minimizes air time and battery power. Set the transmission power to 14 dBi (25 mW).
+   // LMIC_setDrTxpow(EU868_DR_SF9, 14);
+
+   // // in the US, with TTN, it saves join time if we start on subband 1 (channels 8-15). This will
+   // // get overridden after the join by parameters from the network. If working with other
+   // // networks or in other regions, this will need to be changed.
+   // // LMIC_selectSubBand(1);
 
    // Check if there is not a current TX/RX job running
    if (LMIC.opmode & OP_TXRXPEND)
@@ -2175,11 +2191,71 @@ void do_send(osjob_t *j)
    }
    else
    {
+      // Schedule a network time request at the next possible time
+      LMIC_requestNetworkTime(user_request_network_time_callback, &userUTCTime);
+
       // Prepare upstream data transmission at the next possible time.
       LMIC_setTxData2(1, loraSendData, sizeof(loraSendData) - 1, 0);
       Serial.println(F("Packet queued"));
    }
    // Next TX is scheduled after TX_COMPLETE event.
+}
+
+void user_request_network_time_callback(void *pVoidUserUTCTime, int flagSuccess)
+{
+   // Explicit conversion from void* to uint32_t* to avoid compiler errors
+   uint32_t *pUserUTCTime = (uint32_t *)pVoidUserUTCTime;
+
+   // A struct that will be populated by LMIC_getNetworkTimeReference.
+   // It contains the following fields:
+   //  - tLocal: the value returned by os_GetTime() when the time
+   //            request was sent to the gateway, and
+   //  - tNetwork: the seconds between the GPS epoch and the time
+   //              the gateway received the time request
+   lmic_time_reference_t lmicTimeReference;
+
+   if (flagSuccess != 1)
+   {
+      Serial.println(F("USER CALLBACK: Not a success"));
+      return;
+   }
+
+   // Populate "lmic_time_reference"
+   flagSuccess = LMIC_getNetworkTimeReference(&lmicTimeReference);
+   if (flagSuccess != 1)
+   {
+      Serial.println(F("USER CALLBACK: LMIC_getNetworkTimeReference didn't succeed"));
+      return;
+   }
+
+   // Update userUTCTime, considering the difference between the GPS and UTC
+   // epoch, and the leap seconds
+   *pUserUTCTime = lmicTimeReference.tNetwork + 315964800;
+
+   // Add the delay between the instant the time was transmitted and
+   // the current time
+
+   // Current time, in ticks
+   ostime_t ticksNow = os_getTime();
+   // Time when the request was sent, in ticks
+   ostime_t ticksRequestSent = lmicTimeReference.tLocal;
+   uint32_t requestDelaySec = osticks2ms(ticksNow - ticksRequestSent) / 1000;
+   *pUserUTCTime += requestDelaySec;
+
+   // Update the system time with the time read from the network
+   setTime(*pUserUTCTime);
+
+   Serial.print(F("The current UTC time is: "));
+   Serial.print(hour());
+   printDigits(minute());
+   printDigits(second());
+   Serial.print(' ');
+   Serial.print(day());
+   Serial.print('/');
+   Serial.print(month());
+   Serial.print('/');
+   Serial.print(year());
+   Serial.println();
 }
 
 void setUPWiFi()
@@ -2197,11 +2273,6 @@ void setUPWiFi()
    // attach board-setup page to the WiFi Manager
    WiFiManagerNS::init(&wifiManager);
 
-   if (WiFiManagerNS::NTPEnabled)
-   {
-      // optionally attach external RTC update callback
-      // WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
-   }
    // reset settings - wipe stored credentials for testing
    // these are stored by the WiFiManager library
    // wifiManager.resetSettings();
@@ -2224,4 +2295,92 @@ void setUPWiFi()
    // wifiManager.setShowInfoUpdate(false);
    wifiManager.setDarkMode(true);
    // wifiManager.setSaveConfigCallback([]() { configSaved = true; }); // restart on credentials save, ESP32 doesn't like to switch between AP/STA
+}
+
+void convertTo_LSB_EUI(char *input, uint8_t *output)
+{
+   // Check if input matches pattern
+   if (strlen(input) != 16)
+   {
+      Serial.println("Input must be 16 characters long.");
+      return;
+   }
+   for (int i = 0; i < 16; i++)
+   {
+      if (!isxdigit(input[i]))
+      {
+         Serial.println("Input must be in hexadecimal format.");
+         return;
+      }
+   }
+
+   // Reverse input string
+   char inputRev[17];
+   for (int i = 0; i < 16; i++)
+   {
+      inputRev[i] = input[15 - i];
+   }
+   inputRev[16] = '\0';
+
+   // Convert string to byte array
+   for (int i = 0; i < 8; i++)
+   {
+      char byteStr[3];
+      strncpy(byteStr, &inputRev[i * 2], 2);
+      byteStr[2] = '\0';
+      output[i] = strtol(byteStr, NULL, 16);
+   }
+
+   // Print converted array
+   Serial.print("APPEUI[8]={ ");
+   for (int i = 0; i < 8; i++)
+   {
+      Serial.print("0x");
+      Serial.print(output[i], HEX);
+      if (i < 7)
+      {
+         Serial.print(",");
+      }
+   }
+   Serial.println(" };");
+}
+
+void convertTo_MSB_APPKEY(char *input, uint8_t *output)
+{
+   // Check if input matches pattern
+   if (strlen(input) != 32)
+   {
+      Serial.println("Input must be 16 characters long.");
+      return;
+   }
+   for (int i = 0; i < 32; i++)
+   {
+      if (!isxdigit(input[i]))
+      {
+         Serial.println("Input must be in hexadecimal format.");
+         return;
+      }
+   }
+
+   // Convert string to byte array
+   for (int i = 0; i < 16; i++)
+   {
+      char byteStr[3];
+      strncpy(byteStr, &input[i * 2], 2);
+      byteStr[2] = '\0';
+      output[i] = strtol(byteStr, NULL, 16);
+   }
+
+   // Print converted array
+   Serial.print("APPEUI[8]={ ");
+   for (int i = 0; i < 16; i++)
+   {
+      Serial.print("0x");
+      Serial.print(output[i], HEX);
+      if (i < 7)
+      {
+         Serial.print(",");
+      }
+   }
+   Serial.println(" };");
 }

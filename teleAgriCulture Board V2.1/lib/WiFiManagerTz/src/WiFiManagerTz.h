@@ -82,6 +82,7 @@ namespace WiFiManagerNS
     String tempServer = NTP::server();
     char char_array[tempServer.length() + 1];
     tempServer.toCharArray(char_array, tempServer.length() + 1);
+    delay(500);
     TZ::configTimeWithTz(tz, char_array);
   }
 

@@ -1661,7 +1661,7 @@ void wifi_sendData(void)
    String output;
    serializeJson(docMeasures, output);
 
-   if (sizeof(output) > 2)
+   if (output != NULL)
    {
       Serial.println("\nsend Data via WIFI:");
       serializeJson(docMeasures, Serial);

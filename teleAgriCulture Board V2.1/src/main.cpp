@@ -671,6 +671,7 @@ void digitalClockDisplay(int x, int y, bool date)
 void drawBattery(int x, int y)
 {
    int bat = BL.getBatteryChargeLevel();
+   tft.fillRect(x - 5, y - 2, 60, 10, ST7735_BLACK);
    tft.setCursor(x, y);
    tft.setTextColor(0xCED7);
    tft.print("Bat: ");
@@ -679,28 +680,31 @@ void drawBattery(int x, int y)
       tft.setTextColor(ST7735_WHITE);
       tft.print("NO");
    }
-   if (bat > 1 && bat < 20)
+   else
    {
-      tft.setTextColor(ST7735_RED);
+      if (bat > 1 && bat < 20)
+      {
+         tft.setTextColor(ST7735_RED);
+      }
+      if (bat >= 20 && bat < 40)
+      {
+         tft.setTextColor(ST7735_ORANGE);
+      }
+      if (bat >= 40 && bat < 60)
+      {
+         tft.setTextColor(ST7735_YELLOW);
+      }
+      if (bat >= 60 && bat < 80)
+      {
+         tft.setTextColor(0xAEB2);
+      }
+      if (bat >= 80)
+      {
+         tft.setTextColor(ST7735_GREEN);
+      }
+      tft.print(bat);
+      tft.print(" %");
    }
-   if (bat >= 20 && bat < 40)
-   {
-      tft.setTextColor(ST7735_ORANGE);
-   }
-   if (bat >= 40 && bat < 60)
-   {
-      tft.setTextColor(ST7735_YELLOW);
-   }
-   if (bat >= 60 && bat < 80)
-   {
-      tft.setTextColor(0xAEB2);
-   }
-   if (bat >= 80)
-   {
-      tft.setTextColor(ST7735_GREEN);
-   }
-   tft.print(bat);
-   tft.print(" %");
 }
 
 void printDigits(int digits)
@@ -1678,7 +1682,6 @@ void wifi_sendData(void)
 
          // should show up there:
          // https://kits.teleagriculture.org/kits/1003
-         // Sensor: test
 
          // https.begin(client, "https://kits.teleagriculture.org/api/kits/1003/measurements");
 

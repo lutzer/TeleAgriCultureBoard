@@ -1,4 +1,7 @@
+Firmware is based on this Platformio ESP32-S3 Project
 
+find the actuall Firmware for OTA upload (Board Setup on the Config Portal) here:
+[actuall Firmware](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/Firmware)
 
 # TeleAgriCulture Board V2.1
 

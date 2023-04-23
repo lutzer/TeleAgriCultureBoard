@@ -24,9 +24,11 @@
  *
 \*/
 
-//TODO: a system for multible simular measurments, NAMING
+// TODO: a system for multible simular measurments, NAMING
 
 #include <Arduino.h>
+#include <esp_adc_cal.h>
+#include <soc/adc_channel.h>
 
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
@@ -39,7 +41,6 @@
 #include "drivers/DSTherm.h"
 #include "utils/Placeholder.h"
 #include <GravityTDS.h>
-#include <Pangodream_18650_CL.h>
 
 #define DHTTYPE DHT22
 
@@ -62,6 +63,8 @@ Measurement measurements[MEASURMENT_NUM];
 std::vector<Sensor> sensorVector;
 std::vector<Measurement> show_measurements;
 
+esp_adc_cal_characteristics_t adc_cal;
+
 // flag for saving Connector data
 bool shouldSaveConfig = false;
 
@@ -71,8 +74,11 @@ bool shouldSaveConfig = false;
 Adafruit_BME280 bme;
 Adafruit_VEML7700 veml = Adafruit_VEML7700();
 
+GAS_GMXXX<TwoWire> gas;
+MiCS6814 multiGasV1;
+
 GravityTDS gravityTds;
-Pangodream_18650_CL BL(BATSENS, 3.1, 10);
+// Pangodream_18650_CL BL(BATSENS, 3.1, 10);
 
 float temperature = 22, tdsValue = 0;
 
@@ -83,6 +89,7 @@ void readOneWire_Connectors();
 void readI2C_5V_Connector();
 void readSPI_Connector();
 void readEXTRA_Connectors();
+float getBatteryVoltage();
 
 // LevelSensor
 #define NO_TOUCH 0xFE
@@ -117,13 +124,18 @@ void sensorRead()
 
     sensorVector.clear();
 
+    // TwoWire I2CCON = TwoWire(0);
+    // I2CCON.begin(I2C_SDA, I2C_SCL);
+
+    Wire.setPins(I2C_SDA, I2C_SCL);
+
+
     if (I2C_5V_con_table[0] == MULTIGAS_V1)
     {
-        MiCS6814 multiGasV1;
         // Connect to sensor using default I2C address (0x04)
         // Alternatively the address can be passed to begin(addr)
 
-        if (multiGasV1.begin() == true)
+        if (multiGasV1.begin(0x04) == true)
         {
             // Turn heater element on
             multiGasV1.powerOn();
@@ -137,7 +149,7 @@ void sensorRead()
     }
 
     Sensor newSensor = allSensors[BATTERY];
-    newSensor.measurements->value = BL.getBatteryVolts();
+    newSensor.measurements->value = getBatteryVoltage();
     sensorVector.push_back(newSensor);
 
     Serial.println("SensorRead.....");
@@ -149,7 +161,7 @@ void sensorRead()
     readI2C_5V_Connector();
     readEXTRA_Connectors();
 
-   // digitalWrite(SW_3V3, LOW);
+    // digitalWrite(SW_3V3, LOW);
     digitalWrite(SW_5V, LOW);
     digitalWrite(LED, LOW);
 }
@@ -555,10 +567,12 @@ void readI2C_5V_Connector()
 {
     if (I2C_5V_con_table[0] == MULTIGAS)
     {
+        gas.begin(Wire, 0x08); // use the hardware I2C
         static uint8_t recv_cmd[8] = {};
         int PPM = 0;
         double lgPPM;
-        GAS_GMXXX<TwoWire> gas;
+
+        delay(200);
 
         /* Multichannel sensor Grove V2, by vcoder 2021
             CO range 0 - 1000 PPM
@@ -576,8 +590,6 @@ void readI2C_5V_Connector()
         0.15        150
         */
 
-        gas.begin(Wire, 0x04); // use the hardware I2C
-
         uint8_t len = 0;
         uint8_t addr = 0;
         uint8_t i;
@@ -589,30 +601,26 @@ void readI2C_5V_Connector()
 
         float ratio;
         unsigned long messureTime = millis();
-        do
-        {
-            float sensorValue = 0;
-            for (int x = 0; x < 100; x++)
-            {
-                sensorValue = gas.measure_CO();
-            }
-            sensor_volt = (sensorValue / 1024) * 3.3;
-            RS_gas = (3.3 - sensor_volt) / sensor_volt;
 
-            R0 = 3.21; // measured on ambient air
-            ratio = RS_gas / R0;
-            // ratio = 1; //it is for tests of the calibration curve
+        float sensorValue = 0;
 
-            lgPPM = (log10(ratio) * -2.82) - 0.12; //- 3.82) - 0.66; - default      - 2.82) - 0.12; - best for range up to 150 ppm
+        sensorValue = gas.measure_CO();
 
-            PPM = pow(10, lgPPM);
+        sensor_volt = (sensorValue / 1024) * 3.3;
+        RS_gas = (3.3 - sensor_volt) / sensor_volt;
 
-        } while (millis() - messureTime < 2000U);
+        R0 = 3.21; // measured on ambient air
+        ratio = RS_gas / R0;
+        // ratio = 1; //it is for tests of the calibration curve
+
+        lgPPM = (log10(ratio) * -2.82) - 0.12; //- 3.82) - 0.66; - default      - 2.82) - 0.12; - best for range up to 150 ppm
+
+        PPM = pow(10, lgPPM);
 
         Sensor newSensor = allSensors[MULTIGAS];
         newSensor.measurements[0].value = PPM;
 
-        sensorVector.push_back(newSensor);
+        delay(200);
 
         /* Multichannel sensor Grove V2, by vcoder 2021
             NO2 range 0 - 10 PPM
@@ -632,30 +640,29 @@ void readI2C_5V_Connector()
         4.7         10
         */
 
-        messureTime = millis();
-        do
-        {
-            float sensorValue = 0;
-            for (int x = 0; x < 100; x++)
-            {
-                sensorValue = gas.measure_NO2();
-            }
+        sensorValue = 0;
 
-            sensor_volt = (sensorValue / 1024) * 3.3;
-            RS_gas = (3.3 - sensor_volt) / sensor_volt;
+        sensorValue = gas.measure_NO2();
 
-            R0 = 1.07; // measured on ambient air
-            ratio = RS_gas / R0;
-            // ratio = 4.7; //for tests of the calibration curve
+        sensor_volt = (sensorValue / 1024) * 3.3;
+        RS_gas = (3.3 - sensor_volt) / sensor_volt;
 
-            lgPPM = (log10(ratio) * +1.9) - 0.2; //+2   -0.3
+        R0 = 1.07; // measured on ambient air
+        ratio = RS_gas / R0;
+        // ratio = 4.7; //for tests of the calibration curve
 
-            PPM = pow(10, lgPPM);
-        } while (millis() - messureTime < 2000U);
+        lgPPM = (log10(ratio) * +1.9) - 0.2; //+2   -0.3
+
+        PPM = pow(10, lgPPM);
+
+        delay(10);
 
         newSensor.measurements[1].value = PPM;
 
         sensorVector.push_back(newSensor);
+
+        Wire.end();
+
     }
     else if (I2C_5V_con_table[0] == MULTIGAS_V1)
     {
@@ -665,6 +672,8 @@ void readI2C_5V_Connector()
 
         multiGasV1.begin(0x04);
         multiGasV1.powerOn();
+
+        delay(200);
 
         Sensor newSensor = allSensors[MULTIGAS_V1];
 
@@ -678,6 +687,8 @@ void readI2C_5V_Connector()
         newSensor.measurements[7].value = multiGasV1.measureC2H5OH();
 
         sensorVector.push_back(newSensor);
+
+        multiGasV1.powerOff();
     }
     else
     {
@@ -694,8 +705,8 @@ void readSPI_Connector()
     }
     else
     {
-        // Serial.print("\nNo Sensor attaches at ");
-        // Serial.println("SPI_CON");
+        Serial.print("\nNo Sensor attaches at ");
+        Serial.println("SPI_CON");
     }
 }
 
@@ -826,4 +837,13 @@ static void printScratchpad(const DSTherm::Scratchpad &scrpd)
     Serial.print(" C");
 
     Serial.println();
+}
+
+float getBatteryVoltage()
+{
+    uint32_t raw = adc1_get_raw(ADC1_CHANNEL_3);
+    uint32_t millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+    const uint32_t upper_divider = 442;
+    const uint32_t lower_divider = 160;
+    return (float)(upper_divider + lower_divider) / lower_divider / 1000 * millivolts;
 }

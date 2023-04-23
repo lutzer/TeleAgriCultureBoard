@@ -82,10 +82,9 @@ namespace WiFiManagerNS
     String tempServer = NTP::server();
     char char_array[tempServer.length() + 1];
     tempServer.toCharArray(char_array, tempServer.length() + 1);
-    delay(500);
+    delay(100);
     TZ::configTimeWithTz(tz, char_array);
   }
-
 
   enum Element_t
   {
@@ -216,6 +215,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "<BR><BR>";
     TimeConfHTML += "Board MAC Address: " + WiFi.macAddress();
     TimeConfHTML += "<BR><BR>";
+    TimeConfHTML += "<iframe name='dummyframe' id='dummyframe' style='display: none;'></iframe>";
 
     TimeConfHTML += "<div><form action='/save-tz' target='dummyframe' method='POST'><legend>Please select your data upload method:</legend>";
     TimeConfHTML += "<table style='width:100%'><tr>";
@@ -344,8 +344,6 @@ namespace WiFiManagerNS
     TimeConfHTML += "<input readonly style=width:auto name='system-time' type='datetime-local' value='" + systimeStr + "'>";
     TimeConfHTML += " <button onclick=location.reload() style=width:auto type=button> Refresh </button></label><br>";
 
-    TimeConfHTML += "<iframe name='dummyframe' id='dummyframe' style='display: none;'></iframe>";
-
     // const char *currentTimeZone = "Europe/Paris";
     TimeConfHTML += "<label for='timezone'>Time Zone</label>";
     TimeConfHTML += "<select id='timezone' name='timezone'>";
@@ -399,8 +397,7 @@ namespace WiFiManagerNS
     TimeConfHTML += "</div>";
 
     TimeConfHTML += "<button type=submit>Submit</button>";
-    TimeConfHTML += "</form></div>";
-
+    TimeConfHTML += "</form></div><BR>";
     TimeConfHTML += getTemplate(HTML_END);
 
     _wifiManager->server->send_P(200, "text/html", TimeConfHTML.c_str(), TimeConfHTML.length());
@@ -518,6 +515,7 @@ namespace WiFiManagerNS
 
     if (_wifiManager->server->hasArg("BoardID"))
     {
+      boardID = atoi(_wifiManager->server->arg("BoardID").c_str());
     }
 
     if (_wifiManager->server->hasArg("i2c_1"))
@@ -573,12 +571,6 @@ namespace WiFiManagerNS
     if (_wifiManager->server->hasArg("onewire_3"))
     {
       OneWire_con_table[2] = atoi(_wifiManager->server->arg("onewire_3").c_str());
-    }
-
-    if (_wifiManager->server->hasArg("boardID"))
-    {
-      boardID = atoi(_wifiManager->server->arg("BoardID").c_str());
-      Serial.println("arg: BoardID");
     }
 
     if (_wifiManager->server->hasArg("battery"))
@@ -650,7 +642,7 @@ namespace WiFiManagerNS
     save_Connectors();
     save_Config();
 
-    const char *successResp = "<script>parent.location.href = '/';</script>";
+    const char *successResp = "<script>parent.location.href = '/exit';</script>";
     const char *failureResp = "<script>parent.alert('fail');</script>";
 
     _wifiManager->server->send(200, "text/html", success ? successResp : failureResp);
@@ -663,7 +655,7 @@ namespace WiFiManagerNS
     _wifiManager->server->on("/favicon.ico", handleFavicon); // changed to imbedded png/base64 link
   }
 
-  // define a function that takes a connector type and a sensor id as parameters
+  // function that takes a connector type and a sensor id as parameters and generates dropdown menu
   String generateDropdown(String con_typ, int sensor_id)
   {
     // create an empty string to store the dropdown

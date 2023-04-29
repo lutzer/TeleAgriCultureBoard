@@ -24,9 +24,7 @@
  *
  *
 
-//TODO: LoRa send to TTN
 //TODO: TTN decoder
-//TODO: LoRa frequency change based on UI
 
 //TODO: Cert read and set  ---> String user_CA ---> to usable const char[]
 //TODO: WiFISecure Cert check
@@ -37,7 +35,7 @@
 
 /*
  *
- * For defines, GPIOs and implemented Sensors see sensor_Board.hpp
+ * For defines, GPIOs and implemented Sensors, see sensor_Board.hpp (BoardID, API_KEY and LORA credentials)
  *
  * **************** board Version 2.0 (no TFT CON) needs some pin define changes in the sensor_Board.hpp !!!!
  *
@@ -46,12 +44,14 @@
  *
  * ------> Config Portal opens after double reset or holding BooT button for >5sec
  *
- * main() handles Config Accesspoint, WiFi, LoRa, load, save and display UI
+ * main() handles Config Accesspoint, WiFi, LoRa, load, save, time and display UI
  *
  * Global vector to store connected Sensor data:
  * std::vector<Sensor> sensorVector;
- * Global vector to store Measurement data:
- * std::vector<Measurement> show_measurements;
+ * 
+ * Sensor Data Name: sensorVector[i].measurements[j].data_name    --> in order of apperiance (temp, temp1, temp2 ...)
+ * Sensor Value:     sensorVector[i].measurements[j].value
+ * 
 /*/
 
 /*
@@ -70,7 +70,6 @@
       corresponding to your Sensortype with case statement using your Sensor ENUM
 */
 
-// TODO: Power and timing optimisation on battery power
 
 #include <Arduino.h>
 #include <FS.h>
@@ -98,9 +97,8 @@
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <TTN_esp32.h>
 #include <LoraMessage.h>
-#include <lmic.h>
-#include <hal/hal.h>
 
 #include <tac_logo.h>
 #include <customTitle_picture.h>
@@ -108,6 +106,8 @@
 #include <sensor_Read.hpp>  // Sensor read handling
 
 #define ESP_DRD_USE_SPIFFS true
+#define DOUBLERESETDETECTOR_DEBUG true
+
 #include <ESP_DoubleResetDetector.h>
 #include <Button.h>
 #include <servers.h>
@@ -155,7 +155,7 @@ void load_Connectors(void);
 void save_Connectors(void);
 void load_Config(void);
 void save_Config(void);
-void lora_sendData(void);
+ValueOrder getValueOrderFromString(String str);
 
 // UI functions
 void renderPage(int page);
@@ -183,9 +183,9 @@ void get_time_in_timezone(const char *timezone);
 void setEsp32Time(const char *timeStr);
 
 // Lora functions
-LoraSendType getLoraSendTypeFromString(String str);
-void SaveLMICToRTC(int deepsleep_sec);
-void user_request_network_time_callback(void *pVoidUserUTCTime, int flagSuccess);
+void lora_sendData(void);
+void message(const uint8_t *payload, size_t size, int rssi);
+void waitForTransactions();
 void convertTo_LSB_EUI(char *input, uint8_t *output);
 void convertTo_MSB_APPKEY(char *input, uint8_t *output);
 
@@ -204,55 +204,12 @@ void printHex2(unsigned v);
 
 // ----- LoRa related -----//
 
-#define TTN_APPEUI                                   \
-   {                                                 \
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 \
-   } // TTN Application EUI with "lsb"
-#define TTN_DEVEUI                                   \
-   {                                                 \
-      0x45, 0xC6, 0x05, 0xD0, 0x7E, 0xD5, 0xB3, 0x70 \
-   } // TTN Device EUI with "lsb"
-#define TTN_APPKEY                                                                                   \
-   {                                                                                                 \
-      0x20, 0xF5, 0x40, 0xD0, 0x52, 0x16, 0x12, 0xA7, 0x79, 0x5F, 0xE2, 0x06, 0xAF, 0x92, 0x33, 0x8F \
-   } // TTN App Key with "msb"
-
-// AppEUI (sometimes called JoinEUI)
-const char *appEui = "0000000000000000";
-// DevEUI
-const char *devEui = "70B3D57ED005A8F4";
-// AppKey
-const char *appKey = "DF6B2A4AC0930BCA55141564D751D578";
-
-static const u1_t PROGMEM APPEUI[8] = TTN_APPEUI;
-static const u1_t PROGMEM DEVEUI[8] = TTN_DEVEUI;
-static const u1_t PROGMEM APPKEY[16] = TTN_APPKEY;
-
-void os_getArtEui(u1_t *buf) { memcpy_P(buf, APPEUI, 8); }
-void os_getDevEui(u1_t *buf) { memcpy_P(buf, DEVEUI, 8); }
-void os_getDevKey(u1_t *buf) { memcpy_P(buf, APPKEY, 16); }
+TTN_esp32 ttn;
 
 static const int spiClk = 1000000; // 10 MHz
 
-// Pin mapping
-const lmic_pinmap lmic_pins = {
-    .nss = LORA_CS,
-    .rxtx = LMIC_UNUSED_PIN,
-    .rst = LORA_RST,
-    .dio = {LORA_DI0, LORA_DI1, LMIC_UNUSED_PIN},
-    .rxtx_rx_active = 0,
-    .rssi_cal = 14,
-    .spi_freq = 1000000,
-};
-
-// Schedule TX every this many seconds
-// Respect Fair Access Policy and Maximum Duty Cycle!
-// https://www.thethingsnetwork.org/docs/lorawan/duty-cycle.html
 // https://www.loratools.nl/#/airtime
 const unsigned TX_INTERVAL = 30;
-
-// Saves the LMIC structure during DeepSleep
-RTC_DATA_ATTR lmic_t RTC_LMIC;
 
 bool lora_Data_is_Sent = false;
 
@@ -279,7 +236,7 @@ WiFiClientSecure client;
 // subseqent reset will be considered a double reset.
 #define DRD_TIMEOUT 5
 
-// RTC Memory Address for the DoubleResetDetector to use
+// RTC Memory Address for the DoubleResetDetector to use just for ESP8266
 #define DRD_ADDRESS 0
 
 DoubleResetDetector *drd;
@@ -332,10 +289,18 @@ void setup()
    pinMode(SW_3V3, OUTPUT);
    pinMode(SW_5V, OUTPUT);
 
-   delay(500);
+   delay(500);               // for debugging in screen
+   Serial.setTxTimeoutMs(5); // set USB CDC Time TX
+   Serial.begin(115200);     // start Serial for debuging
 
-   // Initialize the GPIO ISR handler service
-   gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+   drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
+   if (drd->detectDoubleReset())
+   {
+      Serial.println(F("\nForcing config mode as there was a Double reset detected"));
+      forceConfig = true;
+   }
+
+   delay(500);
 
    // Initialize the NVS (non-volatile storage) for saving and restoring the keys
    nvs_flash_init();
@@ -378,10 +343,6 @@ void setup()
 
   ---------------------------------------------------------------------------------*/
 
-   delay(1000);
-   Serial.setTxTimeoutMs(5); // set USB CDC Time TX
-   Serial.begin(115200);     // start Serial for debuging
-
    // Print the wakeup reason for ESP32
    print_wakeup_reason();
    GPIO_wake_up();
@@ -392,21 +353,14 @@ void setup()
    ++bootCount;
    // Serial.println("\nBoot number: " + String(bootCount));
 
-   drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
-   if (drd->detectDoubleReset())
-   {
-      Serial.println(F("\nForcing config mode as there was a Double reset detected"));
-      forceConfig = true;
-   }
+   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
-   // esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-
-   // Initialize SPIFFS file system
-   if (!SPIFFS.begin(true))
-   {
-      Serial.println("Failed to mount SPIFFS file system");
-      return;
-   }
+   // print SPIFF files for debugging
+   // if (!SPIFFS.begin(true))
+   // {
+   //    Serial.println("Failed to mount SPIFFS file system");
+   //    return;
+   // }
    // listDir(SPIFFS, "/", 0);
    // Serial.println();
 
@@ -415,10 +369,6 @@ void setup()
    load_Config();     // loade config Data
 
    Wire.setPins(I2C_SDA, I2C_SCL);
-
-// void os_getArtEui(u1_t *buf) { memcpy_P(buf, APPEUI, 8); }
-// void os_getDevEui(u1_t *buf) { memcpy_P(buf, DEVEUI, 8); }
-// void os_getDevKey(u1_t *buf) { memcpy_P(buf, APPKEY, 16); }
 
    // checkLoadedStuff();
 
@@ -458,6 +408,10 @@ void setup()
          esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)anonym.c_str(), strlen(anonym.c_str()));
       }
 
+      // reset settings - wipe stored credentials for testing
+      // these are stored by the WiFiManager library
+      // wifiManager.resetSettings();
+
       setUPWiFi();
 
       startBlinking();
@@ -473,31 +427,34 @@ void setup()
       if ((WiFi.status() == WL_CONNECTED) && useNTP)
       {
          WiFiManagerNS::configTime();
+         WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
       }
       sendDataWifi = true;
       stopBlinking();
    }
 
-   if (upload == "LORA") //   for debug
+   if (upload == "LORA")
    {
       WiFiManagerNS::TZ::loadPrefs();
-      // LMIC init
-      os_init();
 
-      // Reset the MAC state. Session and pending data transfers will be discarded.
-      LMIC_reset();
+      digitalWrite(SW_3V3, HIGH);
+      // ttn.eraseKeys();
 
-      // LMIC_setClockError(MAX_CLOCK_ERROR * 3 / 100);
+      ttn.begin(LORA_CS, UNUSED_PIN, LORA_RST, LORA_DI0, LORA_DI1, UNUSED_PIN);
 
-      // LMIC_setLinkCheckMode(0);    // Disable link check validation
-      // LMIC_setAdrMode(true);
-      // LMIC.dn2Dr = EU868_DR_SF9;         // TTN uses SF9 for its RX2 window.
-      // LMIC_setDrTxpow(EU868_DR_SF9, 14); // Set data rate and transmit power for uplink (note: txpow seems to be ignored by the library)
+      // Declare callback function for handling downlink messages from server
+      ttn.onMessage(message);
 
-      if (RTC_LMIC.seqnoUp != 0)
+      // Join the network
+      ttn.join(OTAA_DEVEUI.c_str(), OTAA_APPEUI.c_str(), OTAA_APPKEY.c_str());
+
+      Serial.print("Joining TTN ");
+      while (!ttn.isJoined())
       {
-         // LMIC = RTC_LMIC;
+         Serial.print(".");
+         delay(500);
       }
+      Serial.println("\njoined!");
 
       sendDataLoRa = true;
    }
@@ -509,11 +466,6 @@ void loop()
 {
    drd->loop();
    analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
-
-   if (upload == "LORA")
-   {
-      os_runloop_once();
-   }
 
    int currentHour = hour(); // get the current hour using the built-in function
 
@@ -540,17 +492,7 @@ void loop()
 
       sendDataWifi = false;
 
-      if (WiFiManagerNS::NTPEnabled)
-      {
-         struct tm timeInfo;
-         getLocalTime(&timeInfo, 1000);
-         Serial.print("Time set by NTP: ");
-         Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-         setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
-         // setenv("TZ", timeZone.c_str(), 1);
-         // tzset();
-      }
-      else
+      if (!(WiFiManagerNS::NTPEnabled))
       {
          String header = get_header();
          delay(1000);
@@ -568,15 +510,18 @@ void loop()
    {
       sensorRead();
 
+      waitForTransactions();
+
       lora_sendData();
 
-      LMIC_requestNetworkTime(user_request_network_time_callback, &userUTCTime);
+      waitForTransactions();
 
       // useBattery = true;
 
       sendDataLoRa = false;
 
       setUploadTime();
+
       if ((!useBattery || !gotoSleep) && useDisplay)
       {
          renderPage(currentPage);
@@ -635,22 +580,23 @@ void loop()
       stopBlinking();
    }
 
-   if (useBattery && gotoSleep || (!useDisplay))
+   if ((useBattery && gotoSleep) || (!useDisplay))
    {
-      if (upload == "LORA")
-      {
-         while (!lora_Data_is_Sent)
-         {
-            os_runloop_once();
-            const bool timeCriticalJobs = os_queryTimeCriticalJobs(ms2osticksRound((TX_INTERVAL * 1000)));
-            if (!timeCriticalJobs && !(LMIC.opmode & OP_TXRXPEND))
-            {
-               Serial.println("Lora DAta sent");
-               lora_Data_is_Sent = true;
-            }
-         }
-         // SaveLMICToRTC(TX_INTERVAL);
-      }
+      // if (upload == "LORA")
+      // {
+      //    while (!lora_Data_is_Sent)
+      //    {
+      //       os_runloop_once();
+      //       const bool timeCriticalJobs = os_queryTimeCriticalJobs(ms2osticksRound((TX_INTERVAL * 1000)));
+      //       if (!timeCriticalJobs && !(LMIC.opmode & OP_TXRXPEND))
+      //       {
+      //          Serial.println("Lora DAta sent");
+      //          lora_Data_is_Sent = true;
+      //       }
+      //    }
+
+      // }
+
       // deepsleepPage();
       // delay(500);
 
@@ -689,11 +635,6 @@ void loop()
 
       delay(100);
 
-      // Serial.println(digitalRead(0));
-
-      // esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-      // Serial.println("Setup ESP32 to sleep for " + String(TIME_TO_SLEEP) + " Seconds");
-
       esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
       esp_sleep_enable_timer_wakeup((seconds_to_next_hour() - 20) * uS_TO_S_FACTOR);
       Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour()) + " Seconds");
@@ -714,7 +655,7 @@ void loop()
 
    if (currentPage == 0)
    {
-      if (now() != prevDisplay)
+      if ((now() != prevDisplay) && upload == "WIFI")
       { // update the display only if time has changed
          prevDisplay = now();
          if (useDisplay && (!useBattery || !gotoSleep))
@@ -774,19 +715,24 @@ void on_time_available(struct timeval *t)
    Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
    setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
 
-   lastUpload = "";
+   if (!useBattery || !gotoSleep)
+   {
+      renderPage(currentPage);
+   }
 
-   if (timeInfo.tm_hour < 10)
-      lastUpload += '0';
-   lastUpload += String(timeInfo.tm_hour) + ':';
+   // lastUpload = "";
 
-   if (timeInfo.tm_min < 10)
-      lastUpload += '0';
-   lastUpload += String(timeInfo.tm_min) + ':';
+   // if (timeInfo.tm_hour < 10)
+   //    lastUpload += '0';
+   // lastUpload += String(timeInfo.tm_hour) + ':';
 
-   if (timeInfo.tm_sec < 10)
-      lastUpload += '0';
-   lastUpload += String(timeInfo.tm_sec);
+   // if (timeInfo.tm_min < 10)
+   //    lastUpload += '0';
+   // lastUpload += String(timeInfo.tm_min) + ':';
+
+   // if (timeInfo.tm_sec < 10)
+   //    lastUpload += '0';
+   // lastUpload += String(timeInfo.tm_sec);
 }
 
 void digitalClockDisplay(int x, int y, bool date)
@@ -978,7 +924,7 @@ void load_Sensors()
 
             allSensors[i].measurements[j].data_name = measurementObj["data_name"].as<String>();
             allSensors[i].measurements[j].value = measurementObj["value"].as<float>();
-            allSensors[i].measurements[j].loraSend = getLoraSendTypeFromString(measurementObj["loraSend"].as<String>());
+            allSensors[i].measurements[j].valueOrder = getValueOrderFromString(measurementObj["valueOrder"].as<String>());
             allSensors[i].measurements[j].unit = measurementObj["unit"].as<String>();
          }
       }
@@ -1212,7 +1158,22 @@ void mainPage()
    tft.setTextColor(ST7735_WHITE);
    tft.print(WiFi.macAddress());
 
-   digitalClockDisplay(5, 95, true);
+   if (upload == "WIFI")
+   {
+      digitalClockDisplay(5, 95, true);
+
+      tft.setTextColor(ST7735_ORANGE);
+      tft.setCursor(5, 115);
+      tft.print(lastUpload);
+   }
+   else
+   {
+      tft.setTextColor(ST7735_ORANGE);
+      tft.setCursor(5, 95);
+      tft.print("TTN no time sync");
+      tft.setCursor(5, 115);
+      tft.print("packet sent");
+   }
 
    tft.setCursor(5, 105);
    tft.print("last data UPLOAD: ");
@@ -1220,10 +1181,6 @@ void mainPage()
    tft.print(upload);
 
    drawBattery(83, 115);
-
-   tft.setTextColor(ST7735_ORANGE);
-   tft.setCursor(5, 115);
-   tft.print(lastUpload);
 }
 
 void printConnectors(ConnectorType typ)
@@ -1889,71 +1846,169 @@ void lora_sendData(void)
 
    for (int i = 0; i < sensorVector.size(); ++i)
    {
-      int k = static_cast<uint8_t>((sensorVector[i].sensor_id) + 1); // send Sensor ID as UINT8
-      message.addUint8(k);
-
       for (int j = 0; j < sensorVector[i].returnCount; j++)
       {
+         int k = static_cast<uint8_t>((sensorVector[i].measurements[j].valueOrder));
+
          if (!isnan(sensorVector[i].measurements[j].value))
          {
-            switch (sensorVector[i].measurements[j].loraSend) // send Measurment values as different packeges
+            message.addUint8(k);
+
+            switch (k) // send Measurment values as different packeges
             {
-            case UNIXTIME:
-               message.addUnixtime(static_cast<uint32_t>(round(sensorVector[i].measurements[j].value)));
-               break;
-            // case LATLNG:
-            //    encoder.writeLatLng(sensorVector[i].measurements[j].value.latitude, sensorVector[i].measurements[j].value.longitude);
-            //    break;
-            case UINT8:
-               message.addUint8(static_cast<uint8_t>(round(sensorVector[i].measurements[j].value)));
-               break;
-            case UINT16:
-               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
-               break;
-            case UINT32:
-               message.addUint32(static_cast<uint32_t>(round(sensorVector[i].measurements[j].value)));
+            case VOLT:
+               message.addTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
                break;
             case TEMP:
                message.addTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
                break;
-            case HUMI:
+            case HUMIDITY:
                message.addHumidity(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
                break;
-            case RAWFLOAT:
+            case PRESSURE:
                message.addRawFloat(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
                break;
-               // case BITMAP:
-               //    encoder.writeBitmap(sensorVector[i].measurements[j].value, false, false, false, false, false, false, false);
-               //    break;
+            case DISTANCE:
+               message.addTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
+            case TDSv:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case MOIS:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case LUX:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case AMBIENT:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case H2v:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case COv:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case CO2v:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case NO2v:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case NH3v:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case C4H10v:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case C3H8v:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case CH4v:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
+            case C2H5OHv:
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
+               break;
             }
          }
       }
    }
-   if (sizeof(message) > 2)
+
+   if (message.getLength() > 2)
    {
-      // Check if there is not a current TX/RX job running
-      if (LMIC.opmode & OP_TXRXPEND)
+      Serial.println("\nSend Lora Data: ");
+
+      ttn.sendBytes(message.getBytes(), message.getLength());
+
+      byte buffer[message.getLength()];
+
+      memcpy(buffer, &message, message.getLength());
+
+      Serial.println(F("Packet queued"));
+
+      for (int i = 0; i < sizeof(buffer); i++)
       {
-         Serial.println(F("OP_TXRXPEND, not sending"));
+         Serial.print(buffer[i], HEX);
       }
-      else
-      {
-         Serial.println("\nSend Lora Data: ");
-
-         byte buffer[sizeof(message)];
-
-         memcpy(buffer, &message, sizeof(message));
-
-         // Prepare upstream data transmission at the next possible time.
-         LMIC_setTxData2(1, buffer, sizeof(buffer) - 1, 0);
-         Serial.println(F("Packet queued"));
-
-         for (int i = 0; i < sizeof(buffer); i++)
-         {
-            Serial.print(buffer[i], HEX);
-         }
-         Serial.println();
-      }
+      Serial.println();
    }
 }
 
@@ -2048,50 +2103,6 @@ void configModeCallback(WiFiManager *myWiFiManager)
    tft.print(version);
 }
 
-LoraSendType getLoraSendTypeFromString(String str)
-{
-   if (str == "UNIXTIME")
-   {
-      return UNIXTIME;
-   }
-   else if (str == "LATLNG")
-   {
-      return LATLNG;
-   }
-   else if (str == "UINT8")
-   {
-      return UINT8;
-   }
-   else if (str == "UINT16")
-   {
-      return UINT16;
-   }
-   else if (str == "UINT32")
-   {
-      return UINT32;
-   }
-   else if (str == "TEMP")
-   {
-      return TEMP;
-   }
-   else if (str == "HUMI")
-   {
-      return HUMI;
-   }
-   else if (str == "RAWFLOAT")
-   {
-      return RAWFLOAT;
-   }
-   else if (str == "BITMAP")
-   {
-      return BITMAP;
-   }
-   else
-   {
-      return NOT;
-   }
-}
-
 String get_header()
 {
    WiFiClientSecure client;
@@ -2174,6 +2185,9 @@ String getDateTime(String header)
 
 void setEsp32Time(const char *timeStr)
 {
+   if (useNTP)
+      return;
+
    struct tm t;
    struct tm now;
    strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
@@ -2232,68 +2246,6 @@ void printHex2(unsigned v)
    Serial.print(v, HEX);
 }
 
-void user_request_network_time_callback(void *pVoidUserUTCTime, int flagSuccess)
-{
-   // Explicit conversion from void* to uint32_t* to avoid compiler errors
-   uint32_t *pUserUTCTime = (uint32_t *)pVoidUserUTCTime;
-
-   // A struct that will be populated by LMIC_getNetworkTimeReference.
-   // It contains the following fields:
-   //  - tLocal: the value returned by os_GetTime() when the time
-   //            request was sent to the gateway, and
-   //  - tNetwork: the seconds between the GPS epoch and the time
-   //              the gateway received the time request
-   lmic_time_reference_t lmicTimeReference;
-
-   if (flagSuccess != 1)
-   {
-      Serial.println(F("USER CALLBACK: Not a success"));
-      return;
-   }
-
-   // Populate "lmic_time_reference"
-   flagSuccess = LMIC_getNetworkTimeReference(&lmicTimeReference);
-   if (flagSuccess != 1)
-   {
-      Serial.println(F("USER CALLBACK: LMIC_getNetworkTimeReference didn't succeed"));
-      return;
-   }
-
-   // Update userUTCTime, considering the difference between the GPS and UTC
-   // epoch, and the leap seconds
-   *pUserUTCTime = lmicTimeReference.tNetwork + 315964800;
-
-   // Add the delay between the instant the time was transmitted and
-   // the current time
-
-   // Current time, in ticks
-   ostime_t ticksNow = os_getTime();
-   // Time when the request was sent, in ticks
-   ostime_t ticksRequestSent = lmicTimeReference.tLocal;
-   uint32_t requestDelaySec = osticks2ms(ticksNow - ticksRequestSent) / 1000;
-   *pUserUTCTime += requestDelaySec;
-
-   // Update the system time with the time read from the network
-   // setTime(*pUserUTCTime);
-   struct timeval set_Time;
-   set_Time.tv_sec = *pUserUTCTime;
-   settimeofday(&set_Time, NULL);
-   setenv("TZ", timeZone.c_str(), 1);
-   tzset();
-
-   Serial.print(F("The current UTC time is: "));
-   Serial.print(hour());
-   printDigits(minute());
-   printDigits(second());
-   Serial.print(' ');
-   Serial.print(day());
-   Serial.print('/');
-   Serial.print(month());
-   Serial.print('/');
-   Serial.print(year());
-   Serial.println();
-}
-
 void setUPWiFi()
 {
    if (customNTPaddress != NULL)
@@ -2306,12 +2258,14 @@ void setUPWiFi()
       }
    }
 
+   if (useNTP)
+   {
+      // optionally attach external RTC update callback
+      WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
+   }
+
    // attach board-setup page to the WiFi Manager
    WiFiManagerNS::init(&wifiManager);
-
-   // reset settings - wipe stored credentials for testing
-   // these are stored by the WiFiManager library
-   // wifiManager.resetSettings();
 
    wifiManager.setDebugOutput(false);
    wifiManager.setHostname(hostname.c_str());
@@ -2617,35 +2571,109 @@ void deepsleepPage()
    // tft.print(TIME_TO_SLEEP);
 }
 
-void SaveLMICToRTC(int deepsleep_sec)
+void message(const uint8_t *payload, size_t size, int rssi)
 {
-   Serial.println(F("Save LMIC to RTC"));
-   RTC_LMIC = LMIC;
-
-   // ESP32 can't track millis during DeepSleep and no option to advanced millis after DeepSleep.
-   // Therefore reset DutyCyles
-
-   unsigned long now = millis();
-
-   // EU Like Bands
-#if defined(CFG_LMIC_EU_like)
-   Serial.println(F("Reset CFG_LMIC_EU_like band avail"));
-   for (int i = 0; i < MAX_BANDS; i++)
+   Serial.println("-- MESSAGE");
+   Serial.print("Received " + String(size) + " bytes RSSI=" + String(rssi) + "db");
+   for (int i = 0; i < size; i++)
    {
-      ostime_t correctedAvail = RTC_LMIC.bands[i].avail - ((now / 1000.0 + deepsleep_sec) * OSTICKS_PER_SEC);
-      if (correctedAvail < 0)
-      {
-         correctedAvail = 0;
-      }
-      RTC_LMIC.bands[i].avail = correctedAvail;
+      Serial.print(" " + String(payload[i]));
+      // Serial.write(payload[i]);
    }
 
-   RTC_LMIC.globalDutyAvail = RTC_LMIC.globalDutyAvail - ((now / 1000.0 + deepsleep_sec) * OSTICKS_PER_SEC);
-   if (RTC_LMIC.globalDutyAvail < 0)
+   Serial.println();
+}
+
+void waitForTransactions()
+{
+   Serial.println("Waiting for pending transactions... ");
+   Serial.println("Waiting took " + String(ttn.waitForPendingTransactions()) + "ms");
+}
+
+ValueOrder getValueOrderFromString(String str)
+{
+   if (str == "VOLT")
    {
-      RTC_LMIC.globalDutyAvail = 0;
+      return VOLT;
    }
-#else
-   Serial.println(F("No DutyCycle recalculation function!"));
-#endif
+   else if (str == "TEMP")
+   {
+      return TEMP;
+   }
+   else if (str == "HUMIDITY")
+   {
+      return HUMIDITY;
+   }
+   else if (str == "PRESSURE")
+   {
+      return PRESSURE;
+   }
+   else if (str == "DISTANCE")
+   {
+      return DISTANCE;
+   }
+   else if (str == "MOIS")
+   {
+      return MOIS;
+   }
+   else if (str == "LUX")
+   {
+      return LUX;
+   }
+   else if (str == "AMBIENT")
+   {
+      return AMBIENT;
+   }
+   else if (str == "H2v")
+   {
+      return H2v;
+   }
+   else if (str == "COv")
+   {
+      return COv;
+   }
+   else if (str == "COv")
+   {
+      return COv;
+   }
+   else if (str == "CO2v")
+   {
+      return CO2v;
+   }
+   else if (str == "NO2v")
+   {
+      return NO2v;
+   }
+   else if (str == "NH3v")
+   {
+      return NH3v;
+   }
+   else if (str == "C4H10v")
+   {
+      return C4H10v;
+   }
+   else if (str == "C3H8v")
+   {
+      return C3H8v;
+   }
+   else if (str == "CH4v")
+   {
+      return CH4v;
+   }
+   else if (str == "C2H5OHv")
+   {
+      return C2H5OHv;
+   }
+   else if (str == "RGB")
+   {
+      return RGB;
+   }
+   else if (str == "ANGLE")
+   {
+      return ANGLE;
+   }
+   else
+   {
+      return NOT;
+   }
 }

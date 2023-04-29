@@ -29,6 +29,8 @@
 #include <Arduino.h>
 #include <esp_adc_cal.h>
 #include <soc/adc_channel.h>
+#include <unordered_map>
+#include <map>
 
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
@@ -51,8 +53,6 @@
         TODO: optimizing the read process ... mostly timing stuff
 
         TODO: implementing sensor_Calibrate ... just a few have to be calibrated
-
-        TODO: finding a way to name sensor readeings if multible readings
 
 */
 
@@ -90,6 +90,7 @@ void readI2C_5V_Connector();
 void readSPI_Connector();
 void readEXTRA_Connectors();
 float getBatteryVoltage();
+void updateDataNames(std::vector<Sensor>& sensorVector);
 
 // LevelSensor
 #define NO_TOUCH 0xFE
@@ -164,6 +165,8 @@ void sensorRead()
     // digitalWrite(SW_3V3, LOW);
     digitalWrite(SW_5V, LOW);
     digitalWrite(LED, LOW);
+
+    updateDataNames(sensorVector); // adding # to sensor data_name (e.g. temp, temp1, temp2 ....)
 }
 
 void readI2C_Connectors()
@@ -485,8 +488,6 @@ void readOneWire_Connectors()
 
             Sensor newSensor = allSensors[DHT_22];
 
-            newSensor.measurements[0].data_name = newSensor.measurements[0].data_name + (OWi + 1);
-            newSensor.measurements[1].data_name = newSensor.measurements[1].data_name + (OWi + 1);
             newSensor.measurements[0].value = dht.readTemperature();
             newSensor.measurements[1].value = dht.readHumidity();
 
@@ -549,7 +550,6 @@ void readOneWire_Connectors()
                     long temp = scrpd->getTemp();
                     Sensor newSensor = allSensors[DS18B20];
 
-                    newSensor.measurements[0].data_name = newSensor.measurements[0].data_name + (OWi + 1);
                     newSensor.measurements[0].value = static_cast<double>(temp) / 1000.0;
                     sensorVector.push_back(newSensor);
                 }
@@ -846,4 +846,22 @@ float getBatteryVoltage()
     const uint32_t upper_divider = 442;
     const uint32_t lower_divider = 160;
     return (float)(upper_divider + lower_divider) / lower_divider / 1000 * millivolts;
+}
+
+void updateDataNames(std::vector<Sensor>& sensorVector)
+{
+  std::unordered_map<ValueOrder, int> valueOrderCount;
+
+  for (Sensor& sensor : sensorVector) {
+    for (Measurement& measurement : sensor.measurements) {
+      ValueOrder valueOrder = measurement.valueOrder;
+      if (valueOrderCount.find(valueOrder) == valueOrderCount.end()) {
+        valueOrderCount[valueOrder] = 0;
+      }
+      int count = ++valueOrderCount[valueOrder];
+      if (count > 1) {
+        measurement.data_name += String(count - 1);
+      }
+    }
+  }
 }

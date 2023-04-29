@@ -249,11 +249,10 @@ namespace WiFiManagerNS
     TimeConfHTML += "<br><br><label for='use-WPA_enterprise'>Enable WPA enterprise / Eduroam </label><input value='1' type='checkbox' name='use-WPA_enterprise' id='use-WPA_enterprise'><br>";
     TimeConfHTML += "<div class='enterprise'><label for='ANONYMUS'>Anonymus ID</label><input type='email' name='ANONYMUS' title='Enter anonym id' value=" + anonym + " required>";
     TimeConfHTML += "<br><br><label for='certificate'>Please paste your CA server certificate here:</label><textarea id='certificate' name='certificate' rows='23' cols='63' placeholder='-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----'></textarea></div></div>";
-    TimeConfHTML += "<div id='Lora' style='display:none'><br><BR><b>LoRa Data</b><BR>";
+    TimeConfHTML += "<div id='Lora' style='display:none'><br><BR><b>LoRa Data  </b>";
 
-    TimeConfHTML += "<label for='lora_fqz'>Lora Frequency</label><select id='lora_fqz' name='lora_fqz'><option value='EU'>EU 868 MHz</option>";
-    TimeConfHTML += "<option value='US'>US/CD/AUS  915 MHz</option>";
-    TimeConfHTML += "<option value='ASIA'>Asia 923 MHz</option></select>";
+    TimeConfHTML += "<strong>" + lora_fqz + "</strong><BR>";
+
     TimeConfHTML += "<label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type='text' id='OTAA_DEVEUI' name='OTAA_DEVEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=" + OTAA_DEVEUI + " required>";
     TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type='text' id='OTAA_APPEUI' name='OTAA_APPEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=" + OTAA_APPEUI + " required>";
     TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type='text' id='OTAA_APPKEY' name='OTAA_APPKEY' pattern='^[0-9A-F]{32}$' title='Enter 16 hexadecimal digits without any prefix or separator' value=" + OTAA_APPKEY + " required>";
@@ -613,10 +612,10 @@ namespace WiFiManagerNS
       user_CA = _wifiManager->server->arg("certificate").c_str();
     }
 
-    if (_wifiManager->server->hasArg("lora_fqz"))
-    {
-      lora_fqz = _wifiManager->server->arg("lora_fqz").c_str();
-    }
+    // if (_wifiManager->server->hasArg("lora_fqz"))
+    // {
+    //   lora_fqz = _wifiManager->server->arg("lora_fqz").c_str();
+    // }
 
     if (_wifiManager->server->hasArg("OTAA_DEVEUI"))
     {
@@ -636,7 +635,10 @@ namespace WiFiManagerNS
     if (_wifiManager->server->hasArg("set-time"))
     {
       setTime_value = _wifiManager->server->arg("set-time").c_str();
-      setEsp32Time(setTime_value.c_str());
+      if (!(upload == "WIFI"))
+      {
+        setEsp32Time(setTime_value.c_str());
+      }
     }
 
     save_Connectors();

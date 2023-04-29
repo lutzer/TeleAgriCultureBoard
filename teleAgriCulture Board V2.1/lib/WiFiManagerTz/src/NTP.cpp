@@ -86,7 +86,7 @@ namespace WiFiManagerNS
         if (id != currentServer)
         {
           currentServer = id;
-          log_d("Setting NTP server to #%d ( %s / %s )", currentServer, Servers[currentServer].name, Servers[currentServer].addr);
+          //log_d("Setting NTP server to #%d ( %s / %s )", currentServer, Servers[currentServer].name, Servers[currentServer].addr);
           prefs::setUChar(NVS_NTPZONE_KEY, currentServer);
         }
         return true;

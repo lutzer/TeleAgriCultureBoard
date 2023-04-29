@@ -36,7 +36,7 @@
 #define SPI_NUM 1
 #define I2C_5V_NUM 1
 #define EXTRA_NUM 2
-#define JSON_BUFFER 4500 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
+#define JSON_BUFFER 7000 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
 
 // ----- Declare Connectors ----- //
 
@@ -53,8 +53,13 @@ int EXTRA_con_table[EXTRA_NUM];
 
 int boardID = 1003;
 String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // TODO: after all the testing has to be masked in the gitlab and changed in the app
+String lora_fqz = "EU 868 MHz"; // US/CD/AUS 915 MHz    Asia 923 MHz
+String OTAA_DEVEUI = "70B3D57ED005C604";
+String OTAA_APPEUI = "0000000000000000";
+String OTAA_APPKEY = "845D3002413D4D0EA49E7265056A4753";
+String customNTPaddress = "129.6.15.28";
 
-String version = "Firmware Version 0.98";
+String version = "Firmware Version 1.00";
 
 bool useBattery = false;
 bool useDisplay = true;
@@ -65,11 +70,6 @@ bool useCustomNTP = false;
 String upload = "WIFI";
 String anonym = "anonymus@example.com";
 String user_CA = "-----BEGIN CERTIFICATE----- optional -----END CERTIFICATE-----";
-String lora_fqz = "EU";
-String OTAA_DEVEUI = "70B3D57ED005A8F4";
-String OTAA_APPEUI = "70B3D57ED005A8F4";
-String OTAA_APPKEY = "DF6B2A4AC0930BCA55141564D751D578";
-String customNTPaddress = "129.6.15.28";
 String setTime_value = "";
 String timeZone = "";
 
@@ -80,7 +80,7 @@ String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardI
 String api_Bearer = "Bearer " + API_KEY;
 const char GET_Time_SERVER[30] = "www.teleagriculture.org";
 String GET_Time_Address = "https://www.teleagriculture.org";
-const int SSL_PORT =443;
+const int SSL_PORT = 443;
 const unsigned long TIMEOUT = 2500;
 
 // TODO: have to change the POST to insecure ... no checking the Server CA
@@ -123,8 +123,8 @@ const char *kits_ca =
 #define TFT_DC 2  // on teleAgriCulture Board V2.0 it is part of J3 CON
 #define TFT_BL 48 // on teleAgriCulture Board V2.0 it is part of J4 CON
 
-#define LORA_SPI_HOST      SPI2_HOST
-#define LORA_SPI_DMA_CHAN  SPI_DMA_DISABLED
+#define LORA_SPI_HOST SPI2_HOST
+#define LORA_SPI_DMA_CHAN SPI_DMA_DISABLED
 #define LORA_CS 10
 #define LORA_MOSI 11
 #define LORA_SCLK 12
@@ -166,18 +166,29 @@ enum class ConnectorType : uint8_t
   EXTRA
 };
 
-enum LoraSendType
+enum ValueOrder
 {
   NOT = -1,
-  UNIXTIME,
-  LATLNG,
-  UINT8,
-  UINT16,
-  UINT32,
-  TEMP,
-  HUMI,
-  RAWFLOAT,
-  BITMAP
+  VOLT,     // temp encoding
+  TEMP,     // temp encoding
+  HUMIDITY, // humidity encoding
+  PRESSURE, // rawfloat encoding
+  DISTANCE, // rawfloat encoding
+  TDSv,     // uint16 encoding
+  MOIS,     // uint16 encoding
+  LUX,      // uint16 encoding
+  AMBIENT,  // uint16 encoding
+  H2v,      // uint16 encoding
+  COv,      // uint16 encoding
+  CO2v,     // uint16 encoding
+  NO2v,     // uint16 encoding
+  NH3v,     // uint16 encoding
+  C4H10v,   // uint16 encoding
+  C3H8v,    // uint16 encoding
+  CH4v,     // uint16 encoding
+  C2H5OHv,  // uint16 encoding
+  RGB,
+  ANGLE
 };
 
 enum SensorsImplemented
@@ -203,7 +214,7 @@ class Measurement
 {
 public:
   double value;
-  int loraSend;
+  ValueOrder valueOrder;
   String unit;
   String data_name;
 };
@@ -258,19 +269,19 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 56,
-        "loraSend": "HUMI",
+        "valueOrder": "HUMIDITY",
         "unit": "%",
         "data_name": "hum"
       },
       {
         "value": 20.3,
-        "loraSend": "TEMP",
+        "valueOrder": "TEMP",
         "unit": "°C",
         "data_name": "temp"
       },
       {
         "value": 1000.5,
-        "loraSend": "RAWFLOAT",
+        "valueOrder": "PRESSURE",
         "unit": "hPa",
         "data_name": "press"
       }
@@ -293,7 +304,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 14.5,
-        "loraSend": "TEMP",
+        "valueOrder": "DISTANCE",
         "unit": "mm",
         "data_name": "height"
       }
@@ -316,14 +327,14 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 11255,
-        "loraSend": "UINT16",
-        "unit": "lux",
+        "valueOrder": "LUX",
+        "unit": "lx",
         "data_name": "lux"
       },
       {
         "value": 55200,
-        "loraSend": "UINT16",
-        "unit": ".",
+        "valueOrder": "AMBIENT",
+        "unit": "lx",
         "data_name": "ambient"
       }
     ],
@@ -342,7 +353,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 300,
-        "loraSend": "UINT16",
+        "valueOrder": "TDSv",
         "unit": "ppm",
         "data_name": "TDS"
       }
@@ -356,7 +367,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 300,
-        "loraSend": "UINT16",
+        "valueOrder": "MOIS",
         "unit": ".",
         "data_name": "mois"
       }
@@ -370,7 +381,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 300,
-        "loraSend": "UINT16",
+        "valueOrder": "MOIS",
         "unit": ".",
         "data_name": "mois"
       }
@@ -384,13 +395,13 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 20.2,
-        "loraSend": "TEMP",
+        "valueOrder": "TEMP",
         "unit": "°C",
         "data_name": "temp"
       },
       {
         "value": 55,
-        "loraSend": "HUMI",
+        "valueOrder": "HUMIDITY",
         "unit": "%",
         "data_name": "hum"
       }
@@ -404,7 +415,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 20.2,
-        "loraSend": "TEMP",
+        "valueOrder": "TEMP",
         "unit": "°C",
         "data_name": "temp"
       }
@@ -418,13 +429,13 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "COv",
         "unit": "ppm",
         "data_name": "CO"
       },
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "NO2v",
         "unit": "ppm",
         "data_name": "NO2"
       }
@@ -447,49 +458,49 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "COv",
         "unit": "ppm",
         "data_name": "CO"
       },
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "NO2v",
         "unit": "ppm",
         "data_name": "NO2"
       },
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "NH3v",
         "unit": "ppm",
         "data_name": "NH3"
       },
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "C3H8v",
         "unit": "ppm",
         "data_name": "C3H8"
       },
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "C4H10v",
         "unit": "ppm",
         "data_name": "C4H10"
       },
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "CH4v",
         "unit": "ppm",
         "data_name": "CH4"
       },
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "H2v",
         "unit": "ppm",
         "data_name": "H2"
       },
       {
         "value": 5,
-        "loraSend": "UINT16",
+        "valueOrder": "C2H5oHv",
         "unit": "ppm",
         "data_name": "C2H5OH"
       }
@@ -512,7 +523,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 20,
-        "loraSend": "TEMP",
+        "valueOrder": "TEMP",
         "unit": "°C",
         "data_name": "Temp"
       }
@@ -535,9 +546,9 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 3.7,
-        "loraSend": "RAWFLOAT",
+        "valueOrder": "VOLT",
         "unit": "V",
-        "data_name": "Volt"
+        "data_name": "Battery"
       }
     ]
   },
@@ -549,7 +560,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 1,
-        "loraSend": "UINT8",
+        "valueOrder": "RGB",
         "unit": "OK",
         "data_name": "LED"
       }
@@ -563,7 +574,7 @@ const char *proto_sensors = R"([
     "measurements": [
       {
         "value": 90,
-        "loraSend": "UINT8",
+        "valueOrder": "ANGLE",
         "unit": "°",
         "data_name": "angle"
       }

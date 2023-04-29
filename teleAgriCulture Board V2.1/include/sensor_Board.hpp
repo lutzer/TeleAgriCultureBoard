@@ -53,9 +53,9 @@ int EXTRA_con_table[EXTRA_NUM];
 
 int boardID = 1003;
 String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // TODO: after all the testing has to be masked in the gitlab and changed in the app
-String lora_fqz = "EU 868 MHz"; // US/CD/AUS 915 MHz    Asia 923 MHz
-String OTAA_DEVEUI = "70B3D57ED005C604";
+String lora_fqz = "EU 868 MHz"; // "US/CD/AUS 915 MHz";   // "Asia 923 MHz";
 String OTAA_APPEUI = "0000000000000000";
+String OTAA_DEVEUI = "70B3D57ED005C604";
 String OTAA_APPKEY = "845D3002413D4D0EA49E7265056A4753";
 String customNTPaddress = "129.6.15.28";
 

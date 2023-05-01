@@ -195,11 +195,11 @@ void readI2C_Connectors()
             uint8_t addressValue;
 
             // Parse the I2C address string
-            if (!parseI2CAddress((allSensors[j].i2c_add), &addressValue))
-            {
-                printf("Error: Invalid I2C address %s\n", (allSensors[j].i2c_add));
-                break;
-            }
+            // if (!parseI2CAddress((allSensors[j].i2c_add), &addressValue))
+            // {
+            //     printf("Error: Invalid I2C address %s\n", (allSensors[j].i2c_add));
+            //     break;
+            // }
 
             bmp280.begin();
             delay(100);
@@ -220,16 +220,15 @@ void readI2C_Connectors()
 
         case BME_280:
         {
-            //          https://randomnerdtutorials.com/esp32-i2c-communication-arduino-ide/
             unsigned status;
             uint8_t addressValue;
 
             // Parse the I2C address string
-            if (!parseI2CAddress((allSensors[j].i2c_add), &addressValue))
-            {
-                printf("Error: Invalid I2C address %s\n", (allSensors[j].i2c_add));
-                break;
-            }
+            // if (!parseI2CAddress((allSensors[j].i2c_add), &addressValue))
+            // {
+            //     printf("Error: Invalid I2C address %s\n", (allSensors[j].i2c_add));
+            //     break;
+            // }
 
             status = bme.begin(0x76, &Wire); // addressValue, &I2CCON);
             if (!status)
@@ -250,7 +249,7 @@ void readI2C_Connectors()
             newSensor.measurements[0].value = bme.readHumidity();
             newSensor.measurements[1].value = bme.readTemperature();
             newSensor.measurements[2].value = (bme.readPressure() / 100.0F);
-
+            newSensor.measurements[3].value =bme.readAltitude(SEALEVELPRESSURE_HPA);
             sensorVector.push_back(newSensor);
         }
         break;

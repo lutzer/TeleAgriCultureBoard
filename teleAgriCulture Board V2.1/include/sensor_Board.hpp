@@ -27,7 +27,7 @@
 #include <Arduino.h>
 #include <WString.h>
 
-#define SENSORS_NUM 14      // Number of Sensors implemeted
+#define SENSORS_NUM 15      // Number of Sensors implemeted
 #define MEASURMENT_NUM 8    // max. Sensor values / Sensor (Multi Gas Sensor V1 produces 8 measures to send)
 #define MAX_I2C_ADDRESSES 3 // max. stored I2C addresses / Sensor
 #define I2C_NUM 4
@@ -188,9 +188,9 @@ enum ValueOrder
   C3H8v,    // uint16 encoding
   CH4v,     // uint16 encoding
   C2H5OHv,  // uint16 encoding
+  ALTITUDE, // uint16 encoding
   RGB,
-  ANGLE,
-  ALTITUDE
+  ANGLE
 };
 
 enum SensorsImplemented
@@ -292,10 +292,10 @@ const char *proto_sensors = R"([
     "i2c_add": "0x76",
     "possible_i2c_add": [
       {
-        "standard": "0x76"
+        "standard": "0x77"
       },
       {
-        "alt_1": "0x77"
+        "alt_1": "0x76"
       }
     ]
   },
@@ -585,9 +585,9 @@ const char *proto_sensors = R"([
   },
    {
     "sensor-id": 15,
-    "name": "BME280",
+    "name": "BME_280",
     "con_typ": "I2C",
-    "returnCount": 3,
+    "returnCount": 4,
     "measurements": [
       {
         "value": 56,
@@ -606,6 +606,12 @@ const char *proto_sensors = R"([
         "valueOrder": "PRESSURE",
         "unit": "hPa",
         "data_name": "press"
+      },
+      {
+        "value": 100,
+        "valueOrder": "ALTITUDE",
+        "unit": "m",
+        "data_name": "alt"
       }
     ],
     "i2c_add": "0x76",

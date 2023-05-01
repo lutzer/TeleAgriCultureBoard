@@ -24,13 +24,14 @@
  *
  *
 
-//TODO: TTN decoder
 
 //TODO: Cert read and set  ---> String user_CA ---> to usable const char[]
 //TODO: WiFISecure Cert check
 
 //TODO: Battery optimation    ---> uses around 3mA without gas sensor and without display
 //TODO: Sensor test
+
+//TODO: find a I2C Address solution
 
 
 /*
@@ -672,6 +673,7 @@ void loop()
       esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
       esp_sleep_enable_timer_wakeup((seconds_to_next_hour() - 20) * uS_TO_S_FACTOR);
       Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour()) + " Seconds");
+      delay(500);
 
       esp_deep_sleep_start();
    }
@@ -752,20 +754,6 @@ void on_time_available(struct timeval *t)
    {
       renderPage(currentPage);
    }
-
-   // lastUpload = "";
-
-   // if (timeInfo.tm_hour < 10)
-   //    lastUpload += '0';
-   // lastUpload += String(timeInfo.tm_hour) + ':';
-
-   // if (timeInfo.tm_min < 10)
-   //    lastUpload += '0';
-   // lastUpload += String(timeInfo.tm_min) + ':';
-
-   // if (timeInfo.tm_sec < 10)
-   //    lastUpload += '0';
-   // lastUpload += String(timeInfo.tm_sec);
 }
 
 void digitalClockDisplay(int x, int y, bool date)
@@ -2018,12 +2006,11 @@ void lora_sendData(void)
                Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
                break;
             case ALTITUDE:
-               message.addRawFloat(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
-               Serial.print(sensorVector[i].measurements[j].data_name);
+               message.addUint16(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
                Serial.print(": #");
                Serial.print(k);
                Serial.print(" Value: ");
-               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
                break;
             }
          }

@@ -53,10 +53,10 @@ int EXTRA_con_table[EXTRA_NUM];
 
 int boardID = 1003;
 String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // TODO: after all the testing has to be masked in the gitlab and changed in the app
-String lora_fqz = "EU 868 MHz"; // "US/CD/AUS 915 MHz";   // "Asia 923 MHz";
+String lora_fqz = "EU 868 MHz";                      // "US/CD/AUS 915 MHz";   // "Asia 923 MHz";
 String OTAA_APPEUI = "0000000000000000";
-String OTAA_DEVEUI = "70B3D57ED005C604";
-String OTAA_APPKEY = "845D3002413D4D0EA49E7265056A4753";
+String OTAA_DEVEUI = "70B3D57ED005D262";                 // 70B3D57ED005D269
+String OTAA_APPKEY = "0A3899BD1DFBD23288913469B308F7D0"; // 2E9D9884F562B37E9AB10392C24866FF
 String customNTPaddress = "129.6.15.28";
 
 String version = "Firmware Version 1.00";
@@ -66,6 +66,7 @@ bool useDisplay = true;
 bool useEnterpriseWPA = false;
 bool useNTP = false;
 bool useCustomNTP = false;
+bool loraChanged = false;
 
 String upload = "WIFI";
 String anonym = "anonymus@example.com";
@@ -188,13 +189,14 @@ enum ValueOrder
   CH4v,     // uint16 encoding
   C2H5OHv,  // uint16 encoding
   RGB,
-  ANGLE
+  ANGLE,
+  ALTITUDE
 };
 
 enum SensorsImplemented
 {
   NO = -1,
-  BM280,
+  BMP_280,
   LEVEL,
   VEML7700,
   TDS,
@@ -207,7 +209,8 @@ enum SensorsImplemented
   DS3231,
   BATTERY,
   WS2812,
-  SERVO
+  SERVO,
+  BME_280
 };
 
 class Measurement
@@ -263,16 +266,10 @@ public:
 const char *proto_sensors = R"([
   {
     "sensor-id": 1,
-    "name": "BM280",
+    "name": "BMP_280",
     "con_typ": "I2C",
     "returnCount": 3,
     "measurements": [
-      {
-        "value": 56,
-        "valueOrder": "HUMIDITY",
-        "unit": "%",
-        "data_name": "hum"
-      },
       {
         "value": 20.3,
         "valueOrder": "TEMP",
@@ -284,6 +281,12 @@ const char *proto_sensors = R"([
         "valueOrder": "PRESSURE",
         "unit": "hPa",
         "data_name": "press"
+      },
+      {
+        "value": 300,
+        "valueOrder": "ALTITUDE",
+        "unit": "m",
+        "data_name": "alt"
       }
     ],
     "i2c_add": "0x76",
@@ -577,6 +580,41 @@ const char *proto_sensors = R"([
         "valueOrder": "ANGLE",
         "unit": "°",
         "data_name": "angle"
+      }
+    ]
+  },
+   {
+    "sensor-id": 15,
+    "name": "BME280",
+    "con_typ": "I2C",
+    "returnCount": 3,
+    "measurements": [
+      {
+        "value": 56,
+        "valueOrder": "HUMIDITY",
+        "unit": "%",
+        "data_name": "hum"
+      },
+      {
+        "value": 20.3,
+        "valueOrder": "TEMP",
+        "unit": "°C",
+        "data_name": "temp"
+      },
+      {
+        "value": 1000.5,
+        "valueOrder": "PRESSURE",
+        "unit": "hPa",
+        "data_name": "press"
+      }
+    ],
+    "i2c_add": "0x76",
+    "possible_i2c_add": [
+      {
+        "standard": "0x76"
+      },
+      {
+        "alt_1": "0x77"
       }
     ]
   }

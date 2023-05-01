@@ -48,10 +48,10 @@
  *
  * Global vector to store connected Sensor data:
  * std::vector<Sensor> sensorVector;
- * 
+ *
  * Sensor Data Name: sensorVector[i].measurements[j].data_name    --> in order of apperiance (temp, temp1, temp2 ...)
  * Sensor Value:     sensorVector[i].measurements[j].value
- * 
+ *
 /*/
 
 /*
@@ -70,7 +70,6 @@
       corresponding to your Sensortype with case statement using your Sensor ENUM
 */
 
-
 #include <Arduino.h>
 #include <FS.h>
 #include "SPIFFS.h"
@@ -85,6 +84,7 @@
 #include "esp_system.h"
 #include "esp_sleep.h"
 #include "esp_wpa2.h"
+#include "esp_sntp.h"
 #include "nvs_flash.h"
 #include <BLEDevice.h>
 
@@ -258,7 +258,9 @@ int currentPage = 0;
 int lastPage = -1; // Store the last page to avoid refreshing unnecessarily
 int num_pages = NUM_PAGES;
 
-uint32_t userUTCTime; // Seconds since the UTC epoch
+struct tm timeInfo;     // time from NTP or setEsp32Time
+time_t prevDisplay = 0; // when the digital clock was displayed
+uint32_t userUTCTime;   // Seconds since the UTC epoch
 String lastUpload;
 bool initialState; // state of the LED
 bool ledState = false;
@@ -269,6 +271,7 @@ bool sendDataWifi = false;
 bool sendDataLoRa = false;
 
 // Define a variable to hold the last hour value
+int currentHour;
 int lastHour = -1;
 unsigned long lastExecutionTime = 0;
 int seconds_to_wait = 0;
@@ -293,6 +296,16 @@ void setup()
    Serial.setTxTimeoutMs(5); // set USB CDC Time TX
    Serial.begin(115200);     // start Serial for debuging
 
+   // Initialize the NVS (non-volatile storage) for saving and restoring the keys
+   nvs_flash_init();
+
+   // Initialize SPIFFS
+   if (!SPIFFS.begin(true))
+   {
+      Serial.println("An Error has occurred while mounting SPIFFS");
+      return;
+   }
+
    drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
    if (drd->detectDoubleReset())
    {
@@ -301,9 +314,6 @@ void setup()
    }
 
    delay(500);
-
-   // Initialize the NVS (non-volatile storage) for saving and restoring the keys
-   nvs_flash_init();
 
    upButton.begin();
    downButton.begin();
@@ -438,9 +448,23 @@ void setup()
       WiFiManagerNS::TZ::loadPrefs();
 
       digitalWrite(SW_3V3, HIGH);
-      // ttn.eraseKeys();
 
       ttn.begin(LORA_CS, UNUSED_PIN, LORA_RST, LORA_DI0, LORA_DI1, UNUSED_PIN);
+
+      Serial.printf("\n\nReset Lora Keys: %s", loraChanged ? "true" : "false");
+
+      Serial.print("\nOTAA_DEVEUI: ");
+      Serial.println(OTAA_DEVEUI);
+      Serial.print("OTAA_APPEUI: ");
+      Serial.println(OTAA_APPEUI);
+      Serial.print("OTAA_APPKEY: ");
+      Serial.println(OTAA_APPKEY);
+
+      if (loraChanged)
+      {
+         ttn.eraseKeys();
+         loraChanged = false;
+      }
 
       // Declare callback function for handling downlink messages from server
       ttn.onMessage(message);
@@ -460,14 +484,16 @@ void setup()
    }
 }
 
-time_t prevDisplay = 0; // when the digital clock was displayed
-
 void loop()
 {
    drd->loop();
    analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
 
-   int currentHour = hour(); // get the current hour using the built-in function
+   time_t rawtime;
+   time(&rawtime);
+   localtime_r(&rawtime, &timeInfo);
+
+   currentHour = timeInfo.tm_hour;
 
    if (currentHour != lastHour)
    {
@@ -479,6 +505,8 @@ void loop()
       // Set the last hour variable to the current hour to avoid triggering the function multiple times in the same hour
       lastHour = currentHour;
    }
+
+   // currentHour = hour(); // get the current hour using the built-in function
 
    if (sendDataWifi)
    {
@@ -497,9 +525,15 @@ void loop()
          String header = get_header();
          delay(1000);
          String Time1 = getDateTime(header);
+
+         setenv("TZ", "GMT0", 1); // set Timezone to GMT
+         tzset();
+
          setEsp32Time(Time1.c_str());
       }
+
       setUploadTime();
+
       if (!useBattery || !gotoSleep)
       {
          renderPage(currentPage);
@@ -520,7 +554,7 @@ void loop()
 
       sendDataLoRa = false;
 
-      setUploadTime();
+      // setUploadTime();
 
       if ((!useBattery || !gotoSleep) && useDisplay)
       {
@@ -710,7 +744,6 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 void on_time_available(struct timeval *t)
 {
    Serial.println("Received time adjustment from NTP");
-   struct tm timeInfo;
    getLocalTime(&timeInfo, 1000);
    Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
    setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
@@ -743,21 +776,18 @@ void digitalClockDisplay(int x, int y, bool date)
 
    tft.fillRect(x - 5, y - 2, 60, 10, ST7735_BLACK);
 
-   struct tm actualTime;
-   getLocalTime(&actualTime);
-
-   tft.print(actualTime.tm_hour);
-   printDigits(actualTime.tm_min);
-   printDigits(actualTime.tm_sec);
+   tft.print(timeInfo.tm_hour);
+   printDigits(timeInfo.tm_min);
+   printDigits(timeInfo.tm_sec);
 
    if (date)
    {
       tft.print("   ");
-      tft.print(actualTime.tm_mday);
+      tft.print(timeInfo.tm_mday);
       tft.print(" ");
-      tft.print(actualTime.tm_mon + 1);
+      tft.print(timeInfo.tm_mon + 1);
       tft.print(" ");
-      tft.print(actualTime.tm_year - 100 + 2000);
+      tft.print(timeInfo.tm_year - 100 + 2000);
       tft.println();
    }
 }
@@ -1987,6 +2017,14 @@ void lora_sendData(void)
                Serial.print(" Value: ");
                Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
                break;
+            case ALTITUDE:
+               message.addRawFloat(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
             }
          }
       }
@@ -2031,12 +2069,12 @@ void get_time_in_timezone(const char *timezone)
 
 int seconds_to_next_hour()
 {
-   struct tm timeinfo;
-   getLocalTime(&timeinfo);
+   struct tm timeInfo;
+   getLocalTime(&timeInfo);
 
    // time_t now = time(NULL);
    // struct tm *tm_now = localtime(&now);
-   int seconds = (60 - timeinfo.tm_sec) + (59 - timeinfo.tm_min) * 60;
+   int seconds = (60 - timeInfo.tm_sec) + (59 - timeInfo.tm_min) * 60;
    return seconds;
 }
 
@@ -2189,21 +2227,19 @@ void setEsp32Time(const char *timeStr)
       return;
 
    struct tm t;
-   struct tm now;
+   struct tm t2;
+   timeInfo;
    strptime(timeStr, "%Y-%m-%dT%H:%M", &t);
-   now.tm_hour = t.tm_hour;
-   now.tm_min = t.tm_min;
-   now.tm_sec = 0;
-   now.tm_mday = t.tm_mday;
-   now.tm_mon = t.tm_mon;
-   now.tm_year = t.tm_year;
+   t2.tm_sec = 0;
+   t2.tm_min = t.tm_min;
+   t2.tm_mday = t.tm_mday;
+   t2.tm_mon = t.tm_mon;
+   t2.tm_hour = t.tm_hour;
+   t2.tm_year = t.tm_year;
 
    delay(100);
 
-   const time_t sec = mktime(&now); // make time_t
-   Serial.printf("Setting time based on GET: %s", asctime(&now));
-   // Serial.print("\nsec: ");
-   // Serial.println(sec);
+   const time_t sec = mktime(&t2); // make time_t
 
    struct timeval set_Time = {.tv_sec = sec};
    settimeofday(&set_Time, NULL);
@@ -2212,30 +2248,32 @@ void setEsp32Time(const char *timeStr)
    // setTime(now.tm_hour, now.tm_min, now.tm_sec, now.tm_mday, now.tm_mon, now.tm_year);
    setenv("TZ", timeZone.c_str(), 1);
    tzset();
+
+   getLocalTime(&timeInfo);
+   Serial.printf("\nSetting time based on GET: %s", asctime(&timeInfo));
+
+   currentHour = timeInfo.tm_hour;
+   lastHour = currentHour;
 }
 
 void setUploadTime()
 {
-   struct tm timeinfo;
-   getLocalTime(&timeinfo);
-
-   Serial.println("\nESP Time set:");
-   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+   getLocalTime(&timeInfo);
 
    lastUpload = "";
 
-   if (timeinfo.tm_hour < 10)
+   if (timeInfo.tm_hour < 10)
       lastUpload += '0';
-   lastUpload += String(timeinfo.tm_hour) + ':';
+   lastUpload += String(timeInfo.tm_hour) + ':';
 
-   if (timeinfo.tm_min < 10)
+   if (timeInfo.tm_min < 10)
       lastUpload += '0';
-   lastUpload += String(timeinfo.tm_min) + ':';
+   lastUpload += String(timeInfo.tm_min) + ':';
 
-   if (timeinfo.tm_sec < 10)
+   if (timeInfo.tm_sec < 10)
       lastUpload += '0';
 
-   lastUpload += String(timeinfo.tm_sec);
+   lastUpload += String(timeInfo.tm_sec);
 }
 
 void printHex2(unsigned v)
@@ -2671,6 +2709,10 @@ ValueOrder getValueOrderFromString(String str)
    else if (str == "ANGLE")
    {
       return ANGLE;
+   }
+   else if (str == "ALTITUDE")
+   {
+      return ALTITUDE;
    }
    else
    {

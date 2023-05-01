@@ -253,8 +253,8 @@ namespace WiFiManagerNS
 
     TimeConfHTML += "<strong>" + lora_fqz + "</strong><BR>";
 
-    TimeConfHTML += "<label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type='text' id='OTAA_DEVEUI' name='OTAA_DEVEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=" + OTAA_DEVEUI + " required>";
     TimeConfHTML += "<label for='OTAA_APPEUI'>OTAA_APPEUI:</label><input type='text' id='OTAA_APPEUI' name='OTAA_APPEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=" + OTAA_APPEUI + " required>";
+    TimeConfHTML += "<label for='OTAA_DEVEUI'>OTAA_DEVEUI:</label><input type='text' id='OTAA_DEVEUI' name='OTAA_DEVEUI' pattern='^[0-9A-F]{16}$' title='Enter 8 hexadecimal digits without any prefix or separator' value=" + OTAA_DEVEUI + " required>";
     TimeConfHTML += "<label for='OTAA_APPKEY'>OTAA_APPKEY:</label><input type='text' id='OTAA_APPKEY' name='OTAA_APPKEY' pattern='^[0-9A-F]{32}$' title='Enter 16 hexadecimal digits without any prefix or separator' value=" + OTAA_APPKEY + " required>";
     TimeConfHTML += "</div><BR>";
 
@@ -620,16 +620,19 @@ namespace WiFiManagerNS
     if (_wifiManager->server->hasArg("OTAA_DEVEUI"))
     {
       OTAA_DEVEUI = _wifiManager->server->arg("OTAA_DEVEUI").c_str();
+      loraChanged = true;
     }
 
     if (_wifiManager->server->hasArg("OTAA_APPEUI"))
     {
       OTAA_APPEUI = _wifiManager->server->arg("OTAA_APPEUI").c_str();
+      loraChanged = true;
     }
 
     if (_wifiManager->server->hasArg("OTAA_APPKEY"))
     {
       OTAA_APPKEY = _wifiManager->server->arg("OTAA_APPKEY").c_str();
+      loraChanged = true;
     }
 
     if (_wifiManager->server->hasArg("set-time"))

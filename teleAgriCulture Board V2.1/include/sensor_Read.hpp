@@ -33,6 +33,7 @@
 #include <map>
 
 #include <Adafruit_Sensor.h>
+#include <BMP280.h>
 #include <Adafruit_BME280.h>
 #include "Adafruit_VEML7700.h"
 #include <Multichannel_Gas_GMXXX.h>
@@ -71,7 +72,9 @@ bool shouldSaveConfig = false;
 // ----- Sensor section ----- //
 
 #define SEALEVELPRESSURE_HPA (1013.25)
+
 Adafruit_BME280 bme;
+BMP280 bmp280;
 Adafruit_VEML7700 veml = Adafruit_VEML7700();
 
 GAS_GMXXX<TwoWire> gas;
@@ -90,7 +93,7 @@ void readI2C_5V_Connector();
 void readSPI_Connector();
 void readEXTRA_Connectors();
 float getBatteryVoltage();
-void updateDataNames(std::vector<Sensor>& sensorVector);
+void updateDataNames(std::vector<Sensor> &sensorVector);
 
 // LevelSensor
 #define NO_TOUCH 0xFE
@@ -129,7 +132,6 @@ void sensorRead()
     // I2CCON.begin(I2C_SDA, I2C_SCL);
 
     Wire.setPins(I2C_SDA, I2C_SCL);
-
 
     if (I2C_5V_con_table[0] == MULTIGAS_V1)
     {
@@ -171,8 +173,9 @@ void sensorRead()
 
 void readI2C_Connectors()
 {
-    TwoWire I2CCON = TwoWire(0);
-    I2CCON.begin(I2C_SDA, I2C_SCL);
+    // TwoWire I2CCON = TwoWire(0);
+    // I2CCON.begin(I2C_SDA, I2C_SCL);
+    Wire.begin(I2C_SDA, I2C_SCL);
 
     for (int j = 0; j < I2C_NUM; j++)
     {
@@ -186,7 +189,36 @@ void readI2C_Connectors()
         }
         break;
 
-        case BM280:
+        case BMP_280:
+        {
+            float pressure, altitude;
+            uint8_t addressValue;
+
+            // Parse the I2C address string
+            if (!parseI2CAddress((allSensors[j].i2c_add), &addressValue))
+            {
+                printf("Error: Invalid I2C address %s\n", (allSensors[j].i2c_add));
+                break;
+            }
+
+            bmp280.begin();
+            delay(100);
+            bmp280.setConfigTStandby(BMP280::eConfigTStandby_t::eConfigTStandby_500);
+            bmp280.setCtrlMeasSamplingTemp(BMP280::eSampling_t::eSampling_X4);
+            bmp280.setCtrlMeasSamplingPress(BMP280::eSampling_t::eSampling_X4);
+            delay(100);
+
+            Sensor newSensor = allSensors[BMP_280];
+            newSensor.measurements[0].value = bmp280.getTemperature();
+            pressure = bmp280.getPressure();
+            newSensor.measurements[1].value = (double)(pressure/100.00F);
+            newSensor.measurements[2].value = bmp280.calAltitude(pressure);
+
+            sensorVector.push_back(newSensor);
+        }
+        break;
+
+        case BME_280:
         {
             //          https://randomnerdtutorials.com/esp32-i2c-communication-arduino-ide/
             unsigned status;
@@ -199,14 +231,14 @@ void readI2C_Connectors()
                 break;
             }
 
-            status = bme.begin(addressValue, &I2CCON);
+            status = bme.begin(0x76, &Wire); // addressValue, &I2CCON);
             if (!status)
             {
                 Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
                 Serial.print("SensorID was: 0x");
                 Serial.println(bme.sensorID(), 16);
                 Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
-                Serial.print("   ID of 0x56-0x58 represents a BMP 280,\n");
+                Serial.print("        ID of 0x56-0x58 represents a BMP 280,\n");
                 Serial.print("        ID of 0x60 represents a BME 280.\n");
                 Serial.println("        ID of 0x61 represents a BME 680.\n");
                 break;
@@ -214,7 +246,7 @@ void readI2C_Connectors()
             // Serial.print(bme.readTemperature());
             // Serial.print(1.8 * bme.readTemperature() + 32);
 
-            Sensor newSensor = allSensors[BM280];
+            Sensor newSensor = allSensors[BME_280];
             newSensor.measurements[0].value = bme.readHumidity();
             newSensor.measurements[1].value = bme.readTemperature();
             newSensor.measurements[2].value = (bme.readPressure() / 100.0F);
@@ -280,7 +312,7 @@ void readI2C_Connectors()
         {
             //          See Vishy App Note "Designing the VEML7700 Into an Application"
             //          Vishay Document Number: 84323, Fig. 24 Flow Chart
-            if (!veml.begin(&I2CCON))
+            if (!veml.begin(&Wire))
             {
                 Serial.println("Sensor VEML7700 not found");
                 break;
@@ -662,7 +694,6 @@ void readI2C_5V_Connector()
         sensorVector.push_back(newSensor);
 
         Wire.end();
-
     }
     else if (I2C_5V_con_table[0] == MULTIGAS_V1)
     {
@@ -848,20 +879,24 @@ float getBatteryVoltage()
     return (float)(upper_divider + lower_divider) / lower_divider / 1000 * millivolts;
 }
 
-void updateDataNames(std::vector<Sensor>& sensorVector)
+void updateDataNames(std::vector<Sensor> &sensorVector)
 {
-  std::unordered_map<ValueOrder, int> valueOrderCount;
+    std::unordered_map<ValueOrder, int> valueOrderCount;
 
-  for (Sensor& sensor : sensorVector) {
-    for (Measurement& measurement : sensor.measurements) {
-      ValueOrder valueOrder = measurement.valueOrder;
-      if (valueOrderCount.find(valueOrder) == valueOrderCount.end()) {
-        valueOrderCount[valueOrder] = 0;
-      }
-      int count = ++valueOrderCount[valueOrder];
-      if (count > 1) {
-        measurement.data_name += String(count - 1);
-      }
+    for (Sensor &sensor : sensorVector)
+    {
+        for (Measurement &measurement : sensor.measurements)
+        {
+            ValueOrder valueOrder = measurement.valueOrder;
+            if (valueOrderCount.find(valueOrder) == valueOrderCount.end())
+            {
+                valueOrderCount[valueOrder] = 0;
+            }
+            int count = ++valueOrderCount[valueOrder];
+            if (count > 1)
+            {
+                measurement.data_name += String(count - 1);
+            }
+        }
     }
-  }
 }

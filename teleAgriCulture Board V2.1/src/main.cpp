@@ -25,8 +25,8 @@
  *
 
 
-//TODO: Cert read and set  ---> String user_CA ---> to usable const char[]
-//TODO: WiFISecure Cert check
+//TODO: prepaired but disabled in ConfigPortal -->Cert read and set  ---> String user_CA ---> to usable const char[]
+//TODO: WiFISecure Cert check maybe dissable? server cert may change... client.insecure() not avaiable in new espidf
 
 //TODO: Battery optimation    ---> uses around 3mA without gas sensor and without display
 //TODO: Sensor test
@@ -751,12 +751,6 @@ void on_time_available(struct timeval *t)
    Serial.println("Received time adjustment from NTP");
    getLocalTime(&timeInfo, 1000);
    Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
-   setTime(timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec, timeInfo.tm_mday, timeInfo.tm_mon + 1, timeInfo.tm_year + 1900);
-
-   if (!useBattery || !gotoSleep)
-   {
-      renderPage(currentPage);
-   }
 }
 
 void digitalClockDisplay(int x, int y, bool date)

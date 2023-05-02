@@ -52,11 +52,11 @@ int EXTRA_con_table[EXTRA_NUM];
 // ***  initial values  ***  // will be overwritten by config file / user input at board setup
 
 int boardID = 1003;
-String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // TODO: after all the testing has to be masked in the gitlab and changed in the app
+String API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // TODO: after all the testing has to be masked in the gitlab and changed in the app
 String lora_fqz = "EU 868 MHz";                      // "US/CD/AUS 915 MHz";   // "Asia 923 MHz";
 String OTAA_APPEUI = "0000000000000000";
-String OTAA_DEVEUI = "70B3D57ED005D262";                 // 70B3D57ED005D269
-String OTAA_APPKEY = "0A3899BD1DFBD23288913469B308F7D0"; // 2E9D9884F562B37E9AB10392C24866FF
+String OTAA_DEVEUI = "xxxxxxxxxxxxxxxx";              
+String OTAA_APPKEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 String customNTPaddress = "129.6.15.28";
 
 String version = "Firmware Version 1.00";

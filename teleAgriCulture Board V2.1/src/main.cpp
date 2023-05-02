@@ -26,6 +26,7 @@
 
 
 //TODO: prepaired but disabled in ConfigPortal -->Cert read and set  ---> String user_CA ---> to usable const char[]
+//      WPA Enterprise works without cert and anonym identity at the moment
 //TODO: WiFISecure Cert check maybe dissable? server cert may change... client.insecure() not avaiable in new espidf
 
 //TODO: Battery optimation    ---> uses around 3mA without gas sensor and without display
@@ -38,7 +39,6 @@
  *
  * For defines, GPIOs and implemented Sensors, see sensor_Board.hpp (BoardID, API_KEY and LORA credentials)
  *
- * **************** board Version 2.0 (no TFT CON) needs some pin define changes in the sensor_Board.hpp !!!!
  *
  * Config Portal Access Point:   SSID: TeleAgriCulture Board
  *                               pasword: enter123
@@ -413,6 +413,10 @@ void setup()
 
    if (upload == "WIFI" || forceConfig == true)
    {
+
+      // Cert field in ConfigPortal deactivated --> do not know if this would work, can not test it now
+      // https://github.com/martinius96/ESP32-eduroam
+      // WiFiManager handles esp_wpa2.h connection, username and password
       if (useEnterpriseWPA && !forceConfig)
       {
          WiFi.disconnect(true);
@@ -1837,8 +1841,8 @@ void wifi_sendData(void)
 
          // https.begin(client, "https://kits.teleagriculture.org/api/kits/1003/measurements");
 
-         serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
-         api_Bearer = "Bearer " + API_KEY;
+         String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
+         String api_Bearer = "Bearer " + API_KEY;
 
          https.begin(client, serverName);
 

@@ -60,6 +60,8 @@
    -> sensor_Board.hpp
    -> add new SensorName to ENUM SensorsImplemented (use Name that has no conflicts with your sensor library)
    -> add new Sensor to json styled proto_sensors (use same format)
+   -> add new ENUM ValueOrder if necessary -> this has also to be added to lora_sendData() and getValueOrderFromString()
+      (Lora Data gets send in the format <ValueOrder ENUM><Value> for encoding/decoding)
 
    -> include SENSOR library to sensor_Read.hpp
    -> add implementation to   readI2C_Connectors()
@@ -69,6 +71,7 @@
                               readSPI_Connector()
                               readEXTRA_Connectors()
       corresponding to your Sensortype with case statement using your Sensor ENUM
+   -> increase SENSORS_NUM by 1
 */
 
 #include <Arduino.h>
@@ -126,12 +129,11 @@
 
 // ----- Deep Sleep related -----//
 #define BUTTON_PIN_BITMASK 0x1   // GPIO 0
-#define uS_TO_S_FACTOR 1000000LL /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP 20         /* Time ESP32 will go to sleep (in seconds) */
+#define uS_TO_S_FACTOR 1000000UL /* Conversion factor for micro seconds to seconds */
 
 RTC_DATA_ATTR int bootCount = 0;
 
-void print_wakeup_reason();
+void doubleReset_wakeup_reason();
 void GPIO_wake_up();
 // ----- Deep Sleep related -----//
 
@@ -195,7 +197,6 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels);
 void checkLoadedStuff(void);
 void printConnectors(ConnectorType typ);
 void printProtoSensors(void);
-void showSensors(ConnectorType type);
 void printMeassurments(void);
 void printSensors(void);
 void wifi_sendData(void);
@@ -230,6 +231,7 @@ int backlight_pwm = 250;
 #define WM_NOHELP 1
 WiFiManager wifiManager;
 WiFiClientSecure client;
+// ----- WiFiManager section ---- //
 
 // ----- globals and defines --------
 
@@ -248,7 +250,6 @@ Button downButton(RIGHT_BUTTON_PIN);
 #define NUM_PAGES 4   // pages with out the measurement pages
 #define NUM_PERPAGE 9 // max measurement values per page
 
-char test_input[6];
 bool portalRunning = false;
 bool _enteredConfigMode = false;
 bool connectorsSaved = false;
@@ -256,12 +257,12 @@ bool configSaved = false;
 int total_measurement_pages = 1;
 
 int currentPage = 0;
-int lastPage = -1; // Store the last page to avoid refreshing unnecessarily
+int lastPage = -1;      // Store the last page to avoid refreshing unnecessarily
+time_t prevDisplay = 0; // when the digital clock was displayed
 int num_pages = NUM_PAGES;
 
-struct tm timeInfo;     // time from NTP or setEsp32Time
-time_t prevDisplay = 0; // when the digital clock was displayed
-uint32_t userUTCTime;   // Seconds since the UTC epoch
+struct tm timeInfo;   // time from NTP or setEsp32Time
+uint32_t userUTCTime; // Seconds since the UTC epoch
 String lastUpload;
 bool initialState; // state of the LED
 bool ledState = false;
@@ -279,13 +280,25 @@ int seconds_to_wait = 0;
 
 unsigned long previousMillis = 0;
 unsigned long upButtonsMillis = 0;
-const long interval = 200000; // screen backlight darken time 20s
+const long interval = 200000;   // screen backlight darken time 20s
+const long interval2 = 3000000; // screen goes black after 5min
 
-double vs[101];
+// Battery levels
+double vs[101]; //   Copyright (c) 2019 Pangodream   	https://github.com/pangodream/18650CL
 
 void setup()
 {
+   // reset Pins after holding them during deep sleep
    gpio_reset_pin(GPIO_NUM_0);
+   gpio_reset_pin((gpio_num_t)SW_3V3);
+   gpio_reset_pin((gpio_num_t)SW_5V);
+   gpio_reset_pin((gpio_num_t)TFT_BL);
+
+   gpio_hold_dis((gpio_num_t)SW_3V3);
+   gpio_hold_dis((gpio_num_t)SW_5V);
+   gpio_hold_dis((gpio_num_t)TFT_BL);
+   gpio_deep_sleep_hold_dis();
+
    pinMode(BATSENS, INPUT_PULLDOWN);
    pinMode(TFT_BL, OUTPUT);
    pinMode(LED, OUTPUT);
@@ -307,14 +320,16 @@ void setup()
       return;
    }
 
-   drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
-   if (drd->detectDoubleReset())
-   {
-      Serial.println(F("\nForcing config mode as there was a Double reset detected"));
-      forceConfig = true;
-   }
+   // Print the wakeup reason for ESP32
+   doubleReset_wakeup_reason();
+   GPIO_wake_up();
+   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
-   delay(500);
+   delay(100);
+
+   // Increment boot number and print it every reboot
+   ++bootCount;
+   Serial.println("\nBoot number: " + String(bootCount));
 
    upButton.begin();
    downButton.begin();
@@ -354,18 +369,6 @@ void setup()
 
   ---------------------------------------------------------------------------------*/
 
-   // Print the wakeup reason for ESP32
-   print_wakeup_reason();
-   GPIO_wake_up();
-
-   delay(100);
-
-   // Increment boot number and print it every reboot
-   ++bootCount;
-   // Serial.println("\nBoot number: " + String(bootCount));
-
-   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-
    // print SPIFF files for debugging
    // if (!SPIFFS.begin(true))
    // {
@@ -383,7 +386,7 @@ void setup()
 
    // checkLoadedStuff();
 
-   if (useDisplay)
+   if (useDisplay || forceConfig)
    {
       // ----- Initiate the TFT display and Start Image----- //
       tft.initR(INITR_GREENTAB); // work around to set protected offset values
@@ -396,6 +399,7 @@ void setup()
 
    if (useBattery && useDisplay)
    {
+      analogWrite(TFT_BL, 25); // turn TFT Backlight on
       tft.fillScreen(ST7735_BLACK);
    }
 
@@ -507,8 +511,6 @@ void loop()
       lastHour = currentHour;
    }
 
-   // currentHour = hour(); // get the current hour using the built-in function
-
    if (sendDataWifi)
    {
       sensorRead();
@@ -551,8 +553,6 @@ void loop()
 
       waitForTransactions();
 
-      // useBattery = true;
-
       sendDataLoRa = false;
 
       // setUploadTime();
@@ -575,12 +575,21 @@ void loop()
       }
    }
 
+   if (currentMillis - previousMillis >= interval2)
+   {
+      backlight_pwm = 0; // turns Backlight off
+      tft.fillScreen(ST7735_BLACK);
+      previousMillis = currentMillis;
+      tft.enableSleep(true);
+   }
+
    num_pages = NUM_PAGES + total_measurement_pages;
 
    if (downButton.pressed())
    {
       currentPage = (currentPage + 1) % num_pages;
       backlight_pwm = 250;
+      tft.enableSleep(false);
       gotoSleep = false;
    }
 
@@ -588,6 +597,7 @@ void loop()
    {
       currentPage = (currentPage - 1 + num_pages) % num_pages;
       backlight_pwm = 250;
+      tft.enableSleep(false);
       upButtonsMillis = millis();
       gotoSleep = false;
    }
@@ -617,23 +627,25 @@ void loop()
 
    if ((useBattery && gotoSleep) || (!useDisplay))
    {
-      // if (upload == "LORA")
-      // {
-      //    while (!lora_Data_is_Sent)
-      //    {
-      //       os_runloop_once();
-      //       const bool timeCriticalJobs = os_queryTimeCriticalJobs(ms2osticksRound((TX_INTERVAL * 1000)));
-      //       if (!timeCriticalJobs && !(LMIC.opmode & OP_TXRXPEND))
-      //       {
-      //          Serial.println("Lora DAta sent");
-      //          lora_Data_is_Sent = true;
-      //       }
-      //    }
+      // Stop Lora befor sleep
+      if (upload == "LORA")
+      {
+         waitForTransactions();
+         ttn.stop();
+         esp_sleep_enable_timer_wakeup((3585) * uS_TO_S_FACTOR);
+         Serial.println("Setup ESP32 to sleep for 3600 Seconds");
+      }
 
-      // }
+      // Stop WiFi befor sleep
+      if (upload == "WIFI")
+      {
+         wifiManager.disconnect();
+         WiFi.mode(WIFI_OFF);
 
-      // deepsleepPage();
-      // delay(500);
+         esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
+         esp_sleep_enable_timer_wakeup((seconds_to_next_hour() - 15) * uS_TO_S_FACTOR);
+         Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour()) + " Seconds");
+      }
 
       // Stop all events
       blinker.detach();
@@ -641,19 +653,15 @@ void loop()
       // Stop I2C
       Wire.end();
 
-      // Stop WiFi
-      wifiManager.disconnect();
-      WiFi.mode(WIFI_OFF);
-
       // Stop SPI
       tft.enableSleep(true);
       // spi_bus_free(SPI1_HOST);
       spi_bus_free(SPI2_HOST);
 
       // reset Pins
-      gpio_reset_pin(GPIO_NUM_42);
-      gpio_reset_pin(GPIO_NUM_47);
-      gpio_reset_pin(GPIO_NUM_48);
+      gpio_reset_pin((gpio_num_t)SW_3V3);
+      gpio_reset_pin((gpio_num_t)SW_5V);
+      gpio_reset_pin((gpio_num_t)TFT_BL);
 
       pinMode(SW_3V3, OUTPUT);
       digitalWrite(SW_3V3, LOW);
@@ -662,18 +670,13 @@ void loop()
       pinMode(TFT_BL, OUTPUT);
       digitalWrite(TFT_BL, LOW);
 
-      gpio_hold_en(GPIO_NUM_42);
-      gpio_hold_en(GPIO_NUM_47);
-      gpio_hold_en(GPIO_NUM_48);
+      gpio_hold_en((gpio_num_t)SW_3V3);
+      gpio_hold_en((gpio_num_t)SW_5V);
+      gpio_hold_en((gpio_num_t)TFT_BL);
 
       gpio_deep_sleep_hold_en();
 
       delay(100);
-
-      esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
-      esp_sleep_enable_timer_wakeup((seconds_to_next_hour() - 20) * uS_TO_S_FACTOR);
-      Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour()) + " Seconds");
-      delay(500);
 
       esp_deep_sleep_start();
    }
@@ -870,7 +873,7 @@ void GPIO_wake_up()
    }
 }
 
-void print_wakeup_reason()
+void doubleReset_wakeup_reason()
 {
    esp_sleep_wakeup_cause_t wakeup_reason;
 
@@ -897,6 +900,15 @@ void print_wakeup_reason()
    default:
       Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason);
       break;
+   }
+
+   drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
+
+   // Double Reset detected caused not by deep sleep timer
+   if (drd->detectDoubleReset() && (wakeup_reason != ESP_SLEEP_WAKEUP_TIMER))
+   {
+      Serial.println(F("\nForcing config mode as there was a Double reset detected"));
+      forceConfig = true;
    }
 }
 
@@ -1180,6 +1192,11 @@ void mainPage()
    {
       digitalClockDisplay(5, 95, true);
 
+      tft.setCursor(5, 105);
+      tft.print("last data UPLOAD: ");
+      tft.setTextColor(ST7735_ORANGE);
+      tft.print(upload);
+
       tft.setTextColor(ST7735_ORANGE);
       tft.setCursor(5, 115);
       tft.print(lastUpload);
@@ -1189,14 +1206,15 @@ void mainPage()
       tft.setTextColor(ST7735_ORANGE);
       tft.setCursor(5, 95);
       tft.print("TTN no time sync");
+      tft.setTextColor(ST7735_RED);
+      tft.setCursor(5, 105);
+      tft.print(lora_fqz);
+      tft.print("  ");
+      tft.setTextColor(ST7735_ORANGE);
+      tft.print(upload);
       tft.setCursor(5, 115);
       tft.print("packet sent");
    }
-
-   tft.setCursor(5, 105);
-   tft.print("last data UPLOAD: ");
-   tft.setTextColor(ST7735_ORANGE);
-   tft.print(upload);
 
    drawBattery(83, 115);
 }

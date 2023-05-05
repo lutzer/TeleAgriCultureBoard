@@ -462,6 +462,8 @@ void setup()
 
       Serial.printf("\n\nReset Lora Keys: %s", loraChanged ? "true" : "false");
 
+      Serial.println("\nRegion: " + String(LMIC_REGION));
+
       Serial.print("\nOTAA_DEVEUI: ");
       Serial.println(OTAA_DEVEUI);
       Serial.print("OTAA_APPEUI: ");

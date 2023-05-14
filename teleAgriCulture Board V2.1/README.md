@@ -53,6 +53,7 @@ Follow these steps:
 - Serial Monitor is avaiable with 115200 boud rate
 
 For more information on how to use the board, please join our community at https://www.teleagriculture.org
-We would love to hear about your experiances with the board and share your projects with us all...
+
+<span style="background-color: #32C8C8">We would love to hear about your experiances with the board and share your projects with us all...</span>
 
 >**for more info about the source code and if you would like to contribute in the coding goto:**  [Docu Page](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/Docu)

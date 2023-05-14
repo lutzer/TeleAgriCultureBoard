@@ -54,4 +54,4 @@ Follow these steps:
 
 For more information on how to use the board, please refer to or join our community at https://www.teleagriculture.org
 
->**for more info about the source code and if you would like to contribute in the coding goto:**  [CODE PAGE](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/src)
+>**for more info about the source code and if you would like to contribute in the coding goto:**  [CODE PAGE](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/Docu)

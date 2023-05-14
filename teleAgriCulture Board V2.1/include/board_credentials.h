@@ -10,11 +10,6 @@ String OTAA_APPKEY = "00000000000000000000000000000000"; // TTN --> msb first
 
 #define LMIC_PRINTF_TO Serial
 
-// 70B3D57ED005C604
-// 845D3002413D4D0EA49E7265056A4753
-
-// TODO: have to change the POST to insecure ... no checking the Server CA
-
 const char *kits_ca =
     "-----BEGIN CERTIFICATE-----\n"
     "MIIDdzCCAl+gAwIBAgIEAgAAuTANBgkqhkiG9w0BAQUFADBaMQswCQYDVQQGEwJJ\n"

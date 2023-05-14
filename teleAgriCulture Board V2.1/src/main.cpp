@@ -484,42 +484,6 @@ void setup()
 
       digitalWrite(SW_3V3, HIGH);
 
-<<<<<<< HEAD
-=======
-      ttn.begin(LORA_CS, UNUSED_PIN, LORA_RST, LORA_DI0, LORA_DI1, UNUSED_PIN);
-
-      Serial.printf("\n\nReset Lora Keys: %s", loraChanged ? "true" : "false");
-
-      Serial.println("\nRegion: " + String(LMIC_REGION));
-
-      Serial.print("\nOTAA_DEVEUI: ");
-      Serial.println(OTAA_DEVEUI);
-      Serial.print("OTAA_APPEUI: ");
-      Serial.println(OTAA_APPEUI);
-      Serial.print("OTAA_APPKEY: ");
-      Serial.println(OTAA_APPKEY);
-
-      if (loraChanged)
-      {
-         ttn.eraseKeys();
-         loraChanged = false;
-      }
-
-      // Declare callback function for handling downlink messages from server
-      ttn.onMessage(message);
-
-      // Join the network
-      ttn.join(OTAA_DEVEUI.c_str(), OTAA_APPEUI.c_str(), OTAA_APPKEY.c_str());
-
-      Serial.print("Joining TTN ");
-      while (!ttn.isJoined())
-      {
-         Serial.print(".");
-         delay(500);
-      }
-      Serial.println("\njoined!");
-
->>>>>>> b3f934fbc1ae1379fedf2c9c595b37e785aa34df
       sendDataLoRa = true;
    }
 }

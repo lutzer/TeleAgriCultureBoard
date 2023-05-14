@@ -1,9 +1,9 @@
-Firmware is based on this Platformio ESP32-S3 Project
-
-find the actual Firmware for OTA upload (Board Setup on the Config Portal) here:
-[actual Firmware](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/Firmware)
-
-**If you are using LORA please choose the right Firmware for your location/lora module**
+>Firmware is based on this VS Code / Platformio ESP32-S3 Project
+>
+>find the actual compiled Firmware for OTA upload (Board Setup on the Config Portal) here:
+>[actual Firmware](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/Firmware)
+>
+>**If you are using LORA please choose the right Firmware for your location/lora module**
 
 # TeleAgriCulture Board V2.1
 
@@ -37,10 +37,21 @@ To get started with the TeleAgriCulture Board V2.1, you will need:
 Follow these steps:
 
 - power the board ( via Micro USB or Waveshare Solar Power Manager board)
-- the board creates a WiFi Access Point ( SSID: TeleAgriCulture Board )
+- the board creates a WiFi Access Point ( SSID: <mark style="background-color: lightblue">TeleAgriCulture Board</mark> / Password: <mark style="background-color: lightblue">enter123</mark>)
 - connect to this Wifi Network with your mobilephone or laptop
 - you will be redirected in your browser to the Config Portal of the board ( IP: 192.168.4.1 )
 - go through all setup pages and choose your settings
 - save the settings
 
-For more information on how to use the board, please refer to  or join our community at https://www.teleagriculture.org
+### Board Functions
+
+- Navigate through pages: BOOT BUTTON and SELECT BUTTON
+- Wakeup from Deep Sleep: BOOT BUTTON
+- to enter the Config Mode (with open Config Portal):
+- - press BOOT BUTTON > 5 sec or 
+- - Doueble Reset the board (reset, 1, 2, 3, reset again)
+- Serial Monitor is avaiable with 115200 boud rate
+
+For more information on how to use the board, please refer to or join our community at https://www.teleagriculture.org
+
+>**for more info about the source code and if you would like to contribute in the coding goto:**  [CODE PAGE](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/src)

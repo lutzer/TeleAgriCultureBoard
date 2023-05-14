@@ -45,6 +45,8 @@
  *
  * ------> Config Portal opens after double reset or holding BooT button for >5sec
  *
+ * !! to build this project, take care that board_credentials.h is in the include folder (gets ignored by git)
+ *
  * main() handles Config Accesspoint, WiFi, LoRa, load, save, time and display UI
  *
  * Global vector to store connected Sensor data:
@@ -101,7 +103,8 @@
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include <TTN_esp32.h>
+#include <lmic.h>
+#include <hal/hal.h>
 #include <LoraMessage.h>
 
 #include <tac_logo.h>
@@ -186,11 +189,26 @@ void get_time_in_timezone(const char *timezone);
 void setEsp32Time(const char *timeStr);
 
 // Lora functions
+
+void os_getArtEui(u1_t *buf)
+{
+   std::copy(app_eui, app_eui + 8, buf);
+}
+
+void os_getDevEui(u1_t *buf)
+{
+   std::copy(dev_eui, dev_eui + 8, buf);
+}
+void os_getDevKey(u1_t *buf)
+{
+   std::copy(app_key, app_key + 16, buf);
+}
+
 void lora_sendData(void);
-void message(const uint8_t *payload, size_t size, int rssi);
-void waitForTransactions();
-void convertTo_LSB_EUI(char *input, uint8_t *output);
-void convertTo_MSB_APPKEY(char *input, uint8_t *output);
+void do_send(osjob_t *j);
+void onEvent(ev_t ev);
+void convertTo_LSB_EUI(String input, uint8_t *output);
+void convertTo_MSB_APPKEY(String input, uint8_t *output);
 
 // debug fuctions
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels);
@@ -206,14 +224,12 @@ void printHex2(unsigned v);
 
 // ----- LoRa related -----//
 
-TTN_esp32 ttn;
-
 static const int spiClk = 1000000; // 10 MHz
 
 // https://www.loratools.nl/#/airtime
-const unsigned TX_INTERVAL = 30;
-
-bool lora_Data_is_Sent = false;
+const unsigned TX_INTERVAL = 3580;
+bool loraJoinFailed = false;
+bool loraDataTransmitted = false;
 
 // ----- LoRa related -----//
 
@@ -225,6 +241,7 @@ bool lora_Data_is_Sent = false;
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
 
 int backlight_pwm = 250;
+bool displayRefresh = true;
 // ----- Initialize TFT ----- //
 
 // ----- WiFiManager section ---- //
@@ -267,6 +284,7 @@ String lastUpload;
 bool initialState; // state of the LED
 bool ledState = false;
 bool gotoSleep = true;
+bool userWakeup = false;
 bool forceConfig = false; // if no config file or DoubleReset detected
 
 bool sendDataWifi = false;
@@ -278,8 +296,9 @@ int lastHour = -1;
 unsigned long lastExecutionTime = 0;
 int seconds_to_wait = 0;
 
-unsigned long previousMillis = 0;
 unsigned long upButtonsMillis = 0;
+unsigned long previousMillis = 0;
+unsigned long previousMillis_long = 0;
 const long interval = 200000;   // screen backlight darken time 20s
 const long interval2 = 3000000; // screen goes black after 5min
 
@@ -411,7 +430,7 @@ void setup()
    }
    // ----- Initiate the TFT display  and Start Image----- //
 
-   if (upload == "WIFI" || forceConfig == true)
+   if (upload == "WIFI" && !forceConfig)
    {
 
       // Cert field in ConfigPortal deactivated --> do not know if this would work, can not test it now
@@ -435,12 +454,16 @@ void setup()
 
       startBlinking();
 
-      if (wifiManager.autoConnect("TeleAgriCulture Board", "enter123"))
+      bool success = (wifiManager.autoConnect("TeleAgriCulture Board", "enter123"));
+
+      if (!success)
       {
-         if (forceConfig)
-         {
-            wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123");
-         }
+         Serial.println("Failed to connect");
+         ESP.restart();
+      }
+      else
+      {
+         Serial.println("Connected");
       }
 
       if ((WiFi.status() == WL_CONNECTED) && useNTP)
@@ -448,46 +471,18 @@ void setup()
          WiFiManagerNS::configTime();
          WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
       }
-      sendDataWifi = true;
+
       stopBlinking();
    }
+
+   if (upload == "WIFI")
+      sendDataWifi = true;
 
    if (upload == "LORA")
    {
       WiFiManagerNS::TZ::loadPrefs();
 
       digitalWrite(SW_3V3, HIGH);
-
-      ttn.begin(LORA_CS, UNUSED_PIN, LORA_RST, LORA_DI0, LORA_DI1, UNUSED_PIN);
-
-      Serial.printf("\n\nReset Lora Keys: %s", loraChanged ? "true" : "false");
-
-      Serial.print("\nOTAA_DEVEUI: ");
-      Serial.println(OTAA_DEVEUI);
-      Serial.print("OTAA_APPEUI: ");
-      Serial.println(OTAA_APPEUI);
-      Serial.print("OTAA_APPKEY: ");
-      Serial.println(OTAA_APPKEY);
-
-      if (loraChanged)
-      {
-         ttn.eraseKeys();
-         loraChanged = false;
-      }
-
-      // Declare callback function for handling downlink messages from server
-      ttn.onMessage(message);
-
-      // Join the network
-      ttn.join(OTAA_DEVEUI.c_str(), OTAA_APPEUI.c_str(), OTAA_APPKEY.c_str());
-
-      Serial.print("Joining TTN ");
-      while (!ttn.isJoined())
-      {
-         Serial.print(".");
-         delay(500);
-      }
-      Serial.println("\njoined!");
 
       sendDataLoRa = true;
    }
@@ -513,6 +508,25 @@ void loop()
       // The hour has changed since the last execution of this block
       // Set the last hour variable to the current hour to avoid triggering the function multiple times in the same hour
       lastHour = currentHour;
+   }
+
+   if (forceConfig)
+   {
+      startBlinking();
+
+      setUPWiFi();
+
+      // wifiManager.setAPCallback(configModeCallback);
+
+      if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
+      {
+         Serial.println("failed to connect and hit timeout");
+         delay(3000);
+         // reset and try again, or maybe put it to deep sleep
+         ESP.restart();
+      }
+      ESP.restart();
+      stopBlinking();
    }
 
    if (sendDataWifi)
@@ -541,7 +555,7 @@ void loop()
 
       setUploadTime();
 
-      if (!useBattery || !gotoSleep)
+      if ((!useBattery || !gotoSleep) && useDisplay)
       {
          renderPage(currentPage);
       }
@@ -551,15 +565,11 @@ void loop()
    {
       sensorRead();
 
-      waitForTransactions();
+      loraDataTransmitted = false;
+      sendDataLoRa = false;
+      gotoSleep = false;
 
       lora_sendData();
-
-      waitForTransactions();
-
-      sendDataLoRa = false;
-
-      // setUploadTime();
 
       if ((!useBattery || !gotoSleep) && useDisplay)
       {
@@ -568,22 +578,29 @@ void loop()
    }
 
    unsigned long currentMillis = millis();
+   unsigned long currentMillis_long = millis();
 
    if (currentMillis - previousMillis >= interval)
    {
       backlight_pwm = 5; // turns Backlight down
       previousMillis = currentMillis;
-      if (useBattery)
+
+      if (upload == "WIFI" && useBattery)
+      {
+         gotoSleep = true;
+      }
+
+      if (upload == "LORA" && useBattery && loraDataTransmitted)
       {
          gotoSleep = true;
       }
    }
 
-   if (currentMillis - previousMillis >= interval2)
+   if (currentMillis_long - previousMillis_long >= interval2)
    {
       backlight_pwm = 0; // turns Backlight off
       tft.fillScreen(ST7735_BLACK);
-      previousMillis = currentMillis;
+      previousMillis_long = currentMillis_long;
       tft.enableSleep(true);
    }
 
@@ -634,8 +651,8 @@ void loop()
       // Stop Lora befor sleep
       if (upload == "LORA")
       {
-         waitForTransactions();
-         ttn.stop();
+         LMIC_shutdown();
+         esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
          esp_sleep_enable_timer_wakeup((3585) * uS_TO_S_FACTOR);
          Serial.println("Setup ESP32 to sleep for 3600 Seconds");
       }
@@ -686,13 +703,13 @@ void loop()
    }
 
    // Only refresh the screen if the current page has changed
-   if (currentPage != lastPage)
+   if ((currentPage != lastPage) || displayRefresh)
    {
       lastPage = currentPage;
       if (useDisplay)
       {
          renderPage(currentPage);
-         // Serial.println(seconds_to_next_hour());
+         displayRefresh = false;
       }
    }
 
@@ -705,6 +722,14 @@ void loop()
          {
             digitalClockDisplay(5, 95, false);
          }
+      }
+   }
+
+   if (upload == "LORA")
+   {
+      if (!loraDataTransmitted)
+      {
+         os_runloop_once();
       }
    }
 }
@@ -791,6 +816,7 @@ void drawBattery(int x, int y)
    {
       tft.setTextColor(ST7735_WHITE);
       tft.print("NO");
+      return;
    }
    if (bat > 1 && bat < 20)
    {
@@ -867,7 +893,9 @@ void GPIO_wake_up()
 
    if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT1)
    {
-      gotoSleep = false;
+      userWakeup = true;
+      if (useDisplay)
+         gotoSleep = false;
    }
 }
 
@@ -1210,8 +1238,22 @@ void mainPage()
       tft.print("  ");
       tft.setTextColor(ST7735_ORANGE);
       tft.print(upload);
-      tft.setCursor(5, 115);
-      tft.print("packet sent");
+
+      if (loraJoinFailed)
+      {
+         tft.setTextColor(ST7735_RED);
+         tft.setCursor(5, 115);
+         tft.print("JOIN FAILED");
+      }
+      else
+      {
+         if (loraDataTransmitted)
+         {
+            tft.setTextColor(ST7735_GREEN);
+            tft.setCursor(5, 115);
+            tft.print("packet ACK");
+         }
+      }
    }
 
    drawBattery(83, 115);
@@ -1707,7 +1749,6 @@ void save_Config(void)
    doc["user_CA"] = user_CA;
    doc["customNTPadress"] = customNTPaddress;
    doc["timeZone"] = timeZone;
-   doc["lora_fqz"] = lora_fqz;
    doc["OTAA_DEVEUI"] = OTAA_DEVEUI;
    doc["OTAA_APPEUI"] = OTAA_APPEUI;
    doc["OTAA_APPKEY"] = OTAA_APPKEY;
@@ -1759,7 +1800,6 @@ void load_Config(void)
                user_CA = doc["user_CA"].as<String>();
                customNTPaddress = doc["customNTPadress"].as<String>();
                timeZone = doc["timeZone"].as<String>();
-               lora_fqz = doc["lora_fqz"].as<String>();
                OTAA_DEVEUI = doc["OTAA_DEVEUI"].as<String>();
                OTAA_APPEUI = doc["OTAA_APPEUI"].as<String>();
                OTAA_APPKEY = doc["OTAA_APPKEY"].as<String>();
@@ -1873,6 +1913,52 @@ void wifi_sendData(void)
 
 void lora_sendData(void)
 {
+   convertTo_LSB_EUI(OTAA_DEVEUI, dev_eui);
+   convertTo_LSB_EUI(OTAA_APPEUI, app_eui);
+   convertTo_MSB_APPKEY(OTAA_APPKEY, app_key);
+
+   // LMIC init
+   os_init();
+
+   // Reset the MAC state. Session and pending data transfers will be discarded.
+   LMIC_reset();
+
+   Serial.print("\nDEVEUI[8]={ ");
+   for (int i = 0; i < 8; i++)
+   {
+      Serial.print("0x");
+      Serial.print(dev_eui[i], HEX);
+      if (i < 7)
+      {
+         Serial.print(", ");
+      }
+   }
+   Serial.println(" };");
+
+   Serial.print("APPEUI[8]={ ");
+   for (int i = 0; i < 8; i++)
+   {
+      Serial.print("0x");
+      Serial.print(app_eui[i], HEX);
+      if (i < 7)
+      {
+         Serial.print(", ");
+      }
+   }
+   Serial.println(" };");
+
+   Serial.print("APPKEY[16]={ ");
+   for (int i = 0; i < 16; i++)
+   {
+      Serial.print("0x");
+      Serial.print(app_key[i], HEX);
+      if (i < 15)
+      {
+         Serial.print(", ");
+      }
+   }
+   Serial.println(" };\n");
+
    // https://github.com/thesolarnomad/lora-serialization
    // JS decoder example online
 
@@ -2037,19 +2123,17 @@ void lora_sendData(void)
    {
       Serial.println("\nSend Lora Data: ");
 
-      ttn.sendBytes(message.getBytes(), message.getLength());
-
-      byte buffer[message.getLength()];
-
-      memcpy(buffer, &message, message.getLength());
-
-      Serial.println(F("Packet queued"));
-
-      for (int i = 0; i < sizeof(buffer); i++)
+      if (LMIC.opmode & OP_TXRXPEND)
       {
-         Serial.print(buffer[i], HEX);
+         Serial.println(F("OP_TXRXPEND, not sending"));
       }
-      Serial.println();
+      else
+      {
+         // Prepare upstream data transmission at the next possible time.
+         LMIC_setTxData2(1, message.getBytes(), message.getLength(), 1);
+         Serial.println(F("Packet queued\n"));
+      }
+      // Next TX is scheduled after TX_COMPLETE event.
    }
 }
 
@@ -2112,36 +2196,38 @@ void configModeCallback(WiFiManager *myWiFiManager)
    // Serial.println(myWiFiManager->getConfigPortalSSID());
    // Serial.print("Config IP Address: ");
    // Serial.println(WiFi.softAPIP());
+   if (useDisplay)
+   {
+      tft.fillScreen(ST7735_BLACK);
+      tft.setTextColor(ST7735_WHITE);
+      tft.setFont(&FreeSans9pt7b);
+      tft.setTextSize(1);
+      tft.setCursor(5, 17);
+      tft.print("TeleAgriCulture");
+      tft.setCursor(5, 38);
+      tft.print("Board V2.1");
 
-   tft.fillScreen(ST7735_BLACK);
-   tft.setTextColor(ST7735_WHITE);
-   tft.setFont(&FreeSans9pt7b);
-   tft.setTextSize(1);
-   tft.setCursor(5, 17);
-   tft.print("TeleAgriCulture");
-   tft.setCursor(5, 38);
-   tft.print("Board V2.1");
-
-   tft.setTextColor(ST7735_RED);
-   tft.setFont();
-   tft.setTextSize(2);
-   tft.setCursor(5, 50);
-   tft.print("Config MODE");
-   tft.setTextColor(ST7735_WHITE);
-   tft.setTextSize(1);
-   tft.setCursor(5, 73);
-   tft.print("SSID:");
-   tft.setCursor(5, 85);
-   tft.print(myWiFiManager->getConfigPortalSSID());
-   tft.setCursor(5, 95);
-   tft.print("IP: ");
-   tft.print(WiFi.softAPIP());
-   tft.setCursor(5, 108);
-   tft.print("MAC: ");
-   tft.print(WiFi.macAddress());
-   tft.setCursor(5, 117);
-   tft.setTextColor(ST7735_BLUE);
-   tft.print(version);
+      tft.setTextColor(ST7735_RED);
+      tft.setFont();
+      tft.setTextSize(2);
+      tft.setCursor(5, 50);
+      tft.print("Config MODE");
+      tft.setTextColor(ST7735_WHITE);
+      tft.setTextSize(1);
+      tft.setCursor(5, 73);
+      tft.print("SSID:");
+      tft.setCursor(5, 85);
+      tft.print(myWiFiManager->getConfigPortalSSID());
+      tft.setCursor(5, 95);
+      tft.print("IP: ");
+      tft.print(WiFi.softAPIP());
+      tft.setCursor(5, 108);
+      tft.print("MAC: ");
+      tft.print(WiFi.macAddress());
+      tft.setCursor(5, 117);
+      tft.setTextColor(ST7735_BLUE);
+      tft.print(version);
+   }
 }
 
 String get_header()
@@ -2329,65 +2415,42 @@ void setUPWiFi()
                                      { configSaved = true; }); // restart on credentials save, ESP32 doesn't like to switch between AP/STA
 }
 
-void convertTo_LSB_EUI(char *input, uint8_t *output)
+void convertTo_LSB_EUI(String input, uint8_t *output)
 {
    // Check if input matches pattern
-   if (strlen(input) != 16)
+   if (input.length() != 16)
    {
       Serial.println("Input must be 16 characters long.");
       return;
    }
    for (int i = 0; i < 16; i++)
    {
-      if (!isxdigit(input[i]))
+      if (!isxdigit(input.charAt(i)))
       {
          Serial.println("Input must be in hexadecimal format.");
          return;
       }
    }
 
-   // Reverse input string
-   char inputRev[17];
-   for (int i = 0; i < 16; i++)
-   {
-      inputRev[i] = input[15 - i];
-   }
-   inputRev[16] = '\0';
-
    // Convert string to byte array
    for (int i = 0; i < 8; i++)
    {
-      char byteStr[3];
-      strncpy(byteStr, &inputRev[i * 2], 2);
-      byteStr[2] = '\0';
-      output[i] = strtol(byteStr, NULL, 16);
+      String byteStr = input.substring(i * 2, i * 2 + 2);
+      output[7 - i] = strtol(byteStr.c_str(), NULL, 16);
    }
-
-   // Print converted array
-   Serial.print("APPEUI[8]={ ");
-   for (int i = 0; i < 8; i++)
-   {
-      Serial.print("0x");
-      Serial.print(output[i], HEX);
-      if (i < 7)
-      {
-         Serial.print(",");
-      }
-   }
-   Serial.println(" };");
 }
 
-void convertTo_MSB_APPKEY(char *input, uint8_t *output)
+void convertTo_MSB_APPKEY(String input, uint8_t *output)
 {
    // Check if input matches pattern
-   if (strlen(input) != 32)
+   if (input.length() != 32)
    {
       Serial.println("Input must be 16 characters long.");
       return;
    }
    for (int i = 0; i < 32; i++)
    {
-      if (!isxdigit(input[i]))
+      if (!isxdigit(input.charAt(i)))
       {
          Serial.println("Input must be in hexadecimal format.");
          return;
@@ -2397,24 +2460,9 @@ void convertTo_MSB_APPKEY(char *input, uint8_t *output)
    // Convert string to byte array
    for (int i = 0; i < 16; i++)
    {
-      char byteStr[3];
-      strncpy(byteStr, &input[i * 2], 2);
-      byteStr[2] = '\0';
-      output[i] = strtol(byteStr, NULL, 16);
+      String byteStr = input.substring(i * 2, i * 2 + 2);
+      output[i] = strtol(byteStr.c_str(), NULL, 16);
    }
-
-   // Print converted array
-   Serial.print("APPEUI[8]={ ");
-   for (int i = 0; i < 16; i++)
-   {
-      Serial.print("0x");
-      Serial.print(output[i], HEX);
-      if (i < 7)
-      {
-         Serial.print(",");
-      }
-   }
-   Serial.println(" };");
 }
 
 void initVoltsArray()
@@ -2612,25 +2660,6 @@ void deepsleepPage()
    // tft.print(TIME_TO_SLEEP);
 }
 
-void message(const uint8_t *payload, size_t size, int rssi)
-{
-   Serial.println("-- MESSAGE");
-   Serial.print("Received " + String(size) + " bytes RSSI=" + String(rssi) + "db");
-   for (int i = 0; i < size; i++)
-   {
-      Serial.print(" " + String(payload[i]));
-      // Serial.write(payload[i]);
-   }
-
-   Serial.println();
-}
-
-void waitForTransactions()
-{
-   Serial.println("Waiting for pending transactions... ");
-   Serial.println("Waiting took " + String(ttn.waitForPendingTransactions()) + "ms");
-}
-
 ValueOrder getValueOrderFromString(String str)
 {
    if (str == "VOLT")
@@ -2720,5 +2749,133 @@ ValueOrder getValueOrderFromString(String str)
    else
    {
       return NOT;
+   }
+}
+
+void onEvent(ev_t ev)
+{
+   Serial.print(os_getTime());
+   Serial.print(": ");
+   switch (ev)
+   {
+   case EV_SCAN_TIMEOUT:
+      Serial.println(F("EV_SCAN_TIMEOUT"));
+      break;
+   case EV_BEACON_FOUND:
+      Serial.println(F("EV_BEACON_FOUND"));
+      break;
+   case EV_BEACON_MISSED:
+      Serial.println(F("EV_BEACON_MISSED"));
+      break;
+   case EV_BEACON_TRACKED:
+      Serial.println(F("EV_BEACON_TRACKED"));
+      break;
+   case EV_JOINING:
+      Serial.println(F("EV_JOINING"));
+      break;
+   case EV_JOINED:
+      Serial.println(F("EV_JOINED"));
+      {
+         u4_t netid = 0;
+         devaddr_t devaddr = 0;
+         u1_t nwkKey[16];
+         u1_t artKey[16];
+         LMIC_getSessionKeys(&netid, &devaddr, nwkKey, artKey);
+         Serial.print("netid: ");
+         Serial.println(netid, DEC);
+         Serial.print("devaddr: ");
+         Serial.println(devaddr, HEX);
+         Serial.print("artKey: ");
+         for (size_t i = 0; i < sizeof(artKey); ++i)
+         {
+            Serial.print(artKey[i], HEX);
+         }
+         Serial.println("");
+         Serial.print("nwkKey: ");
+         for (size_t i = 0; i < sizeof(nwkKey); ++i)
+         {
+            Serial.print(nwkKey[i], HEX);
+         }
+         Serial.println("\n");
+      }
+      // Disable link check validation (automatically enabled
+      // during join, but because slow data rates change max TX
+      // size, we don't use it in this example.
+      LMIC_setLinkCheckMode(0);
+      break;
+   /*
+       || This event is defined but not used in the code. No
+       || point in wasting codespace on it.
+       ||
+       || case EV_RFU1:
+       ||     Serial.println(F("EV_RFU1"));
+       ||     break;
+       */
+   case EV_JOIN_FAILED:
+      Serial.println(F("EV_JOIN_FAILED"));
+      loraJoinFailed = true;
+      displayRefresh = true;
+      break;
+   case EV_REJOIN_FAILED:
+      Serial.println(F("EV_REJOIN_FAILED"));
+      break;
+   case EV_TXCOMPLETE:
+      Serial.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
+      if (LMIC.txrxFlags & TXRX_ACK)
+      {
+         Serial.println(F("Received ack"));
+         loraDataTransmitted = true;
+         displayRefresh = true;
+
+         if (!userWakeup)
+            gotoSleep = true;
+      }
+      if (LMIC.dataLen)
+      {
+         Serial.print(F("Received "));
+         Serial.print(LMIC.dataLen);
+         Serial.println(F(" bytes of payload"));
+      }
+      break;
+   case EV_LOST_TSYNC:
+      Serial.println(F("EV_LOST_TSYNC"));
+      break;
+   case EV_RESET:
+      Serial.println(F("EV_RESET"));
+      break;
+   case EV_RXCOMPLETE:
+      // data received in ping slot
+      Serial.println(F("EV_RXCOMPLETE"));
+      break;
+   case EV_LINK_DEAD:
+      Serial.println(F("EV_LINK_DEAD"));
+      break;
+   case EV_LINK_ALIVE:
+      Serial.println(F("EV_LINK_ALIVE"));
+      break;
+   /*
+       || This event is defined but not used in the code. No
+       || point in wasting codespace on it.
+       ||
+       || case EV_SCAN_FOUND:
+       ||    Serial.println(F("EV_SCAN_FOUND"));
+       ||    break;
+       */
+   case EV_TXSTART:
+      Serial.println(F("EV_TXSTART"));
+      break;
+   case EV_TXCANCELED:
+      Serial.println(F("EV_TXCANCELED"));
+      break;
+   case EV_RXSTART:
+      /* do not print anything -- it wrecks timing */
+      break;
+   case EV_JOIN_TXCOMPLETE:
+      Serial.println(F("EV_JOIN_TXCOMPLETE: no JoinAccept"));
+      break;
+   default:
+      Serial.print(F("Unknown event: "));
+      Serial.println((unsigned)ev);
+      break;
    }
 }

@@ -25,6 +25,7 @@
 \*/
 
 #include <Arduino.h>
+#include <board_credentials.h>
 #include <WString.h>
 
 #define SENSORS_NUM 15      // Number of Sensors implemeted
@@ -51,15 +52,7 @@ int EXTRA_con_table[EXTRA_NUM];
 
 // ***  initial values  ***  // will be overwritten by config file / user input at board setup
 
-int boardID = 1003;
-String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // TODO: after all the testing has to be masked in the gitlab and changed in the app
-String lora_fqz = "EU 868 MHz";                      // "US/CD/AUS 915 MHz";   // "Asia 923 MHz";
-String OTAA_APPEUI = "0000000000000000";
-String OTAA_DEVEUI = "0000000000000000";                 // 70B3D57ED005D269
-String OTAA_APPKEY = "00000000000000000000000000000000"; // 2E9D9884F562B37E9AB10392C24866FF
 String customNTPaddress = "129.6.15.28";
-
-String version = "Firmware Version 1.00";
 
 bool useBattery = false;
 bool useDisplay = true;
@@ -74,40 +67,20 @@ String user_CA = "-----BEGIN CERTIFICATE----- optional -----END CERTIFICATE-----
 String setTime_value = "";
 String timeZone = "";
 
-// ***  initial values  ***
-
 String hostname = "TeleAgriCulture Board";
+
 const char GET_Time_SERVER[30] = "www.teleagriculture.org";
 String GET_Time_Address = "https://www.teleagriculture.org";
 const int SSL_PORT = 443;
 const unsigned long TIMEOUT = 2500;
 
-// TODO: have to change the POST to insecure ... no checking the Server CA
+static osjob_t sendjob;
+uint8_t dev_eui[8]={ 0, 0, 0, 0, 0, 0, 0, 0 };
+uint8_t app_eui[8]={ 0, 0, 0, 0, 0, 0, 0, 0 };
+uint8_t app_key[16]={ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-const char *kits_ca =
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIDzTCCArWgAwIBAgIQCjeHZF5ftIwiTv0b7RQMPDANBgkqhkiG9w0BAQsFADBa\n"
-    "MQswCQYDVQQGEwJJRTESMBAGA1UEChMJQmFsdGltb3JlMRMwEQYDVQQLEwpDeWJl\n"
-    "clRydXN0MSIwIAYDVQQDExlCYWx0aW1vcmUgQ3liZXJUcnVzdCBSb290MB4XDTIw\n"
-    "MDEyNzEyNDgwOFoXDTI0MTIzMTIzNTk1OVowSjELMAkGA1UEBhMCVVMxGTAXBgNV\n"
-    "BAoTEENsb3VkZmxhcmUsIEluYy4xIDAeBgNVBAMTF0Nsb3VkZmxhcmUgSW5jIEVD\n"
-    "QyBDQS0zMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEua1NZpkUC0bsH4HRKlAe\n"
-    "nQMVLzQSfS2WuIg4m4Vfj7+7Te9hRsTJc9QkT+DuHM5ss1FxL2ruTAUJd9NyYqSb\n"
-    "16OCAWgwggFkMB0GA1UdDgQWBBSlzjfq67B1DpRniLRF+tkkEIeWHzAfBgNVHSME\n"
-    "GDAWgBTlnVkwgkdYzKz6CFQ2hns6tQRN8DAOBgNVHQ8BAf8EBAMCAYYwHQYDVR0l\n"
-    "BBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMBIGA1UdEwEB/wQIMAYBAf8CAQAwNAYI\n"
-    "KwYBBQUHAQEEKDAmMCQGCCsGAQUFBzABhhhodHRwOi8vb2NzcC5kaWdpY2VydC5j\n"
-    "b20wOgYDVR0fBDMwMTAvoC2gK4YpaHR0cDovL2NybDMuZGlnaWNlcnQuY29tL09t\n"
-    "bmlyb290MjAyNS5jcmwwbQYDVR0gBGYwZDA3BglghkgBhv1sAQEwKjAoBggrBgEF\n"
-    "BQcCARYcaHR0cHM6Ly93d3cuZGlnaWNlcnQuY29tL0NQUzALBglghkgBhv1sAQIw\n"
-    "CAYGZ4EMAQIBMAgGBmeBDAECAjAIBgZngQwBAgMwDQYJKoZIhvcNAQELBQADggEB\n"
-    "AAUkHd0bsCrrmNaF4zlNXmtXnYJX/OvoMaJXkGUFvhZEOFp3ArnPEELG4ZKk40Un\n"
-    "+ABHLGioVplTVI+tnkDB0A+21w0LOEhsUCxJkAZbZB2LzEgwLt4I4ptJIsCSDBFe\n"
-    "lpKU1fwg3FZs5ZKTv3ocwDfjhUkV+ivhdDkYD7fa86JXWGBPzI6UAPxGezQxPk1H\n"
-    "goE6y/SJXQ7vTQ1unBuCJN0yJV0ReFEQPaA1IwQvZW+cwdFD19Ae8zFnWSfda9J1\n"
-    "CZMRJCQUzym+5iPDuI9yP+kHyCREU3qzuWFloUwOxkgAyXVjBYdwRVKD05WdRerw\n"
-    "6DEdfgkfCv4+3ao8XnTSrLE=\n"
-    "-----END CERTIFICATE-----\n";
+// Saves the LMIC structure during DeepSleep
+RTC_DATA_ATTR lmic_t RTC_LMIC;
 
 // ----- Define Pins ----- //
 #define I2C_SDA 8 // on teleAgriCulture Board V2.0 I2C_5V SDA is GPIO 15
@@ -133,6 +106,20 @@ const char *kits_ca =
 #define LORA_DI1 14 // on teleAgriCulture Board V2.0 it has to be briged to the LORA Module Connector!
 #define UNUSED_PIN 0xFF
 #define LORA_PIN_RXTX UNUSED_PIN
+
+// Pin mapping
+const lmic_pinmap lmic_pins = {
+    .nss = LORA_CS,
+    .rxtx = LMIC_UNUSED_PIN,
+    .rst = LORA_RST,
+    .dio = {LORA_DI0, LORA_DI1, LMIC_UNUSED_PIN},
+    .rxtx_rx_active = 0,
+    .rssi_cal = 14,
+    .spi_freq = 1000000,
+};
+
+// opmode def
+// https://github.com/mcci-catena/arduino-lmic/blob/89c28c5888338f8fc851851bb64968f2a493462f/src/lmic/lmic.h#L233
 
 #define ONEWIRE_1 39
 #define ONEWIRE_2 40

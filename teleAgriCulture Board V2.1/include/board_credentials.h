@@ -1,12 +1,12 @@
 #include <Arduino.h>
 
-int boardID = 0000;
+int boardID = 1003; // 1004
 String version = "Firmware Version 1.00";
-String API_KEY = "XXXXXXX";
+String API_KEY = "8i8nRED12XgHb3vBjIXCf0rXMedI8NTB"; // iDRXeSKi1AnoOnzdmIPxM2ZNmnrsbawY
 String lora_fqz = "EU 868 MHz"; //"Asia 923 MHz";   //"US/CD/AUS 915 MHz"; 
 String OTAA_APPEUI = "0000000000000000";                 // TTN --> msb first
-String OTAA_DEVEUI = "0000000000000000";                 // TTN --> msb first
-String OTAA_APPKEY = "00000000000000000000000000000000"; // TTN --> msb first
+String OTAA_DEVEUI = "70B3D57ED005D269";                 // TTN --> msb first
+String OTAA_APPKEY = "2E9D9884F562B37E9AB10392C24866FF"; // TTN --> msb first
 
 #define LMIC_PRINTF_TO Serial
 

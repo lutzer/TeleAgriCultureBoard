@@ -35,9 +35,10 @@
 //TODO: find a I2C Address solution
 
 
+
 /*
- *
- * For defines, GPIOs and implemented Sensors, see sensor_Board.hpp (BoardID, API_KEY and LORA credentials)
+ * For defines, GPIOs and implemented Sensors, see sensor_Board.hpp
+ * board_credentials.h contains BoardID, API_KEY and LORA credentials
  *
  *
  * Config Portal Access Point:   SSID: TeleAgriCulture Board
@@ -55,7 +56,7 @@
  * Sensor Data Name: sensorVector[i].measurements[j].data_name    --> in order of apperiance (temp, temp1, temp2 ...)
  * Sensor Value:     sensorVector[i].measurements[j].value
  *
-/*/
+ */
 
 /*
    to add new Sensors
@@ -405,7 +406,7 @@ void setup()
 
    // checkLoadedStuff();
 
-   if (useDisplay || forceConfig)
+   if (useDisplay || forceConfig || userWakeup)
    {
       // ----- Initiate the TFT display and Start Image----- //
       tft.initR(INITR_GREENTAB); // work around to set protected offset values
@@ -414,11 +415,11 @@ void setup()
       tft.cp437(true);
       tft.setCursor(0, 0);
       tft.setRotation(3);
+      tft.enableSleep(false);
    }
 
    if (useBattery && useDisplay)
    {
-      analogWrite(TFT_BL, 25); // turn TFT Backlight on
       tft.fillScreen(ST7735_BLACK);
    }
 
@@ -563,18 +564,25 @@ void loop()
 
    if (sendDataLoRa)
    {
+      if ((!useBattery && useDisplay) || (userWakeup && useDisplay))
+      {
+         // ----- Initiate the TFT display and Start Image----- //
+      tft.initR(INITR_GREENTAB); // work around to set protected offset values
+      tft.initR(INITR_BLACKTAB); // change the colormode back, offset values stay as "green display"
+
+      tft.cp437(true);
+      tft.setCursor(0, 0);
+      tft.setRotation(3);
+      analogWrite(TFT_BL, 25); // turn TFT Backlight on
+         displayRefresh = true;
+      }
+
       sensorRead();
+      lora_sendData();
 
       loraDataTransmitted = false;
       sendDataLoRa = false;
       gotoSleep = false;
-
-      lora_sendData();
-
-      if ((!useBattery || !gotoSleep) && useDisplay)
-      {
-         renderPage(currentPage);
-      }
    }
 
    unsigned long currentMillis = millis();
@@ -585,14 +593,13 @@ void loop()
       backlight_pwm = 5; // turns Backlight down
       previousMillis = currentMillis;
 
-      if (upload == "WIFI" && useBattery)
+      if (useBattery)
       {
-         gotoSleep = true;
-      }
-
-      if (upload == "LORA" && useBattery && loraDataTransmitted)
-      {
-         gotoSleep = true;
+         if (upload == "WIFI" || (upload == "LORA" && loraDataTransmitted))
+         {
+            gotoSleep = true;
+            userWakeup = false;
+         }
       }
    }
 
@@ -706,7 +713,7 @@ void loop()
    if ((currentPage != lastPage) || displayRefresh)
    {
       lastPage = currentPage;
-      if (useDisplay)
+      if (useDisplay || true)
       {
          renderPage(currentPage);
          displayRefresh = false;
@@ -1134,6 +1141,9 @@ void save_Connectors()
 
 void renderPage(int page)
 {
+   Serial.print("rendering page ");
+   Serial.println(page);
+
    // collect measurments for rendering MeasurmentPage
    show_measurements.clear();
 
@@ -2198,6 +2208,15 @@ void configModeCallback(WiFiManager *myWiFiManager)
    // Serial.println(WiFi.softAPIP());
    if (useDisplay)
    {
+      // ----- Initiate the TFT display and Start Image----- //
+      tft.initR(INITR_GREENTAB); // work around to set protected offset values
+      tft.initR(INITR_BLACKTAB); // change the colormode back, offset values stay as "green display"
+
+      tft.cp437(true);
+      tft.setCursor(0, 0);
+      tft.setRotation(3);
+      analogWrite(TFT_BL, 25); // turn TFT Backlight on
+
       tft.fillScreen(ST7735_BLACK);
       tft.setTextColor(ST7735_WHITE);
       tft.setFont(&FreeSans9pt7b);
@@ -2227,6 +2246,8 @@ void configModeCallback(WiFiManager *myWiFiManager)
       tft.setCursor(5, 117);
       tft.setTextColor(ST7735_BLUE);
       tft.print(version);
+
+      gotoSleep = false;
    }
 }
 

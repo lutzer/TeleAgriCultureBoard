@@ -83,8 +83,8 @@ uint8_t app_key[16]={ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 RTC_DATA_ATTR lmic_t RTC_LMIC;
 
 // ----- Define Pins ----- //
-#define I2C_SDA 8 // on teleAgriCulture Board V2.0 I2C_5V SDA is GPIO 15
-#define I2C_SCL 9 // on teleAgriCulture Board V2.0 I2C_5V SCL is GPIO 16
+#define I2C_SDA 15//8 // on teleAgriCulture Board V2.0 I2C_5V SDA is GPIO 15
+#define I2C_SCL 16//9 // on teleAgriCulture Board V2.0 I2C_5V SCL is GPIO 16
 
 #define TFT_SCLK 36
 #define TFT_MISO 37

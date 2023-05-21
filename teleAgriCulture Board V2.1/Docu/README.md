@@ -89,4 +89,11 @@ To add new sensors, follow these steps:
 - [ ] implement DS3231 RTC
 - [ ] implement WS2812 LED function and control logic
 - [ ] implement Servo function and control logic
+- [ ] sensor calibration option
+
+### Hardware
+
+- [ ] LiPo Charger circuit on board
+- [ ] Grove I2C Connector
+
  

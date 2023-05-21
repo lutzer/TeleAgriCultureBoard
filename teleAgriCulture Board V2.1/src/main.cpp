@@ -27,7 +27,6 @@
 
 //TODO: prepaired but disabled in ConfigPortal -->Cert read and set  ---> String user_CA ---> to usable const char[]
 //      WPA Enterprise works without cert and anonym identity at the moment
-//TODO: WiFISecure Cert check maybe dissable? server cert may change... client.insecure() not avaiable in new espidf
 
 //TODO: Battery optimation    ---> uses around 3mA without gas sensor and without display
 //TODO: Sensor test
@@ -74,6 +73,9 @@
                               readSPI_Connector()
                               readEXTRA_Connectors()
       corresponding to your Sensortype with case statement using your Sensor ENUM
+   -> create new Sensor object like:  Sensor newSensor = allSensors[ENUM_SENSOR];
+   -> add sensor meassurement to the newSensor object like: newSensor.measurements[0].value = value;
+   -> push new sensor object to global sensorVector like: sensorVector.push_back(newSensor);
    -> increase SENSORS_NUM by 1
 */
 

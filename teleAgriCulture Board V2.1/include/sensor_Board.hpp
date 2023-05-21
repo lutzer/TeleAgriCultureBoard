@@ -37,7 +37,7 @@
 #define SPI_NUM 1
 #define I2C_5V_NUM 1
 #define EXTRA_NUM 2
-#define JSON_BUFFER 7000 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
+#define JSON_BUFFER 10000 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
 
 // ----- Declare Connectors ----- //
 

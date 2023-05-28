@@ -37,7 +37,7 @@
 #define SPI_NUM 1
 #define I2C_5V_NUM 1
 #define EXTRA_NUM 2
-#define JSON_BUFFER 10000 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
+#define JSON_BUFFER 7000 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
 
 // ----- Declare Connectors ----- //
 
@@ -61,6 +61,8 @@ bool useNTP = false;
 bool useCustomNTP = false;
 bool loraChanged = false;
 
+int upload_interval = 60;
+
 String upload = "WIFI";
 String anonym = "anonymus@example.com";
 String user_CA = "-----BEGIN CERTIFICATE----- optional -----END CERTIFICATE-----";
@@ -75,16 +77,16 @@ const int SSL_PORT = 443;
 const unsigned long TIMEOUT = 2500;
 
 static osjob_t sendjob;
-uint8_t dev_eui[8]={ 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t app_eui[8]={ 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t app_key[16]={ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+uint8_t dev_eui[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t app_eui[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+uint8_t app_key[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 // Saves the LMIC structure during DeepSleep
 RTC_DATA_ATTR lmic_t RTC_LMIC;
 
 // ----- Define Pins ----- //
-#define I2C_SDA 15//8 // on teleAgriCulture Board V2.0 I2C_5V SDA is GPIO 15
-#define I2C_SCL 16//9 // on teleAgriCulture Board V2.0 I2C_5V SCL is GPIO 16
+#define I2C_SDA 8 // on teleAgriCulture Board V2.0 I2C_5V SDA is GPIO 15
+#define I2C_SCL 9 // on teleAgriCulture Board V2.0 I2C_5V SCL is GPIO 16
 
 #define TFT_SCLK 36
 #define TFT_MISO 37
@@ -354,9 +356,9 @@ const char *proto_sensors = R"([
     "returnCount": 1,
     "measurements": [
       {
-        "value": 300,
+        "value": 80,
         "valueOrder": "MOIS",
-        "unit": ".",
+        "unit": "%",
         "data_name": "mois"
       }
     ]

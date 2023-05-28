@@ -34,10 +34,9 @@
 //TODO: find a I2C Address solution
 
 
-
 /*
- * For defines, GPIOs and implemented Sensors, see sensor_Board.hpp
- * board_credentials.h contains BoardID, API_KEY and LORA credentials
+ *
+ * For defines, GPIOs and implemented Sensors, see sensor_Board.hpp (BoardID, API_KEY and LORA credentials)
  *
  *
  * Config Portal Access Point:   SSID: TeleAgriCulture Board
@@ -55,7 +54,7 @@
  * Sensor Data Name: sensorVector[i].measurements[j].data_name    --> in order of apperiance (temp, temp1, temp2 ...)
  * Sensor Value:     sensorVector[i].measurements[j].value
  *
- */
+/*/
 
 /*
    to add new Sensors
@@ -73,9 +72,6 @@
                               readSPI_Connector()
                               readEXTRA_Connectors()
       corresponding to your Sensortype with case statement using your Sensor ENUM
-   -> create new Sensor object like:  Sensor newSensor = allSensors[ENUM_SENSOR];
-   -> add sensor meassurement to the newSensor object like: newSensor.measurements[0].value = value;
-   -> push new sensor object to global sensorVector like: sensorVector.push_back(newSensor);
    -> increase SENSORS_NUM by 1
 */
 
@@ -99,7 +95,7 @@
 
 #include <WiFi.h>
 
-#include <WiFiClientSecure.h>
+#include <WiFiClientSecure.h> //https://github.com/esp32wrangler/esp32-certBundle
 #include <ESPmDNS.h>
 #include <time.h>
 #include <sys/time.h>
@@ -134,8 +130,10 @@
 #include <Adafruit_ST7735.h>
 
 // ----- Deep Sleep related -----//
-#define BUTTON_PIN_BITMASK 0x1   // GPIO 0
-#define uS_TO_S_FACTOR 1000000UL /* Conversion factor for micro seconds to seconds */
+#define BUTTON_PIN_BITMASK 0x1      // GPIO 0
+#define uS_TO_S_FACTOR 1000000UL    /* Conversion factor for micro seconds to seconds */
+#define uS_TO_MIN_FACTOR 60000000UL /* Conversion factor for micro seconds to minutes */
+#define mS_TO_MIN_FACTOR 60000UL    /* Conversion factor for milli seconds to minutes */
 
 RTC_DATA_ATTR int bootCount = 0;
 
@@ -151,6 +149,7 @@ void GPIO_wake_up();
 
 // ----- Function declaration -----//
 void setUPWiFi();
+void wifi_sendData(void);
 void configModeCallback(WiFiManager *myWiFiManager);
 int countMeasurements(const std::vector<Sensor> &sensors);
 void checkButton(void);
@@ -220,7 +219,6 @@ void printConnectors(ConnectorType typ);
 void printProtoSensors(void);
 void printMeassurments(void);
 void printSensors(void);
-void wifi_sendData(void);
 void printHex2(unsigned v);
 
 // ----- Function declaration -----//
@@ -251,6 +249,10 @@ bool displayRefresh = true;
 #define WM_NOHELP 1
 WiFiManager wifiManager;
 WiFiClientSecure client;
+
+extern const uint8_t x509_crt_bundle_start[] asm("_binary_src_x509_crt_bundle_start");
+extern const uint8_t x509_crt_bundle_end[] asm("_binary_src_x509_crt_bundle_end");
+extern const uint8_t rootca_bundle_crt_start[] asm("_binary_data_cert_x509_crt_bundle_bin_start");
 // ----- WiFiManager section ---- //
 
 // ----- globals and defines --------
@@ -294,16 +296,17 @@ bool sendDataWifi = false;
 bool sendDataLoRa = false;
 
 // Define a variable to hold the last hour value
-int currentHour;
-int lastHour = -1;
+int currentDay;
+int lastDay = -1;
 unsigned long lastExecutionTime = 0;
 int seconds_to_wait = 0;
 
 unsigned long upButtonsMillis = 0;
 unsigned long previousMillis = 0;
 unsigned long previousMillis_long = 0;
-const long interval = 200000;   // screen backlight darken time 20s
-const long interval2 = 3000000; // screen goes black after 5min
+unsigned long previousMillis_upload = 0;
+const long interval = 1 * mS_TO_MIN_FACTOR;  // screen backlight darken time after 1 min
+const long interval2 = 5 * mS_TO_MIN_FACTOR; // screen goes black after 5 min
 
 // Battery levels
 double vs[101]; //   Copyright (c) 2019 Pangodream   	https://github.com/pangodream/18650CL
@@ -331,6 +334,8 @@ void setup()
    delay(500);               // for debugging in screen
    Serial.setTxTimeoutMs(5); // set USB CDC Time TX
    Serial.begin(115200);     // start Serial for debuging
+
+   analogWrite(TFT_BL, 0); // turn off TFT Backlight
 
    // Initialize the NVS (non-volatile storage) for saving and restoring the keys
    nvs_flash_init();
@@ -408,7 +413,7 @@ void setup()
 
    // checkLoadedStuff();
 
-   if (useDisplay || forceConfig || userWakeup)
+   if (useDisplay || forceConfig)
    {
       // ----- Initiate the TFT display and Start Image----- //
       tft.initR(INITR_GREENTAB); // work around to set protected offset values
@@ -417,11 +422,11 @@ void setup()
       tft.cp437(true);
       tft.setCursor(0, 0);
       tft.setRotation(3);
-      tft.enableSleep(false);
    }
 
-   if (useBattery && useDisplay)
+   if (useBattery && useDisplay && (!userWakeup))
    {
+      analogWrite(TFT_BL, 0); // turn off TFT Backlight
       tft.fillScreen(ST7735_BLACK);
    }
 
@@ -430,6 +435,17 @@ void setup()
       analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
       tft.fillScreen(background_color);
       tft.drawRGBBitmap(0, 0, tac_logo, 160, 128);
+   }
+
+   if (userWakeup)
+   {
+      analogWrite(TFT_BL, backlight_pwm); // turn off TFT Backlight
+      tft.fillScreen(ST7735_BLACK);
+      tft.setTextColor(0x9E6F);
+      tft.setFont(&FreeSans9pt7b);
+      tft.setTextSize(1);
+      tft.setCursor(5, 50);
+      tft.print("Wakeup by USER");
    }
    // ----- Initiate the TFT display  and Start Image----- //
 
@@ -475,6 +491,14 @@ void setup()
          WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
       }
 
+      if (!useNTP)
+      {
+         String header = get_header();
+         delay(1000);
+         String Time1 = getDateTime(header);
+         setEsp32Time(Time1.c_str());
+      }
+
       stopBlinking();
    }
 
@@ -494,23 +518,21 @@ void setup()
 void loop()
 {
    drd->loop();
-   analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
 
    time_t rawtime;
    time(&rawtime);
    localtime_r(&rawtime, &timeInfo);
 
-   currentHour = timeInfo.tm_hour;
+   currentDay = timeInfo.tm_mday;
 
-   if (currentHour != lastHour)
+   if ((currentDay != lastDay) && (upload == "WIFI") && !(WiFiManagerNS::NTPEnabled)) // get time synced every day
    {
-      if (upload == "WIFI")
-         sendDataWifi = true;
-      if (upload == "LORA")
-         sendDataLoRa = true;
-      // The hour has changed since the last execution of this block
-      // Set the last hour variable to the current hour to avoid triggering the function multiple times in the same hour
-      lastHour = currentHour;
+      // The day has changed since the last execution of this block
+      String header = get_header();
+      delay(1000);
+      String Time1 = getDateTime(header);
+      setEsp32Time(Time1.c_str());
+      lastDay = currentDay;
    }
 
    if (forceConfig)
@@ -520,6 +542,8 @@ void loop()
       setUPWiFi();
 
       // wifiManager.setAPCallback(configModeCallback);
+      backlight_pwm = 200;
+      analogWrite(TFT_BL, backlight_pwm); // turn off TFT Backlight
 
       if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
       {
@@ -532,29 +556,53 @@ void loop()
       stopBlinking();
    }
 
+   unsigned long currentMillis = millis();
+   unsigned long currentMillis_long = millis();
+   unsigned long currentMillis_upload = millis();
+
+   if (currentMillis - previousMillis >= interval)
+   {
+      backlight_pwm = 5; // turns Backlight down
+      previousMillis = currentMillis;
+
+      if (upload == "WIFI" && useBattery)
+      {
+         gotoSleep = true;
+      }
+
+      if (upload == "LORA" && useBattery && loraDataTransmitted)
+      {
+         gotoSleep = true;
+      }
+   }
+
+   if (currentMillis_long - previousMillis_long >= interval2)
+   {
+      backlight_pwm = 0; // turns Backlight off
+      tft.fillScreen(ST7735_BLACK);
+      previousMillis_long = currentMillis_long;
+      tft.enableSleep(true);
+   }
+
+   if (currentMillis_upload - previousMillis_upload >= (upload_interval * mS_TO_MIN_FACTOR))
+   {
+      Serial.println(upload_interval * mS_TO_MIN_FACTOR);
+      delay(1000);
+      if (upload == "WIFI")
+         sendDataWifi = true;
+      if (upload == "LORA")
+         sendDataLoRa = true;
+
+      previousMillis_upload = currentMillis_upload;
+   }
+
    if (sendDataWifi)
    {
       sensorRead();
-      // Serial.println("\nPrint Measurements: ");
-      // printMeassurments();
-      // Serial.println("\nPrint Sensors connected: ");
-      // printSensors();
-      // Serial.println();
+      delay(1000);
       wifi_sendData();
 
       sendDataWifi = false;
-
-      if (!(WiFiManagerNS::NTPEnabled))
-      {
-         String header = get_header();
-         delay(1000);
-         String Time1 = getDateTime(header);
-
-         setenv("TZ", "GMT0", 1); // set Timezone to GMT
-         tzset();
-
-         setEsp32Time(Time1.c_str());
-      }
 
       setUploadTime();
 
@@ -566,51 +614,15 @@ void loop()
 
    if (sendDataLoRa)
    {
-      if ((!useBattery && useDisplay) || (userWakeup && useDisplay))
-      {
-         // ----- Initiate the TFT display and Start Image----- //
-      tft.initR(INITR_GREENTAB); // work around to set protected offset values
-      tft.initR(INITR_BLACKTAB); // change the colormode back, offset values stay as "green display"
-
-      tft.cp437(true);
-      tft.setCursor(0, 0);
-      tft.setRotation(3);
-      analogWrite(TFT_BL, 25); // turn TFT Backlight on
-         displayRefresh = true;
-      }
-
       sensorRead();
-      lora_sendData();
 
       loraDataTransmitted = false;
       sendDataLoRa = false;
       gotoSleep = false;
-   }
 
-   unsigned long currentMillis = millis();
-   unsigned long currentMillis_long = millis();
+      lora_sendData();
 
-   if (currentMillis - previousMillis >= interval)
-   {
-      backlight_pwm = 5; // turns Backlight down
-      previousMillis = currentMillis;
-
-      if (useBattery)
-      {
-         if (upload == "WIFI" || (upload == "LORA" && loraDataTransmitted))
-         {
-            gotoSleep = true;
-            userWakeup = false;
-         }
-      }
-   }
-
-   if (currentMillis_long - previousMillis_long >= interval2)
-   {
-      backlight_pwm = 0; // turns Backlight off
-      tft.fillScreen(ST7735_BLACK);
-      previousMillis_long = currentMillis_long;
-      tft.enableSleep(true);
+      displayRefresh = true;
    }
 
    num_pages = NUM_PAGES + total_measurement_pages;
@@ -662,8 +674,11 @@ void loop()
       {
          LMIC_shutdown();
          esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
-         esp_sleep_enable_timer_wakeup((3585) * uS_TO_S_FACTOR);
-         Serial.println("Setup ESP32 to sleep for 3600 Seconds");
+         int time_interval = upload_interval * uS_TO_MIN_FACTOR;
+         esp_sleep_enable_timer_wakeup(time_interval);
+         Serial.print("Setup ESP32 to sleep for ");
+         Serial.print(upload_interval);
+         Serial.println(" minutes");
       }
 
       // Stop WiFi befor sleep
@@ -673,8 +688,19 @@ void loop()
          WiFi.mode(WIFI_OFF);
 
          esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
-         esp_sleep_enable_timer_wakeup((seconds_to_next_hour() - 15) * uS_TO_S_FACTOR);
-         Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour()) + " Seconds");
+         if (upload_interval == 60)
+         {
+            esp_sleep_enable_timer_wakeup((seconds_to_next_hour() - 15) * uS_TO_S_FACTOR);
+            Serial.println("Setup ESP32 to sleep for " + String(seconds_to_next_hour() / 60) + " Minutes");
+         }
+         else
+         {
+            int time_interval = upload_interval * uS_TO_MIN_FACTOR;
+            esp_sleep_enable_timer_wakeup(time_interval);
+            Serial.print("Setup ESP32 to sleep for ");
+            Serial.print(upload_interval);
+            Serial.println(" minutes");
+         }
       }
 
       // Stop all events
@@ -711,11 +737,13 @@ void loop()
       esp_deep_sleep_start();
    }
 
+   analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
+
    // Only refresh the screen if the current page has changed
    if ((currentPage != lastPage) || displayRefresh)
    {
       lastPage = currentPage;
-      if (useDisplay || true)
+      if ((useDisplay && !useBattery) || (userWakeup && useDisplay))
       {
          renderPage(currentPage);
          displayRefresh = false;
@@ -1143,9 +1171,6 @@ void save_Connectors()
 
 void renderPage(int page)
 {
-   Serial.print("rendering page ");
-   Serial.println(page);
-
    // collect measurments for rendering MeasurmentPage
    show_measurements.clear();
 
@@ -1757,6 +1782,7 @@ void save_Config(void)
    doc["useNTP"] = useNTP;
    doc["API_KEY"] = API_KEY;
    doc["upload"] = upload;
+   doc["upInterval"] = upload_interval;
    doc["anonym"] = anonym;
    doc["user_CA"] = user_CA;
    doc["customNTPadress"] = customNTPaddress;
@@ -1808,6 +1834,7 @@ void load_Config(void)
                useNTP = doc["useNTP"];
                API_KEY = doc["API_KEY"].as<String>();
                upload = doc["upload"].as<String>();
+               upload_interval = doc["upInterval"];
                anonym = doc["anonym"].as<String>();
                user_CA = doc["user_CA"].as<String>();
                customNTPaddress = doc["customNTPadress"].as<String>();
@@ -1877,40 +1904,56 @@ void wifi_sendData(void)
       if (WiFi.status() == WL_CONNECTED)
       {
          // WiFiClient client;
-         WiFiClientSecure client;
-         client.setCACert(kits_ca);
+         //  WiFiClientSecure client;
+         //  client.setCACert(kits_ca);
 
-         HTTPClient https;
+         WiFiClientSecure *client = new WiFiClientSecure;
 
-         // https://gitlab.com/teleagriculture/community/-/blob/main/API.md
+         delay(100);
 
-         // python example
-         // https://gitlab.com/teleagriculture/community/-/blob/main/RPI/tacserial.py
+         if (client)
+         {
 
-         // should show up there:
-         // https://kits.teleagriculture.org/kits/1003
-         // Sensor: test
+            client->setUseCertBundle(true);
+            client->setCertBundle(rootca_bundle_crt_start);
 
-         // https.begin(client, "https://kits.teleagriculture.org/api/kits/1003/measurements");
+            HTTPClient https;
 
-         String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
-         String api_Bearer = "Bearer " + API_KEY;
+            // https://gitlab.com/teleagriculture/community/-/blob/main/API.md
 
-         https.begin(client, serverName);
+            // python example
+            // https://gitlab.com/teleagriculture/community/-/blob/main/RPI/tacserial.py
 
-         https.addHeader("Content-Type", "application/json");
-         https.addHeader("Authorization", api_Bearer);
+            // should show up there:
+            // https://kits.teleagriculture.org/kits/10xx
 
-         int httpResponseCode = https.POST(output);
+            String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
+            String api_Bearer = "Bearer " + API_KEY;
 
-         Serial.print("\nHTTP Response code: ");
-         Serial.println(httpResponseCode);
-         Serial.println();
-         Serial.println(serverName);
-         Serial.println(api_Bearer);
+            https.begin(*client, serverName);
 
-         // Free resources
-         https.end();
+            delay(100);
+
+            https.addHeader("Content-Type", "application/json");
+            https.addHeader("Authorization", api_Bearer);
+
+            int httpResponseCode = https.POST(output);
+            Serial.println();
+            Serial.println(serverName);
+            Serial.println(api_Bearer);
+
+            Serial.print("\nHTTP Response code: ");
+            Serial.println(httpResponseCode);
+            Serial.println();
+
+            // Free resources
+            https.end();
+            delete client;
+         }
+         else
+         {
+            Serial.printf("\n[HTTPS] Unable to connect\n");
+         }
       }
       else
       {
@@ -2210,15 +2253,6 @@ void configModeCallback(WiFiManager *myWiFiManager)
    // Serial.println(WiFi.softAPIP());
    if (useDisplay)
    {
-      // ----- Initiate the TFT display and Start Image----- //
-      tft.initR(INITR_GREENTAB); // work around to set protected offset values
-      tft.initR(INITR_BLACKTAB); // change the colormode back, offset values stay as "green display"
-
-      tft.cp437(true);
-      tft.setCursor(0, 0);
-      tft.setRotation(3);
-      analogWrite(TFT_BL, 25); // turn TFT Backlight on
-
       tft.fillScreen(ST7735_BLACK);
       tft.setTextColor(ST7735_WHITE);
       tft.setFont(&FreeSans9pt7b);
@@ -2248,66 +2282,77 @@ void configModeCallback(WiFiManager *myWiFiManager)
       tft.setCursor(5, 117);
       tft.setTextColor(ST7735_BLUE);
       tft.print(version);
-
-      gotoSleep = false;
    }
 }
 
 String get_header()
 {
-   WiFiClientSecure client;
-
-   // makes a HTTP request
-   unsigned long timeNow;
-   bool HeaderComplete = false;
-   bool currentLineIsBlank = true;
+   WiFiClientSecure *client = new WiFiClientSecure;
    String header = "";
-   client.stop(); // Close any connection before send a new request.  This will free the socket on the WiFi
-   if (client.connect(GET_Time_SERVER, SSL_PORT))
-   { // if there's a successful connection:
-      client.println("GET " + GET_Time_Address + " HTTP/1.1");
-      client.print("HOST: ");
-      client.println(GET_Time_SERVER);
-      client.println();
-      timeNow = millis();
-      while (millis() - timeNow < TIMEOUT)
-      {
-         while (client.available())
+
+   if (client)
+   {
+      client->setUseCertBundle(true);
+      client->setCertBundle(rootca_bundle_crt_start);
+
+      // makes a HTTP request
+      unsigned long timeNow;
+      bool HeaderComplete = false;
+      bool currentLineIsBlank = true;
+      client->stop(); // Close any connection before send a new request.  This will free the socket on the WiFi
+      client->connect(GET_Time_SERVER, SSL_PORT, true);
+      delay(100);
+      if (client->connected())
+      { // if there's a successful connection:
+         client->println("GET " + GET_Time_Address + " HTTP/1.1");
+         client->print("HOST: ");
+         client->println(GET_Time_SERVER);
+         client->println();
+         timeNow = millis();
+         while (millis() - timeNow < TIMEOUT)
          {
-            char c = client.read();
-            if (!HeaderComplete)
+            while (client->available())
             {
-               if (currentLineIsBlank && c == '\n')
+               char c = client->read();
+               if (!HeaderComplete)
                {
-                  HeaderComplete = true;
+                  if (currentLineIsBlank && c == '\n')
+                  {
+                     HeaderComplete = true;
+                  }
+                  else
+                  {
+                     header = header + c;
+                  }
                }
-               else
+               if (c == '\n')
                {
-                  header = header + c;
+                  currentLineIsBlank = true;
+               }
+               else if (c != '\r')
+               {
+                  currentLineIsBlank = false;
                }
             }
-            if (c == '\n')
-            {
-               currentLineIsBlank = true;
-            }
-            else if (c != '\r')
-            {
-               currentLineIsBlank = false;
-            }
+            if (HeaderComplete)
+               break;
          }
-         if (HeaderComplete)
-            break;
       }
+      else
+      {
+         Serial.println("Connection failed");
+      }
+      if (client->connected())
+      {
+         client->stop();
+      }
+      return header;
    }
    else
    {
-      Serial.println("Connection failed");
+      Serial.printf("\n[HTTPS] Unable to connect to GET Time (header)\n");
    }
-   if (client.connected())
-   {
-      client.stop();
-   }
-   return header;
+   return "NO HEADER";
 }
 
 time_t convertDateTime(String dateTimeStr)
@@ -2353,6 +2398,9 @@ void setEsp32Time(const char *timeStr)
 
    const time_t sec = mktime(&t2); // make time_t
 
+   setenv("TZ", "GMT0", 1); // set Timezone to GMT
+   tzset();
+
    struct timeval set_Time = {.tv_sec = sec};
    settimeofday(&set_Time, NULL);
 
@@ -2364,8 +2412,8 @@ void setEsp32Time(const char *timeStr)
    getLocalTime(&timeInfo);
    Serial.printf("\nSetting time based on GET: %s", asctime(&timeInfo));
 
-   currentHour = timeInfo.tm_hour;
-   lastHour = currentHour;
+   currentDay = timeInfo.tm_mday;
+   lastDay = currentDay;
 }
 
 void setUploadTime()

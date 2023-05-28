@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
 int boardID = 1000;
-String version = "Firmware Version 1.00";
+String version = "Firmware Version 1.01";
 String API_KEY = "xxxxxxxx0000000000000000";
 String lora_fqz = "EU 868 MHz"; //"Asia 923 MHz";   //"US/CD/AUS 915 MHz"; 
 String OTAA_APPEUI = "0000000000000000";                 // TTN --> msb first

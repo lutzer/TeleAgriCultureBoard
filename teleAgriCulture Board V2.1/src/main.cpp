@@ -737,14 +737,13 @@ void loop()
       esp_deep_sleep_start();
    }
 
-   analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
-
    // Only refresh the screen if the current page has changed
    if ((currentPage != lastPage) || displayRefresh)
    {
       lastPage = currentPage;
       if ((useDisplay && !useBattery) || (userWakeup && useDisplay))
       {
+         analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
          renderPage(currentPage);
          displayRefresh = false;
       }
@@ -760,6 +759,11 @@ void loop()
             digitalClockDisplay(5, 95, false);
          }
       }
+   }
+
+   if (upload == "WIFI")
+   {
+      wifiManager.process();
    }
 
    if (upload == "LORA")

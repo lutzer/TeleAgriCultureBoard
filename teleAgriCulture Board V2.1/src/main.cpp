@@ -519,6 +519,8 @@ void loop()
 {
    drd->loop();
 
+   analogWrite(TFT_BL, backlight_pwm);
+
    time_t rawtime;
    time(&rawtime);
    localtime_r(&rawtime, &timeInfo);

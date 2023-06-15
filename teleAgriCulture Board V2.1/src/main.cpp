@@ -31,22 +31,33 @@
 //TODO: Battery optimation    ---> uses around 3mA without gas sensor and without display
 //TODO: Sensor test
 
+//TODO: Sensor calibration (hardcoded at the moment)
+
 //TODO: find a I2C Address solution
 
 
 /*
  *
- * For defines, GPIOs and implemented Sensors, see sensor_Board.hpp (BoardID, API_KEY and LORA credentials)
+ * For defines, GPIOs and implemented Sensors, see /include/sensor_Board.hpp
+ * board credentials are in /include/board_credentials.h  (BoardID, API_KEY and LORA credentials)
  *
  *
+ * ------> Config Portal opens after double reset or holding BooT button for > 5sec
+ *____________________________________________________________
+ * 
  * Config Portal Access Point:   SSID: TeleAgriCulture Board
  *                               pasword: enter123
- *
- * ------> Config Portal opens after double reset or holding BooT button for >5sec
+ *____________________________________________________________
+ * 
  *
  * !! to build this project, take care that board_credentials.h is in the include folder (gets ignored by git)
- *
+ * !! for using LoRa set the right frequency for your region in platformio.ini
+ * 
+ * ___________________________________________________________
+ * 
  * main() handles Config Accesspoint, WiFi, LoRa, load, save, time and display UI
+ * sensorRead() in /include/sensor_Read.hpp takes car of the sensor reading
+ * HTML rendering for Config Portal is done here: /lib/WiFiManagerTz/src/WiFiManagerTz.h
  *
  * Global vector to store connected Sensor data:
  * std::vector<Sensor> sensorVector;
@@ -80,50 +91,54 @@
 #include "SPIFFS.h"
 #include <vector>
 #include <WString.h>
-#include <Ticker.h>
 
-#include <driver/spi_master.h>
-#include "driver/timer.h"
-#include <driver/rtc_io.h>
 #include "sdkconfig.h"
 #include "esp_system.h"
 #include "esp_sleep.h"
 #include "esp_wpa2.h"
 #include "esp_sntp.h"
 #include "nvs_flash.h"
-#include <BLEDevice.h>
 
-#include <WiFi.h>
-
-#include <WiFiClientSecure.h> //https://github.com/esp32wrangler/esp32-certBundle
-#include <ESPmDNS.h>
-#include <time.h>
+#include "driver/timer.h"
+#include <driver/rtc_io.h>
 #include <sys/time.h>
-#include <WiFiUdp.h>
-#include <HTTPClient.h>
+#include <time.h>
+
 #include <ArduinoJson.h>
+
+#include <Wire.h>
+#include <SPI.h>
+#include "driver/i2c.h"
+#include <driver/spi_master.h>
+
 #include <lmic.h>
 #include <hal/hal.h>
 #include <LoraMessage.h>
 
 #include <tac_logo.h>
 #include <customTitle_picture.h>
+
 #include <sensor_Board.hpp> // Board and setup defines
 #include <sensor_Read.hpp>  // Sensor read handling
+
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+#include <WiFiUdp.h>
+#include <HTTPClient.h>
+
+#include <servers.h>
+#include <WiFiManager.h>
+#include <WiFiManagerTz.h> // Setup Page html rendering and input handling
+#include <WebServer.h>
 
 #define ESP_DRD_USE_SPIFFS true
 #define DOUBLERESETDETECTOR_DEBUG true
 
 #include <ESP_DoubleResetDetector.h>
 #include <Button.h>
-#include <servers.h>
-#include <WiFiManager.h>
-#include <WiFiManagerTz.h> // Setup Page html rendering and input handling
-
-#include <Wire.h>
-#include <SPI.h>
-#include "driver/spi_master.h"
-#include "driver/i2c.h"
+#include <Ticker.h>
 
 #include <Adafruit_GFX.h>
 #include <Fonts/FreeSans9pt7b.h>
@@ -180,6 +195,11 @@ void initVoltsArray();            //   Copyright (c) 2019 Pangodream   	https://
 int getBatteryChargeLevel();      //   Copyright (c) 2019 Pangodream   	https://github.com/pangodream/18650CL
 int getChargeLevel(double volts); //   Copyright (c) 2019 Pangodream   	https://github.com/pangodream/18650CL
 void drawBattery(int x, int y);
+void handleRoot(); // WEBSERVER
+void handleNotFound();
+void drawGraph();
+String measurementsTable();
+String connectorTable();
 
 // time functions
 int seconds_to_next_hour();
@@ -294,6 +314,7 @@ bool forceConfig = false; // if no config file or DoubleReset detected
 
 bool sendDataWifi = false;
 bool sendDataLoRa = false;
+bool no_upload = false;
 
 // Define a variable to hold the last hour value
 int currentDay;
@@ -310,6 +331,8 @@ const long interval2 = 5 * mS_TO_MIN_FACTOR; // screen goes black after 5 min
 
 // Battery levels
 double vs[101]; //   Copyright (c) 2019 Pangodream   	https://github.com/pangodream/18650CL
+
+WebServer server(80);
 
 void setup()
 {
@@ -411,7 +434,12 @@ void setup()
 
    Wire.setPins(I2C_SDA, I2C_SCL);
 
-   // checkLoadedStuff();
+   // checkLoadedStuff();  // debugging output
+
+   if (!useBattery)
+   {
+      webpage = true;
+   }
 
    if (useDisplay || forceConfig)
    {
@@ -437,9 +465,9 @@ void setup()
       tft.drawRGBBitmap(0, 0, tac_logo, 160, 128);
    }
 
-   if (userWakeup)
+   if (userWakeup && useDisplay)
    {
-      analogWrite(TFT_BL, backlight_pwm); // turn off TFT Backlight
+      analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
       tft.fillScreen(ST7735_BLACK);
       tft.setTextColor(0x9E6F);
       tft.setFont(&FreeSans9pt7b);
@@ -457,9 +485,6 @@ void setup()
       // WiFiManager handles esp_wpa2.h connection, username and password
       if (useEnterpriseWPA && !forceConfig)
       {
-         WiFi.disconnect(true);
-         WiFi.mode(WIFI_STA);
-
          esp_wifi_sta_wpa2_ent_set_ca_cert((uint8_t *)user_CA.c_str(), strlen(user_CA.c_str()) + 1); // used by @debsahu in his example EduWiFi
          // esp_wifi_sta_wpa2_ent_set_ca_cert((uint8_t *)test_root_ca, strlen(test_root_ca)); //try without strlen +1 too if not working
          esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)anonym.c_str(), strlen(anonym.c_str()));
@@ -513,127 +538,167 @@ void setup()
 
       sendDataLoRa = true;
    }
+
+   if (upload == "NO_UPLOAD")
+      no_upload = true;
+
+   if (webpage && !forceConfig)
+   {
+      WiFi.mode(WIFI_AP_STA);
+
+      WiFi.softAP("TeleAgriCulture Board", "enter123");
+      IPAddress IP = WiFi.softAPIP();
+      Serial.print("AP IP address: ");
+      Serial.println(IP);
+
+      if (MDNS.begin("esp32"))
+      {
+         Serial.println("MDNS responder started");
+      }
+
+      server.on("/", handleRoot);
+      server.on("/test.svg", drawGraph);
+      server.on("/inline", []()
+                { server.send(200, "text/plain", "this works as well"); });
+      server.onNotFound(handleNotFound);
+      server.begin();
+      Serial.println("HTTP server started");
+   }
 }
 
 void loop()
 {
-   drd->loop();
+   drd->loop();                              // Process double reset detection
 
-   analogWrite(TFT_BL, backlight_pwm);
+   analogWrite(TFT_BL, backlight_pwm);       // Set the backlight brightness of the TFT display
 
    time_t rawtime;
    time(&rawtime);
-   localtime_r(&rawtime, &timeInfo);
+   localtime_r(&rawtime, &timeInfo);         // Get the current local time
 
-   currentDay = timeInfo.tm_mday;
+   currentDay = timeInfo.tm_mday;            // Update the current day
 
-   if ((currentDay != lastDay) && (upload == "WIFI") && !(WiFiManagerNS::NTPEnabled)) // get time synced every day
+   // Check if the day has changed and perform time synchronization if required
+   if ((currentDay != lastDay) && (upload == "WIFI") && !(WiFiManagerNS::NTPEnabled))
    {
       // The day has changed since the last execution of this block
       String header = get_header();
       delay(1000);
       String Time1 = getDateTime(header);
-      setEsp32Time(Time1.c_str());
-      lastDay = currentDay;
+      setEsp32Time(Time1.c_str());           // Set the time on ESP32 using the obtained time value
+      lastDay = currentDay;                  // Update the last day value
    }
 
    if (forceConfig)
    {
-      startBlinking();
+      startBlinking(); // Start blinking an LED to indicate configuration mode
 
-      setUPWiFi();
+      setUPWiFi(); // Set up WiFi connection
 
-      // wifiManager.setAPCallback(configModeCallback);
       backlight_pwm = 200;
-      analogWrite(TFT_BL, backlight_pwm); // turn off TFT Backlight
+      analogWrite(TFT_BL, backlight_pwm); // Turn off TFT Backlight
 
       if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
       {
          Serial.println("failed to connect and hit timeout");
          delay(3000);
-         // reset and try again, or maybe put it to deep sleep
-         ESP.restart();
+         ESP.restart(); // Failed to connect, restart ESP32
       }
       ESP.restart();
-      stopBlinking();
+      stopBlinking(); // Stop blinking the LED
    }
 
    unsigned long currentMillis = millis();
    unsigned long currentMillis_long = millis();
    unsigned long currentMillis_upload = millis();
 
-   if (currentMillis - previousMillis >= interval)
+   // Perform periodic tasks based on intervals
+   if (currentMillis - previousMillis >= interval)    // lower tft brightness after 1 min
    {
-      backlight_pwm = 5; // turns Backlight down
+      backlight_pwm = 5; // Turn down the backlight
       previousMillis = currentMillis;
 
       if (upload == "WIFI" && useBattery)
       {
-         gotoSleep = true;
+         gotoSleep = true; // Enable sleep mode if using WiFi and battery power
       }
 
-      if (upload == "LORA" && useBattery && loraDataTransmitted)
+      if (upload == "LORA" && useBattery && loraDataTransmitted)     
       {
-         gotoSleep = true;
+         gotoSleep = true; // Enable sleep mode if using LoRa and battery power and data transmitted
       }
    }
 
-   if (currentMillis_long - previousMillis_long >= interval2)
+   if (currentMillis_long - previousMillis_long >= interval2)     // turn tft off after 5 min
    {
-      backlight_pwm = 0; // turns Backlight off
-      tft.fillScreen(ST7735_BLACK);
+      backlight_pwm = 0;                           // Turn off the backlight
+      tft.fillScreen(ST7735_BLACK);                // Fill the TFT screen with black color
       previousMillis_long = currentMillis_long;
-      tft.enableSleep(true);
+      tft.enableSleep(true);                       // Enable sleep mode for the TFT display
    }
 
+   // check if its time to uplooad based on interval
    if (currentMillis_upload - previousMillis_upload >= (upload_interval * mS_TO_MIN_FACTOR))
    {
-      Serial.println(upload_interval * mS_TO_MIN_FACTOR);
-      delay(1000);
+      delay(100);
       if (upload == "WIFI")
-         sendDataWifi = true;
+         sendDataWifi = true;          // Set flag to send data via WiFi
       if (upload == "LORA")
-         sendDataLoRa = true;
+         sendDataLoRa = true;          // Set flag to send data via LoRa
+      if (upload == "NO_UPLOAD")
+         no_upload = true;             // Set flag to indicate no upload
 
       previousMillis_upload = currentMillis_upload;
    }
 
    if (sendDataWifi)
    {
-      sensorRead();
+      sensorRead();                 // Read sensor data
       delay(1000);
-      wifi_sendData();
+      wifi_sendData();              // Send data via WiFi
 
-      sendDataWifi = false;
+      sendDataWifi = false;         // Reset the flag
 
-      setUploadTime();
+      setUploadTime();              // Set the next upload time
 
       if ((!useBattery || !gotoSleep) && useDisplay)
       {
-         renderPage(currentPage);
+         renderPage(currentPage);   // Render the current page on the display
       }
    }
 
    if (sendDataLoRa)
    {
-      sensorRead();
+      sensorRead(); // Read sensor data
 
       loraDataTransmitted = false;
       sendDataLoRa = false;
       gotoSleep = false;
 
-      lora_sendData();
+      lora_sendData(); // Send data via LoRa
 
-      displayRefresh = true;
+      displayRefresh = true;                          // Set flag to refresh the display
    }
 
-   num_pages = NUM_PAGES + total_measurement_pages;
+   if (no_upload)
+   {
+      sensorRead();                                   // Read sensor data
+      no_upload = false;
 
+      if ((!useBattery || !gotoSleep) && useDisplay)
+      {
+         renderPage(currentPage);                     // Render the current page on the display
+      }
+   }
+
+   num_pages = NUM_PAGES + total_measurement_pages;   // Calculate the total number of pages
+
+   // Check button presses to navigate through pages
    if (downButton.pressed())
    {
       currentPage = (currentPage + 1) % num_pages;
       backlight_pwm = 250;
-      tft.enableSleep(false);
+      tft.enableSleep(false);                          // Disable sleep mode for the TFT display
       gotoSleep = false;
    }
 
@@ -641,7 +706,7 @@ void loop()
    {
       currentPage = (currentPage - 1 + num_pages) % num_pages;
       backlight_pwm = 250;
-      tft.enableSleep(false);
+      tft.enableSleep(false);                         // Disable sleep mode for the TFT display
       upButtonsMillis = millis();
       gotoSleep = false;
    }
@@ -650,18 +715,24 @@ void loop()
    {
       if (millis() - upButtonsMillis > 5000)
       {
+         forceConfig = true;
          startBlinking();
+
+         if (webpage)
+         {
+            server.close();
+         }
+
          if (upload != "WIFI")
          {
-            setUPWiFi();
+            setUPWiFi(); // Set up WiFi connection
          }
 
          if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
          {
             Serial.println("failed to connect and hit timeout");
             delay(3000);
-            // reset and try again, or maybe put it to deep sleep
-            ESP.restart();
+            ESP.restart(); // Failed to connect, restart ESP32
             delay(5000);
          }
       }
@@ -669,9 +740,10 @@ void loop()
       stopBlinking();
    }
 
+   // Check if it's time to go to sleep
    if ((useBattery && gotoSleep) || (!useDisplay))
    {
-      // Stop Lora befor sleep
+      // Stop LoRa before sleep
       if (upload == "LORA")
       {
          LMIC_shutdown();
@@ -683,7 +755,7 @@ void loop()
          Serial.println(" minutes");
       }
 
-      // Stop WiFi befor sleep
+      // Stop WiFi before sleep
       if (upload == "WIFI")
       {
          wifiManager.disconnect();
@@ -713,10 +785,9 @@ void loop()
 
       // Stop SPI
       tft.enableSleep(true);
-      // spi_bus_free(SPI1_HOST);
       spi_bus_free(SPI2_HOST);
 
-      // reset Pins
+      // Reset Pins
       gpio_reset_pin((gpio_num_t)SW_3V3);
       gpio_reset_pin((gpio_num_t)SW_5V);
       gpio_reset_pin((gpio_num_t)TFT_BL);
@@ -736,17 +807,17 @@ void loop()
 
       delay(100);
 
-      esp_deep_sleep_start();
+      esp_deep_sleep_start();                         // Enter deep sleep mode
    }
 
-   // Only refresh the screen if the current page has changed
+   // Refresh the display if the current page has changed
    if ((currentPage != lastPage) || displayRefresh)
    {
       lastPage = currentPage;
       if ((useDisplay && !useBattery) || (userWakeup && useDisplay))
       {
-         analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
-         renderPage(currentPage);
+         analogWrite(TFT_BL, backlight_pwm);          // Turn on the TFT Backlight
+         renderPage(currentPage);                     // Render the current page on the display
          displayRefresh = false;
       }
    }
@@ -754,28 +825,35 @@ void loop()
    if (currentPage == 0)
    {
       if ((now() != prevDisplay) && upload == "WIFI")
-      { // update the display only if time has changed
+      { 
+         // Update the display only if time has changed
          prevDisplay = now();
          if (useDisplay && (!useBattery || !gotoSleep))
          {
-            digitalClockDisplay(5, 95, false);
+            digitalClockDisplay(5, 95, false);        // Display the digital clock
          }
       }
    }
 
+   if (webpage && !forceConfig)
+   {
+      server.handleClient();                          // Handle incoming client requests
+   }
+
    if (upload == "WIFI")
    {
-      wifiManager.process();
+      wifiManager.process();                          // Process WiFi manager tasks
    }
 
    if (upload == "LORA")
    {
       if (!loraDataTransmitted)
       {
-         os_runloop_once();
+         os_runloop_once(); // Run the LoRaWAN OS run loop
       }
    }
 }
+
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 {
@@ -1920,8 +1998,7 @@ void wifi_sendData(void)
          if (client)
          {
 
-            client->setUseCertBundle(true);
-            client->setCertBundle(rootca_bundle_crt_start);
+            client->setCACertBundle(rootca_bundle_crt_start);
 
             HTTPClient https;
 
@@ -2175,6 +2252,46 @@ void lora_sendData(void)
                Serial.print(" Value: ");
                Serial.println(static_cast<uint16_t>(round(sensorVector[i].measurements[j].value)));
                break;
+            case MV:
+               message.addRawFloat(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
+            case MGL:
+               message.addTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
+            case MSCM:
+               message.addTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
+            case PH:
+               message.addTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
+            case DBA:
+               message.addTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
             }
          }
       }
@@ -2298,8 +2415,7 @@ String get_header()
 
    if (client)
    {
-      client->setUseCertBundle(true);
-      client->setCertBundle(rootca_bundle_crt_start);
+      client->setCACertBundle(rootca_bundle_crt_start);
 
       // makes a HTTP request
       unsigned long timeNow;
@@ -2823,6 +2939,26 @@ ValueOrder getValueOrderFromString(String str)
    {
       return ALTITUDE;
    }
+   else if (str == "MV")
+   {
+      return MV;
+   }
+   else if (str == "MGL")
+   {
+      return MGL;
+   }
+   else if (str == "MSCM")
+   {
+      return MSCM;
+   }
+   else if (str == "PH")
+   {
+      return PH;
+   }
+   else if (str == "DBA")
+   {
+      return DBA;
+   }
    else
    {
       return NOT;
@@ -2955,4 +3091,183 @@ void onEvent(ev_t ev)
       Serial.println((unsigned)ev);
       break;
    }
+}
+
+String measurementsTable()
+{
+   String table = "<h2>Measurements</h2><table>";
+   table += "<tr><th>Data Name</th><th>Value</th><th>Unit</th></tr>";
+
+   for (int i = 0; i < show_measurements.size(); i++)
+   {
+      table += "<tr>";
+      table += "<td>" + show_measurements[i].data_name + "</td>";
+      table += "<td>";
+
+      if (!isnan(show_measurements[i].value))
+      {
+         table += String(show_measurements[i].value);
+      }
+      else
+      {
+         table += "NAN";
+      }
+
+      table += "</td>";
+      table += "<td>";
+
+      if (!(show_measurements[i].unit == "°C"))
+      {
+         table += show_measurements[i].unit;
+      }
+      else
+      {
+         table += "&deg;C";
+      }
+
+      table += "</td>";
+      table += "</tr>";
+   }
+
+   table += "</table>";
+
+   return table;
+}
+
+String connectorTable()
+{
+   String table = "<h2>Connectors</h2><table>";
+
+   // I2C Connectors
+   for (int i = 0; i < I2C_NUM; i++)
+   {
+      table += "<tr><td style='text-align: center;'>I2C_" + String(i + 1) + "</td>";
+
+      if (I2C_con_table[i] != NO)
+      {
+         table += "<td>" + allSensors[I2C_con_table[i]].sensor_name + "</td>";
+      }
+      else
+      {
+         table += "<td>NO</td>";
+      }
+
+      table += "</tr>";
+   }
+
+   // ADC Connectors
+   for (int i = 0; i < ADC_NUM; i++)
+   {
+      table += "<tr><td style='text-align: center;'>ADC_" + String(i + 1) + "</td>";
+
+      if (ADC_con_table[i] != NO)
+      {
+         table += "<td>" + allSensors[ADC_con_table[i]].sensor_name + "</td>";
+      }
+      else
+      {
+         table += "<td>NO</td>";
+      }
+
+      table += "</tr>";
+   }
+
+   // 1-Wire Connectors
+   for (int i = 0; i < ONEWIRE_NUM; i++)
+   {
+      table += "<tr><td style='text-align: center;'>1-Wire_" + String(i + 1) + "</td>";
+
+      if (OneWire_con_table[i] != NO)
+      {
+         table += "<td>" + allSensors[OneWire_con_table[i]].sensor_name + "</td>";
+      }
+      else
+      {
+         table += "<td>NO</td>";
+      }
+
+      table += "</tr>";
+   }
+
+   table += "</table>";
+   return table;
+}
+
+void handleRoot()
+{
+   String temp;
+   int sec = millis() / 1000;
+   int min = sec / 60;
+   int hr = min / 60;
+
+   temp = "<!DOCTYPE html><html>\
+           <head>\
+             <meta http-equiv='refresh' content='15'/>\
+             <title>ESP32 Demo</title>\
+             <meta name='viewport' content='width=device-width, initial-scale=1'>\
+             <style>\
+               html { font-family: Helvetica; min-height: 100%; text-align: center; background: linear-gradient(to bottom, #00CC99, #009999); color: #fff;}\
+               table { margin: 10px auto; width: 100%; max-width: 600px; border-spacing: 10px; border-collapse: collapse; box-shadow: 0 0 8px rgba(0, 0, 0, 0.3); background-color: rgba(255, 255, 255, 0.4); }\
+               th, td { padding: 8px; text-align: left; }\
+               tr:not(:last-child) td { border-bottom: 1px solid #d9d9d9; }\
+               th { background-color: #206040; color: #fff; }\
+               tr:nth-child(even) { background-color: #00b386; }\
+               tr:nth-child(odd) { background-color: #00cc99; }\
+             </style>\
+           </head>\
+           <body>\
+             <h1>TeleAgriCulture Board 2.1</h1>\
+             <p>Uptime: " +
+          String(hr) + ":" + String(min % 60) + ":" + String(sec % 60) + "</p>";
+   temp += version;
+   temp += "<br>BoardID: ";
+   temp += boardID;
+   temp += "<br>Upload: ";
+   temp += upload;
+   temp += measurementsTable();
+   temp += connectorTable();
+   temp += "</body></html>";
+
+   server.send(200, "text/html", temp.c_str());
+}
+
+//body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088;}\
+
+void handleNotFound()
+{
+   String message = "File Not Found\n\n";
+   message += "URI: ";
+   message += server.uri();
+   message += "\nMethod: ";
+   message += (server.method() == HTTP_GET) ? "GET" : "POST";
+   message += "\nArguments: ";
+   message += server.args();
+   message += "\n";
+
+   for (uint8_t i = 0; i < server.args(); i++)
+   {
+      message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+   }
+
+   server.send(404, "text/plain", message);
+}
+
+void drawGraph()
+{
+   String out = "";
+   char temp[100];
+   out += "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"400\" height=\"150\">\n";
+   out += "<rect width=\"400\" height=\"150\" fill=\"rgb(250, 230, 210)\" stroke-width=\"1\" stroke=\"rgb(0, 0, 0)\" />\n";
+   out += "<g stroke=\"black\">\n";
+   int y = rand() % 130;
+   for (int x = 10; x < 390; x += 10)
+   {
+      int y2 = rand() % 130;
+      sprintf(temp, "<line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke-width=\"1\" />\n", x, 140 - y, x + 10, 140 - y2);
+      out += temp;
+      y = y2;
+   }
+   out += "</g>\n</svg>\n";
+
+   server.send(200, "image/svg+xml", out);
 }

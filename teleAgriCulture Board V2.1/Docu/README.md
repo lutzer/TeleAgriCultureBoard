@@ -47,6 +47,15 @@ The teleAgriCulture Board V2.1 supports a variety of sensors through its connect
 - WS2812: An RGB LED strip - <mark>not implemented now.<mark>
 - SERVO: A servo motor -<mark>not implemented now.<mark>
 - BME_280: A temperature, humidity and pressure sensor. <mark>BME280_ADDRESS_ALTERNATE (0x76) is used<mark>
+- SOUND: Gravity analog Sound level meter
+
+- ADS1115: for KlimaOasis aquaponic system a 4-channel ADC is added
+- - ADC0: https://wiki.dfrobot.com/Gravity_Analog_ORP_Sensor_PRO_SKU_SEN0464
+- - ADC1: https://wiki.dfrobot.com/Gravity__Analog_Dissolved_Oxygen_Sensor_SKU_SEN0237
+- - ADC2: https://wiki.dfrobot.com/Gravity__Analog_Electrical_Conductivity_Sensor___Meter_V2__K=1__SKU_DFR0300
+- - ADC3: https://wiki.dfrobot.com/Gravity__Analog_pH_Sensor_Meter_Kit_V2_SKU_SEN0161-V2
+
+
 
 Each sensor has its own library and reading code in the `include/sensor_Read.hpp` file. The data from the sensors is stored in the `sensorVector` and can be accessed using the `sensorVector[i].measurements[j].value` syntax.
 
@@ -84,7 +93,7 @@ To add new sensors, follow these steps:
 - [x] custom NTP server option
 - [x] include CA root certificates
 - [ ] support for alternative I2C adresses
-- [ ] data upload intervall based on UI
+- [x] data upload intervall based on UI
 - [ ] powermanagment field tests
 - [ ] implement DS3231 RTC
 - [ ] implement WS2812 LED function and control logic

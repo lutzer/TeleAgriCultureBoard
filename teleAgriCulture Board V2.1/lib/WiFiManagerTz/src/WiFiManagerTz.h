@@ -229,11 +229,11 @@ namespace WiFiManagerNS
 
     if (useBattery)
     {
-      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='1' checked /><label for='battery'> powerd by battery</label><br><br>";
+      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='1' checked /><label for='battery'> powerd by battery</label><br>";
     }
     else
     {
-      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='1'/><label for='battery'> powerd by battery</label><br><br>";
+      TimeConfHTML += "<input type='checkbox' id='battery' name='battery' value='1'/><label for='battery'> powerd by battery</label><br>";
     }
 
     if (useDisplay)
@@ -245,7 +245,7 @@ namespace WiFiManagerNS
       TimeConfHTML += "<input type='checkbox' id='display' name='display' value='1'/><label for='display'> show display</label>";
     }
 
-    TimeConfHTML += "<BR><label for='up_interval'>Upload Interval:</label>";
+    TimeConfHTML += "<BR><BR><label for='up_interval'>Upload Interval:</label>";
     TimeConfHTML += "<select id='up_interval' name='up_interval'>";
     TimeConfHTML += "<option value=2>2 min</option>";
     TimeConfHTML += "<option value=10>10 min</option>";

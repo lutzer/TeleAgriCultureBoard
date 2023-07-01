@@ -44,17 +44,17 @@
  *
  * ------> Config Portal opens after double reset or holding BooT button for > 5sec
  *____________________________________________________________
- * 
+ *
  * Config Portal Access Point:   SSID: TeleAgriCulture Board
  *                               pasword: enter123
  *____________________________________________________________
- * 
+ *
  *
  * !! to build this project, take care that board_credentials.h is in the include folder (gets ignored by git)
  * !! for using LoRa set the right frequency for your region in platformio.ini
- * 
+ *
  * ___________________________________________________________
- * 
+ *
  * main() handles Config Accesspoint, WiFi, LoRa, load, save, time and display UI
  * sensorRead() in /include/sensor_Read.hpp takes car of the sensor reading
  * HTML rendering for Config Portal is done here: /lib/WiFiManagerTz/src/WiFiManagerTz.h
@@ -227,7 +227,7 @@ void os_getDevKey(u1_t *buf)
 }
 
 void lora_sendData(void);
-void do_send(osjob_t *j);
+void do_send(void);
 void onEvent(ev_t ev);
 void convertTo_LSB_EUI(String input, uint8_t *output);
 void convertTo_MSB_APPKEY(String input, uint8_t *output);
@@ -251,6 +251,8 @@ static const int spiClk = 1000000; // 10 MHz
 const unsigned TX_INTERVAL = 3580;
 bool loraJoinFailed = false;
 bool loraDataTransmitted = false;
+
+LoraMessage message;
 
 // ----- LoRa related -----//
 
@@ -537,6 +539,11 @@ void setup()
       digitalWrite(SW_3V3, HIGH);
 
       sendDataLoRa = true;
+
+      // LMIC init
+      os_init();
+      // Reset the MAC state. Session and pending data transfers will be discarded.
+      LMIC_reset();
    }
 
    if (upload == "NO_UPLOAD")
@@ -568,15 +575,15 @@ void setup()
 
 void loop()
 {
-   drd->loop();                              // Process double reset detection
+   drd->loop(); // Process double reset detection
 
-   analogWrite(TFT_BL, backlight_pwm);       // Set the backlight brightness of the TFT display
+   analogWrite(TFT_BL, backlight_pwm); // Set the backlight brightness of the TFT display
 
    time_t rawtime;
    time(&rawtime);
-   localtime_r(&rawtime, &timeInfo);         // Get the current local time
+   localtime_r(&rawtime, &timeInfo); // Get the current local time
 
-   currentDay = timeInfo.tm_mday;            // Update the current day
+   currentDay = timeInfo.tm_mday; // Update the current day
 
    // Check if the day has changed and perform time synchronization if required
    if ((currentDay != lastDay) && (upload == "WIFI") && !(WiFiManagerNS::NTPEnabled))
@@ -585,8 +592,8 @@ void loop()
       String header = get_header();
       delay(1000);
       String Time1 = getDateTime(header);
-      setEsp32Time(Time1.c_str());           // Set the time on ESP32 using the obtained time value
-      lastDay = currentDay;                  // Update the last day value
+      setEsp32Time(Time1.c_str()); // Set the time on ESP32 using the obtained time value
+      lastDay = currentDay;        // Update the last day value
    }
 
    if (forceConfig)
@@ -613,7 +620,7 @@ void loop()
    unsigned long currentMillis_upload = millis();
 
    // Perform periodic tasks based on intervals
-   if (currentMillis - previousMillis >= interval)    // lower tft brightness after 1 min
+   if (currentMillis - previousMillis >= interval) // lower tft brightness after 1 min
    {
       backlight_pwm = 5; // Turn down the backlight
       previousMillis = currentMillis;
@@ -623,18 +630,18 @@ void loop()
          gotoSleep = true; // Enable sleep mode if using WiFi and battery power
       }
 
-      if (upload == "LORA" && useBattery && loraDataTransmitted)     
+      if (upload == "LORA" && useBattery && loraDataTransmitted)
       {
          gotoSleep = true; // Enable sleep mode if using LoRa and battery power and data transmitted
       }
    }
 
-   if (currentMillis_long - previousMillis_long >= interval2)     // turn tft off after 5 min
+   if (currentMillis_long - previousMillis_long >= interval2) // turn tft off after 5 min
    {
-      backlight_pwm = 0;                           // Turn off the backlight
-      tft.fillScreen(ST7735_BLACK);                // Fill the TFT screen with black color
+      backlight_pwm = 0;            // Turn off the backlight
+      tft.fillScreen(ST7735_BLACK); // Fill the TFT screen with black color
       previousMillis_long = currentMillis_long;
-      tft.enableSleep(true);                       // Enable sleep mode for the TFT display
+      tft.enableSleep(true); // Enable sleep mode for the TFT display
    }
 
    // check if its time to uplooad based on interval
@@ -642,28 +649,28 @@ void loop()
    {
       delay(100);
       if (upload == "WIFI")
-         sendDataWifi = true;          // Set flag to send data via WiFi
+         sendDataWifi = true; // Set flag to send data via WiFi
       if (upload == "LORA")
-         sendDataLoRa = true;          // Set flag to send data via LoRa
+         sendDataLoRa = true; // Set flag to send data via LoRa
       if (upload == "NO_UPLOAD")
-         no_upload = true;             // Set flag to indicate no upload
+         no_upload = true; // Set flag to indicate no upload
 
       previousMillis_upload = currentMillis_upload;
    }
 
    if (sendDataWifi)
    {
-      sensorRead();                 // Read sensor data
+      sensorRead(); // Read sensor data
       delay(1000);
-      wifi_sendData();              // Send data via WiFi
+      wifi_sendData(); // Send data via WiFi
 
-      sendDataWifi = false;         // Reset the flag
+      sendDataWifi = false; // Reset the flag
 
-      setUploadTime();              // Set the next upload time
+      setUploadTime(); // Set the next upload time
 
       if ((!useBattery || !gotoSleep) && useDisplay)
       {
-         renderPage(currentPage);   // Render the current page on the display
+         renderPage(currentPage); // Render the current page on the display
       }
    }
 
@@ -677,28 +684,28 @@ void loop()
 
       lora_sendData(); // Send data via LoRa
 
-      displayRefresh = true;                          // Set flag to refresh the display
+      displayRefresh = true; // Set flag to refresh the display
    }
 
    if (no_upload)
    {
-      sensorRead();                                   // Read sensor data
+      sensorRead(); // Read sensor data
       no_upload = false;
 
       if ((!useBattery || !gotoSleep) && useDisplay)
       {
-         renderPage(currentPage);                     // Render the current page on the display
+         renderPage(currentPage); // Render the current page on the display
       }
    }
 
-   num_pages = NUM_PAGES + total_measurement_pages;   // Calculate the total number of pages
+   num_pages = NUM_PAGES + total_measurement_pages; // Calculate the total number of pages
 
    // Check button presses to navigate through pages
    if (downButton.pressed())
    {
       currentPage = (currentPage + 1) % num_pages;
       backlight_pwm = 250;
-      tft.enableSleep(false);                          // Disable sleep mode for the TFT display
+      tft.enableSleep(false); // Disable sleep mode for the TFT display
       gotoSleep = false;
    }
 
@@ -706,7 +713,7 @@ void loop()
    {
       currentPage = (currentPage - 1 + num_pages) % num_pages;
       backlight_pwm = 250;
-      tft.enableSleep(false);                         // Disable sleep mode for the TFT display
+      tft.enableSleep(false); // Disable sleep mode for the TFT display
       upButtonsMillis = millis();
       gotoSleep = false;
    }
@@ -807,7 +814,7 @@ void loop()
 
       delay(100);
 
-      esp_deep_sleep_start();                         // Enter deep sleep mode
+      esp_deep_sleep_start(); // Enter deep sleep mode
    }
 
    // Refresh the display if the current page has changed
@@ -816,8 +823,8 @@ void loop()
       lastPage = currentPage;
       if ((useDisplay && !useBattery) || (userWakeup && useDisplay))
       {
-         analogWrite(TFT_BL, backlight_pwm);          // Turn on the TFT Backlight
-         renderPage(currentPage);                     // Render the current page on the display
+         analogWrite(TFT_BL, backlight_pwm); // Turn on the TFT Backlight
+         renderPage(currentPage);            // Render the current page on the display
          displayRefresh = false;
       }
    }
@@ -825,35 +832,36 @@ void loop()
    if (currentPage == 0)
    {
       if ((now() != prevDisplay) && upload == "WIFI")
-      { 
+      {
          // Update the display only if time has changed
          prevDisplay = now();
          if (useDisplay && (!useBattery || !gotoSleep))
          {
-            digitalClockDisplay(5, 95, false);        // Display the digital clock
+            digitalClockDisplay(5, 95, false); // Display the digital clock
          }
       }
    }
 
    if (webpage && !forceConfig)
    {
-      server.handleClient();                          // Handle incoming client requests
+      server.handleClient(); // Handle incoming client requests
    }
 
    if (upload == "WIFI")
    {
-      wifiManager.process();                          // Process WiFi manager tasks
+      wifiManager.process(); // Process WiFi manager tasks
    }
 
    if (upload == "LORA")
    {
+      do_send();
+
       if (!loraDataTransmitted)
       {
          os_runloop_once(); // Run the LoRaWAN OS run loop
       }
    }
 }
-
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 {
@@ -2055,12 +2063,6 @@ void lora_sendData(void)
    convertTo_LSB_EUI(OTAA_APPEUI, app_eui);
    convertTo_MSB_APPKEY(OTAA_APPKEY, app_key);
 
-   // LMIC init
-   os_init();
-
-   // Reset the MAC state. Session and pending data transfers will be discarded.
-   LMIC_reset();
-
    Serial.print("\nDEVEUI[8]={ ");
    for (int i = 0; i < 8; i++)
    {
@@ -2099,8 +2101,6 @@ void lora_sendData(void)
 
    // https://github.com/thesolarnomad/lora-serialization
    // JS decoder example online
-
-   LoraMessage message;
 
    for (int i = 0; i < sensorVector.size(); ++i)
    {
@@ -2300,18 +2300,7 @@ void lora_sendData(void)
    if (message.getLength() > 2)
    {
       Serial.println("\nSend Lora Data: ");
-
-      if (LMIC.opmode & OP_TXRXPEND)
-      {
-         Serial.println(F("OP_TXRXPEND, not sending"));
-      }
-      else
-      {
-         // Prepare upstream data transmission at the next possible time.
-         LMIC_setTxData2(1, message.getBytes(), message.getLength(), 1);
-         Serial.println(F("Packet queued\n"));
-      }
-      // Next TX is scheduled after TX_COMPLETE event.
+      do_send();
    }
 }
 
@@ -3039,6 +3028,7 @@ void onEvent(ev_t ev)
          Serial.println(F("Received ack"));
          loraDataTransmitted = true;
          displayRefresh = true;
+         LoraMessage message;
 
          if (!userWakeup)
             gotoSleep = true;
@@ -3270,4 +3260,22 @@ void drawGraph()
    out += "</g>\n</svg>\n";
 
    server.send(200, "image/svg+xml", out);
+}
+
+void do_send()
+{
+   if (LMIC.opmode & OP_TXRXPEND)
+   {
+     // Serial.println(F("OP_TXRXPEND, not sending"));
+   }
+   else
+   {
+      if (message.getLength() > 1)
+      {
+         // Prepare upstream data transmission at the next possible time.
+         LMIC_setTxData2(1, message.getBytes(), message.getLength(), 0);
+         Serial.println(F("Packet queued\n"));
+      }
+   }
+   // Next TX is scheduled after TX_COMPLETE event.
 }

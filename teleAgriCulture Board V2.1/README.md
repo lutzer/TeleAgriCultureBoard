@@ -60,3 +60,4 @@ For more information on how to use the board, please join our community at https
 <span style="background-color: #32C8C8">We would love to hear about your experiances with the board and share your projects with us all...</span>
 
 >**for more info about the source code and if you would like to contribute in the coding goto:**  [Docu Page](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/Docu)
+there is also a section about integrated sensors.

@@ -37,6 +37,8 @@ To get started with the TeleAgriCulture Board V2.1, you will need:
 - A micro USB cable
 - Some sensors and actuators of your choice (optional)
 
+The boards are flashed with the actual firmware at shipping, and ready to use... (or update via OverTheAirUpdate in Config Portal)
+
 Follow these steps:
 
 - power the board ( via Micro USB or Waveshare Solar Power Manager board)

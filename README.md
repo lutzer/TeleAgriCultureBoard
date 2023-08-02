@@ -1,6 +1,6 @@
 # SETUP GUIDE
 
-For TeleAgriCulture Board V2.1 see ![Start Guide](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/README.md)
+###For TeleAgriCulture Board V2.1 see [Start Guide](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/README.md)
 
 ## Authorization
 

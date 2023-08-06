@@ -39,7 +39,7 @@ To get started with the TeleAgriCulture Board V2.1, you will need:
 
 The boards are flashed with the actual firmware at shipping, and ready to use... (or update via OverTheAirUpdate in Config Portal)
 
-Follow these steps:
+Follow these steps: [here a version with pictures](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/setup.md)
 
 - power the board ( via Micro USB or Waveshare Solar Power Manager board)
 - the board creates a WiFi Access Point ( SSID: <mark style="background-color: lightblue">TeleAgriCulture Board</mark> / Password: <mark style="background-color: lightblue">enter123</mark>)

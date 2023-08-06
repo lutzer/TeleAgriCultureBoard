@@ -2,20 +2,18 @@
 
 First connect Power (via USB or Solar Board)
 
-![Board Power](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_power.jpg) {width=20% height=20%}
+<img src="https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_power.jpg" alt="Board Power" width="20%" height="20%">
 
 Switch board into Config Mode (first start this is standard mode)
 
-![Board Config Mode](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_config.jpg) {width=20% height=20%}
+<img src="https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_config.jpg" alt="Board Config Mode" width="20%" height="20%">
 
-Connect to board via WiFi (on you Mobilphone or Notebook)
+Connect to board via WiFi (on your Mobile phone or Notebook)
 
-![Board WiFi](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_wifi.jpg) {width=20% height=20%}
+<img src="https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_wifi.jpg" alt="Board WiFi" width="20%" height="20%">
 
-Config Portal opens automaticly or open IP: 192.168.4.1 in a browser (on the device you connected to the Board WiFi)
+Config Portal opens automatically or open IP: 192.168.4.1 in a browser (on the device you connected to the Board WiFi)
 
-![Board Config Page](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_config_page.jpg) {width=20% height=20%}
+<img src="https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_config_page.jpg" alt="Board Config Page" width="20%" height="20%">
 
-Now you can change your board settings (Wifi Network, Upload, Sensors, Timezone...) 
-
-
+Now you can change your board settings (WiFi Network, Upload, Sensors, Timezone...)

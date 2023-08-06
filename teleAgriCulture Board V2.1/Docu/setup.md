@@ -4,7 +4,11 @@ First connect Power (via USB or Solar Board)
 
 <img src="https://gitlab.com/teleagriculture/community/-/raw/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_power.jpg" alt="Board Power" width="400" height="400">
 
-Switch board into Config Mode (first start this is standard mode)
+Switch board into Config Mode (new boards start into config mode)
+
+- to enter the Config Mode later (with open Config Portal):
+- - press BOOT BUTTON > 5 sec or 
+- - Doueble Reset the board (reset, 1, 2, 3, reset again)
 
 <img src="https://gitlab.com/teleagriculture/community/-/raw/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_config.jpg" alt="Board Config Mode" width="400" height="400">
 

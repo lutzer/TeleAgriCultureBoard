@@ -2,7 +2,7 @@
 
 First connect Power (via USB or Solar Board)
 
-![USB Power](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_power.jpg){width=20% height=20%}
+(https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/board_power.jpg){width=20% height=20%}
 
 Switch board into Config Mode (first start this is standard mode)
 

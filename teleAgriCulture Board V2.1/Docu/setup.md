@@ -32,13 +32,15 @@ If you use the Update Option:
 
 ## Connect your data to the TeleAgriCulture Kits page
 
-<img src="https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/teleagriculture_kits_page.PNG" alt="TeleAgriCulture Kits Page" width="400" height="500">
+<img src="https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/teleagriculture_kits_page.PNG" alt="TeleAgriCulture Kits Page" width="400" height="400">
 
 - first you need an account on the TeleAgiCulture page. Talk to our admin.
 - log in to kits.teleagriculture.org
 - click on your kit
 - click on configure (Top Right)
 - add Sensors, dont change the API-key or Kit-ID (we are sending data verified by this numbers)
+- save your settings
+
 **we dont send Sensor or data names. (names use a lot of bytes via Lora transmission)**
 **So your Sensor names have to match whats shown on your board (e.g.: temp, temp1, temp2... hum, hum1, ...)**
 

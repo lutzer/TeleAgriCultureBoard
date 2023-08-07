@@ -94,6 +94,7 @@ To add new sensors, follow these steps:
 - [x] include CA root certificates
 - [ ] support for alternative I2C adresses
 - [x] data upload intervall based on UI
+- [x] display data in the browser (just in NO BATTERY MODE)
 - [ ] powermanagment field tests
 - [ ] implement DS3231 RTC
 - [ ] implement WS2812 LED function and control logic
@@ -104,5 +105,7 @@ To add new sensors, follow these steps:
 
 - [ ] LiPo Charger circuit on board
 - [ ] Grove I2C Connector
+
+for technical questions you can write me an email: artdanion at gmail.com
 
  

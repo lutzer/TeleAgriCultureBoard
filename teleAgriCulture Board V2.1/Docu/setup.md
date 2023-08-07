@@ -29,3 +29,19 @@ If you use the Update Option:
 >
 >**If you are using LORA please choose the right Firmware for your location / lora module**
 >and you have to enter your credentials for LoRa on the Config Portal
+
+## Connect your data to the TeleAgriCulture Kits page
+
+<img src="https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/teleagriculture_kits_page.PNG" alt="TeleAgriCulture Kits Page" width="400" height="600">
+
+- first you need an account on the TeleAgiCulture page. Talk to our admin.
+- log in to kits.teleagriculture.org
+- click on your kit
+- click on configure (Top Right)
+- add Sensors, dont change the API-key or Kit-ID (we are sending data verified by this numbers)
+**we dont send Sensor or data names. (names use a lot of bytes via Lora transmission)**
+**So your Sensor names have to match whats shown on your board (e.g.: temp, temp1, temp2... hum, hum1, ...)**
+
+>**for more info about the source code and if you would like to contribute in the coding goto:**  [Docu Page](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/Docu)
+there is also a section about integrated sensors.
+

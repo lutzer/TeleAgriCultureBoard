@@ -32,7 +32,7 @@ If you use the Update Option:
 
 ## Connect your data to the TeleAgriCulture Kits page
 
-<img src="https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/teleagriculture_kits_page.png" alt="TeleAgriCulture Kits Page" width="400" height="500">
+<img src="https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/pictures/teleagriculture_kits_page.png" alt="TeleAgriCulture Kits Page" width="400" height="400">
 
 - first you need an account on the TeleAgiCulture page. Talk to our admin.
 - log in to kits.teleagriculture.org

@@ -56,6 +56,7 @@ Follow these steps: [here a version with pictures](https://gitlab.com/teleagricu
 - - press BOOT BUTTON > 5 sec or 
 - - Doueble Reset the board (reset, 1, 2, 3, reset again)
 - Serial Monitor is avaiable with 115200 boud rate
+- after Firmware Version 1.2 if NO Battery Mode is choosen, you can connect to the board Wifi and display Sensor data at IP address: 192.168.4.1 in your browser
 
 For more information on how to use the board, please join our community at https://www.teleagriculture.org
 

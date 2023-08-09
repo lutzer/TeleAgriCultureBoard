@@ -37,7 +37,9 @@ To get started with the TeleAgriCulture Board V2.1, you will need:
 - A micro USB cable
 - Some sensors and actuators of your choice (optional)
 
-Follow these steps:
+The boards are flashed with the actual firmware at shipping, and ready to use... (or update via OverTheAirUpdate in Config Portal)
+
+Follow these steps: [here a version with pictures](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/Docu/setup.md)
 
 - power the board ( via Micro USB or Waveshare Solar Power Manager board)
 - the board creates a WiFi Access Point ( SSID: <mark style="background-color: lightblue">TeleAgriCulture Board</mark> / Password: <mark style="background-color: lightblue">enter123</mark>)
@@ -54,9 +56,11 @@ Follow these steps:
 - - press BOOT BUTTON > 5 sec or 
 - - Doueble Reset the board (reset, 1, 2, 3, reset again)
 - Serial Monitor is avaiable with 115200 boud rate
+- after Firmware Version 1.2 if NO Battery Mode is choosen, you can connect to the board Wifi and display Sensor data at IP address: 192.168.4.1 in your browser
 
 For more information on how to use the board, please join our community at https://www.teleagriculture.org
 
 <span style="background-color: #32C8C8">We would love to hear about your experiances with the board and share your projects with us all...</span>
 
 >**for more info about the source code and if you would like to contribute in the coding goto:**  [Docu Page](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/Docu)
+there is also a section about integrated sensors.

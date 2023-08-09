@@ -1,5 +1,7 @@
 # SETUP GUIDE
 
+### For TeleAgriCulture Board V2.1 see [Start Guide](https://gitlab.com/teleagriculture/community/-/blob/main/teleAgriCulture%20Board%20V2.1/README.md)
+
 ## Authorization
 
 In order to get access, you will first need to create an account at [https://kits.teleagriculture.org/](https://kits.teleagriculture.org). After signing up contact an admin to assign the kit to your account. 

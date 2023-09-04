@@ -151,6 +151,7 @@
 #define mS_TO_MIN_FACTOR 60000UL    /* Conversion factor for milli seconds to minutes */
 
 RTC_DATA_ATTR int bootCount = 0;
+RTC_DATA_ATTR bool loraJoined = false;
 
 // ----- Deep Sleep LORA related -----//
 RTC_DATA_ATTR u4_t RTC_LORAWAN_netid = 0;
@@ -280,7 +281,6 @@ RTC_DATA_ATTR lmic_t RTC_LMIC;
 const unsigned TX_INTERVAL = 30U;
 bool loraJoinFailed = false;
 bool loraDataTransmitted = false;
-bool loraJoined = false;
 // ----- LoRa related -----//
 
 // ----- Initialize TFT ----- //
@@ -342,7 +342,6 @@ bool loraFreshBoot = true; // fresh start - not loading LMIC Config
 bool sendDataWifi = false;
 bool sendDataLoRa = false;
 bool no_upload = false;
-bool timeCriticalJobs = false;
 
 // Define a variable to hold the last hour value
 int currentDay;
@@ -382,7 +381,8 @@ void setup()
    pinMode(SW_3V3, OUTPUT);
    pinMode(SW_5V, OUTPUT);
 
-   delay(500);               // for debugging in screen
+   delay(1000); // for debugging in screen
+
    Serial.setTxTimeoutMs(5); // set USB CDC Time TX
    Serial.begin(115200);     // start Serial for debuging
 
@@ -398,6 +398,7 @@ void setup()
    // Increment boot number and print it every reboot
    ++bootCount;
    Serial.println("\nBoot number: " + String(bootCount));
+   Serial.printf("LoRa has joined: %s\n", loraJoined ? "true" : "false");
 
    if (bootCount == 1 || (bootCount % 720) == 0) // new join once every 24h
       loraFreshBoot = true;
@@ -419,6 +420,19 @@ void setup()
    digitalWrite(SW_3V3, HIGH);
    digitalWrite(LORA_CS, HIGH);
 
+   // print SPIFF files for debugging
+   if (!SPIFFS.begin(true))
+   {
+      Serial.println("Failed to mount SPIFFS file system");
+      return;
+   }
+   // listDir(SPIFFS, "/", 0);
+   // Serial.println();
+
+   load_Sensors();    // Prototypes get loaded
+   load_Connectors(); // Connectors lookup table
+   load_Config();     // load config Data
+
    /* ------------  Test DATA for connected Sensors  --------------------------
 
       ---> comes from Web Config normaly or out of SPIFF
@@ -428,13 +442,13 @@ void setup()
   I2C_con_table[2] = NO;
   I2C_con_table[3] = NO;
   ADC_con_table[0] = CAP_SOIL;
-  ADC_con_table[1] = TDS;
-  ADC_con_table[2] = TDS;
-  OneWire_con_table[0] = DHT_22;
+  ADC_con_table[1] = NO;
+  ADC_con_table[2] = NO;
+  OneWire_con_table[0] = DS18B20;
   OneWire_con_table[1] = DHT_22;
-  OneWire_con_table[2] = DHT_22;
+  OneWire_con_table[2] = NO;
   SPI_con_table[0] = NO;
-  I2C_5V_con_table[0] = MULTIGAS_V1;
+  I2C_5V_con_table[0] = NO;
   EXTRA_con_table[0] = NO;
   EXTRA_con_table[1] = NO;
 
@@ -444,18 +458,16 @@ void setup()
 
   ---------------------------------------------------------------------------------*/
 
-   // print SPIFF files for debugging
-   if (!SPIFFS.begin(true))
-   {
-      Serial.println("Failed to mount SPIFFS file system");
-      return;
-   }
-   listDir(SPIFFS, "/", 0);
-   Serial.println();
+   /*******************************************************************************
+   ++++++++++++++++ overwrite stored values for debug   +++++++++++++++                */
 
-   load_Sensors();    // Prototypes get loaded
-   load_Connectors(); // Connectors lookup table
-   load_Config();     // loade config Data
+   // upload = "LORA";
+     upload="WIFI";
+   //  useBattery = true;
+   useBattery = false;
+
+   /*******************************************************************************
+   ++++++++++++++++ overwrite stored values for debug   +++++++++++++++                */
 
    Wire.setPins(I2C_SDA, I2C_SCL);
 
@@ -568,25 +580,31 @@ void setup()
       convertTo_LSB_EUI(OTAA_APPEUI, app_eui);
       convertTo_MSB_APPKEY(OTAA_APPKEY, app_key);
 
-      if (loraFreshBoot == true)
+      // LMIC init
+      os_init();
+
+      if (loraJoined && (!loraFreshBoot)) // new join request every 24h because loraFreshBoot gets reseted
       {
-         // LMIC init
-         os_init();
+         loadLORA_State(); // load the LMIC settings
+         delay(200);
+
+         if ((RTC_LMIC.seqnoUp != 0) && CFG_LMIC_EU_like) // just for EU
+         {
+            Serial.println("load air time for channels");
+            delay(200);
+            loadLMICFromRTC();
+            delay(200);
+         }
+      }
+      else
+      {
          // Reset the MAC state. Session and pending data transfers will be discarded.
          LMIC_reset();
          LMIC_setClockError(MAX_CLOCK_ERROR * 5 / 100);
          loraFreshBoot = false;
+         loraJoined = false;
+         // LMIC_startJoining();
       }
-      else
-      {
-         loadLORA_State(); // load the LMIC settings
-
-         if (RTC_LMIC.seqnoUp != 0)
-         {
-            loadLMICFromRTC();
-         }
-      }
-      LMIC_startJoining();
    }
 
    if (upload == "NO_UPLOAD")
@@ -662,6 +680,26 @@ void loop()
    unsigned long currentMillis_long = millis();
    unsigned long currentMillis_upload = millis();
 
+   // check if its time to uplooad based on interval
+   if (currentMillis_upload - previousMillis_upload >= (upload_interval * mS_TO_MIN_FACTOR))
+   {
+      delay(100);
+      if (upload == "WIFI")
+         sendDataWifi = true; // Set flag to send data via WiFi
+
+      if (upload == "LORA" && !useBattery)
+      {
+         if (loraJoined)
+         {
+            sendDataLoRa = true; // Set flag to send data via LoRa
+         }
+      }
+      if (upload == "NO_UPLOAD")
+         no_upload = true; // Set flag to indicate no upload
+
+      previousMillis_upload = currentMillis_upload;
+   }
+
    // Perform periodic tasks based on intervals
    if (currentMillis - previousMillis >= interval) // lower tft brightness after 1 min
    {
@@ -673,7 +711,7 @@ void loop()
          gotoSleep = true; // Enable sleep mode if using WiFi and battery power
       }
 
-      if (upload == "LORA" && useBattery && loraDataTransmitted)
+      if (upload == "LORA" && useBattery)
       {
          gotoSleep = true; // Enable sleep mode if using LoRa and battery power and data transmitted
       }
@@ -685,25 +723,6 @@ void loop()
       tft.fillScreen(ST7735_BLACK); // Fill the TFT screen with black color
       previousMillis_long = currentMillis_long;
       tft.enableSleep(true); // Enable sleep mode for the TFT display
-   }
-
-   // check if its time to uplooad based on interval
-   if (currentMillis_upload - previousMillis_upload >= (upload_interval * mS_TO_MIN_FACTOR))
-   {
-      delay(100);
-      if (upload == "WIFI")
-         sendDataWifi = true; // Set flag to send data via WiFi
-      if (upload == "LORA")
-      {
-         if (loraJoined)
-         {
-            sendDataLoRa = true; // Set flag to send data via LoRa
-         }
-      }
-      if (upload == "NO_UPLOAD")
-         no_upload = true; // Set flag to indicate no upload
-
-      previousMillis_upload = currentMillis_upload;
    }
 
    // Check button presses to navigate through pages
@@ -766,38 +785,44 @@ void loop()
 
    if (upload == "LORA")
    {
+      if (sendDataLoRa) // If ít`s time to send lora data
+      {
+         sensorRead(); // Read sensor data
+         sendDataLoRa = false;
+         gotoSleep = false;
+
+         lora_sendData(); // Send data via LoRa
+      }
+
       os_runloop_once(); // Run the LoRaWAN OS run loop
 
-      if (!timeCriticalJobs && !(LMIC.opmode & OP_TXRXPEND)) // if no transmission is active
+      if (loraJoinFailed && useDisplay)
       {
-         if (sendDataLoRa) // If ít`s time to send lora data
-         {
-            sensorRead(); // Read sensor data
-            loraDataTransmitted = false;
-            sendDataLoRa = false;
-            gotoSleep = false;
+         analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
+         tft.fillScreen(background_color);
 
-            lora_sendData(); // Send data via LoRa
-         }
-         else
-         {
-            loraDataTransmitted = true;
-         }
+         tft.setTextColor(0x9E6F);
+         tft.setFont(&FreeSans9pt7b);
+         tft.setTextSize(1);
+         tft.setCursor(5, 50);
+         tft.print("NO LORA GW near");
+      }
 
-         if ((useBattery && gotoSleep) || (!useDisplay))
+      const bool timeCriticalJobs = os_queryTimeCriticalJobs(ms2osticksRound((TX_INTERVAL * 1000)));
+
+      if (!timeCriticalJobs && !(LMIC.opmode & OP_TXRXPEND) && loraJoined) // if no transmission is active
+      {
+         if ((useBattery || !useDisplay) && gotoSleep)
          {
             Serial.print(F("Can go sleep "));
 
+            saveLORA_State();
             saveLMICToRTC(TX_INTERVAL);
+            delay(200);
 
-            // Stop LoRa before sleep
-            LMIC_shutdown();
             esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
             int time_interval = upload_interval * uS_TO_MIN_FACTOR;
             esp_sleep_enable_timer_wakeup(time_interval);
-            Serial.print("Setup ESP32 to sleep for ");
-            Serial.print(upload_interval);
-            Serial.println(" minutes");
 
             // Stop all events
             blinker.detach();
@@ -805,8 +830,12 @@ void loop()
             // Stop I2C
             Wire.end();
 
-            // Stop SPI
+            tft.fillScreen(ST7735_BLACK);
+            analogWrite(TFT_BL, 0); // turn TFT Backlight off
             tft.enableSleep(true);
+            delay(100);
+
+            // Stop SPI
             spi_bus_free(SPI2_HOST);
 
             // Reset Pins
@@ -826,6 +855,15 @@ void loop()
             gpio_hold_en((gpio_num_t)TFT_BL);
 
             gpio_deep_sleep_hold_en();
+
+            Serial.print("Setup ESP32 to sleep for ");
+            Serial.print(upload_interval);
+            Serial.println(" minutes");
+            Serial.print("wakeup in: ");
+            Serial.print(time_interval);
+            Serial.println(" MicroSeconds");
+
+            Serial.flush();
 
             delay(100);
 
@@ -881,8 +919,11 @@ void loop()
          // Stop I2C
          Wire.end();
 
-         // Stop SPI
+         tft.fillScreen(ST7735_BLACK);
+         analogWrite(TFT_BL, 0); // turn TFT Backlight off
          tft.enableSleep(true);
+
+         // Stop SPI
          spi_bus_free(SPI2_HOST);
 
          // Reset Pins
@@ -902,6 +943,8 @@ void loop()
          gpio_hold_en((gpio_num_t)TFT_BL);
 
          gpio_deep_sleep_hold_en();
+
+         Serial.flush();
 
          delay(100);
 
@@ -3093,6 +3136,7 @@ void onEvent(ev_t ev)
       Serial.println("\n");
 
       loraJoined = true;
+      loraJoinFailed = false;
       displayRefresh = true;
 
       saveLORA_State();
@@ -3510,7 +3554,7 @@ void saveLORA_State(void)
 // Function to reload LMIC configuration from RTC Memory
 void loadLORA_State()
 {
-   Serial.println(F("Load LMIC from RTC ..."));
+   Serial.println(F("Load LMIC State from RTC ..."));
 
    LMIC_setSession(RTC_LORAWAN_netid, RTC_LORAWAN_devaddr, RTC_LORAWAN_nwkKey, RTC_LORAWAN_artKey);
    LMIC_setSeqnoUp(RTC_LORAWAN_seqnoUp);
@@ -3530,5 +3574,6 @@ void loadLORA_State()
    memcpy(LMIC.channelDrMap, RTC_LORAWAN_channelDrMap, MAX_CHANNELS * sizeof(u2_t));
    LMIC.channelMap = RTC_LORAWAN_channelMap;
 #endif
+   delay(200);
    Serial.println("LMIC configuration reloaded from RTC Memory.");
 }

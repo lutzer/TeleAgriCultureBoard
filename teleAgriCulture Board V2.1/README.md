@@ -60,6 +60,9 @@ Follow these steps: [here a version with pictures](https://gitlab.com/teleagricu
 
 For more information on how to use the board, please join our community at https://www.teleagriculture.org
 
+---> see how to get data to teleagriculture.org you need an ID and API token
+Use of the API to get data out : https://gitlab.com/teleagriculture/community/-/blob/e54ab443139c24a1889cc83034cda92408a1d88b/teleAgriCulture%20Board%20V2.1/Docu/API.md
+
 <span style="background-color: #32C8C8">We would love to hear about your experiances with the board and share your projects with us all...</span>
 
 >**for more info about the source code and if you would like to contribute in the coding goto:**  [Docu Page](https://gitlab.com/teleagriculture/community/-/tree/main/teleAgriCulture%20Board%20V2.1/Docu)

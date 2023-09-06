@@ -336,8 +336,8 @@ bool initialState; // state of the LED
 bool ledState = false;
 bool gotoSleep = true;
 bool userWakeup = false;
-bool forceConfig = false;  // if no config file or DoubleReset detected
-bool loraFreshBoot = true; // fresh start - not loading LMIC Config
+bool forceConfig = false; // if no config file or DoubleReset detected
+bool freshBoot = true;    // fresh start - not loading LMIC Config
 
 bool sendDataWifi = false;
 bool sendDataLoRa = false;
@@ -401,7 +401,7 @@ void setup()
    Serial.printf("LoRa has joined: %s\n", loraJoined ? "true" : "false");
 
    if (bootCount == 1 || (bootCount % 720) == 0) // new join once every 24h
-      loraFreshBoot = true;
+      freshBoot = true;
    if (bootCount > 60480) // bootCount resets every 84 days
       bootCount = 0;
 
@@ -462,9 +462,9 @@ void setup()
    ++++++++++++++++ overwrite stored values for debug   +++++++++++++++                */
 
    // upload = "LORA";
-     upload="WIFI";
-   //  useBattery = true;
-   useBattery = false;
+   // upload = "WIFI";
+   // useBattery = true;
+   // useBattery = false;
 
    /*******************************************************************************
    ++++++++++++++++ overwrite stored values for debug   +++++++++++++++                */
@@ -545,6 +545,16 @@ void setup()
       else
       {
          Serial.println("Connected");
+         if (useDisplay)
+         {
+            analogWrite(TFT_BL, backlight_pwm); // turn TFT Backlight on
+            tft.fillScreen(ST7735_BLACK);
+            tft.setTextColor(ST7735_ORANGE);
+            tft.setFont(&FreeSans9pt7b);
+            tft.setTextSize(1);
+            tft.setCursor(5, 50);
+            tft.print("WiFi Connected");
+         }
       }
 
       if ((WiFi.status() == WL_CONNECTED) && useNTP)
@@ -583,7 +593,7 @@ void setup()
       // LMIC init
       os_init();
 
-      if (loraJoined && (!loraFreshBoot)) // new join request every 24h because loraFreshBoot gets reseted
+      if (loraJoined && (!freshBoot)) // new join request every 24h because freshBoot gets reseted
       {
          loadLORA_State(); // load the LMIC settings
          delay(200);
@@ -601,7 +611,7 @@ void setup()
          // Reset the MAC state. Session and pending data transfers will be discarded.
          LMIC_reset();
          LMIC_setClockError(MAX_CLOCK_ERROR * 5 / 100);
-         loraFreshBoot = false;
+         freshBoot = false;
          loraJoined = false;
          // LMIC_startJoining();
       }
@@ -640,23 +650,6 @@ void loop()
 
    analogWrite(TFT_BL, backlight_pwm); // Set the backlight brightness of the TFT display
 
-   time_t rawtime;
-   time(&rawtime);
-   localtime_r(&rawtime, &timeInfo); // Get the current local time
-
-   currentDay = timeInfo.tm_mday; // Update the current day
-
-   // Check if the day has changed and perform time synchronization if required
-   if ((currentDay != lastDay) && (upload == "WIFI") && !(WiFiManagerNS::NTPEnabled))
-   {
-      // The day has changed since the last execution of this block
-      String header = get_header();
-      delay(1000);
-      String Time1 = getDateTime(header);
-      setEsp32Time(Time1.c_str()); // Set the time on ESP32 using the obtained time value
-      lastDay = currentDay;        // Update the last day value
-   }
-
    if (forceConfig)
    {
       startBlinking(); // Start blinking an LED to indicate configuration mode
@@ -674,6 +667,23 @@ void loop()
       }
       ESP.restart();
       stopBlinking(); // Stop blinking the LED
+   }
+
+   time_t rawtime;
+   time(&rawtime);
+   localtime_r(&rawtime, &timeInfo); // Get the current local time
+
+   currentDay = timeInfo.tm_mday; // Update the current day
+
+   // Check if the day has changed and perform time synchronization if required
+   if ((currentDay != lastDay) && (upload == "WIFI") && !(WiFiManagerNS::NTPEnabled) && freshBoot)
+   {
+      // The day has changed since the last execution of this block
+      String header = get_header();
+      delay(1000);
+      String Time1 = getDateTime(header);
+      setEsp32Time(Time1.c_str()); // Set the time on ESP32 using the obtained time value
+      lastDay = currentDay;        // Update the last day value
    }
 
    unsigned long currentMillis = millis();
@@ -1145,7 +1155,7 @@ void GPIO_wake_up()
    if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT1)
    {
       userWakeup = true;
-      loraFreshBoot = false;
+      freshBoot = false;
 
       if (useDisplay)
          gotoSleep = false;
@@ -1153,7 +1163,7 @@ void GPIO_wake_up()
 
    if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER)
    {
-      loraFreshBoot = false;
+      freshBoot = false;
    }
 }
 
@@ -2730,6 +2740,7 @@ void setUPWiFi()
    wifiManager.setSaveConfigCallback([]()
                                      { configSaved = true; }); // restart on credentials save, ESP32 doesn't like to switch between AP/STA
 }
+
 
 void convertTo_LSB_EUI(String input, uint8_t *output)
 {

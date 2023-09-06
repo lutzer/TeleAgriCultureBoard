@@ -2741,7 +2741,6 @@ void setUPWiFi()
                                      { configSaved = true; }); // restart on credentials save, ESP32 doesn't like to switch between AP/STA
 }
 
-
 void convertTo_LSB_EUI(String input, uint8_t *output)
 {
    // Check if input matches pattern

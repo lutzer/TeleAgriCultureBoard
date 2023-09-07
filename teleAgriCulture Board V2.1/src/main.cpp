@@ -196,6 +196,7 @@ void checkButton(void);
 void toggleLED(void);
 void startBlinking(void);
 void stopBlinking(void);
+void openConfig(void);
 
 // file and storage functions
 void load_Sensors(void);
@@ -555,23 +556,27 @@ void setup()
             tft.setCursor(5, 50);
             tft.print("WiFi Connected");
          }
-      }
+         if ((WiFi.status() == WL_CONNECTED) && useNTP)
+         {
+            WiFiManagerNS::configTime();
+            WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
+         }
 
-      if ((WiFi.status() == WL_CONNECTED) && useNTP)
-      {
-         WiFiManagerNS::configTime();
-         WiFiManagerNS::NTP::onTimeAvailable(&on_time_available);
-      }
-
-      if (!useNTP)
-      {
-         String header = get_header();
-         delay(1000);
-         String Time1 = getDateTime(header);
-         setEsp32Time(Time1.c_str());
+         if (!useNTP)
+         {
+            String header = get_header();
+            delay(500);
+            String Time1 = getDateTime(header);
+            setEsp32Time(Time1.c_str());
+         }
       }
 
       stopBlinking();
+   }
+
+   if (forceConfig)
+   {
+      openConfig();
    }
 
    if (upload == "WIFI")
@@ -652,21 +657,7 @@ void loop()
 
    if (forceConfig)
    {
-      startBlinking(); // Start blinking an LED to indicate configuration mode
-
-      setUPWiFi(); // Set up WiFi connection
-
-      backlight_pwm = 200;
-      analogWrite(TFT_BL, backlight_pwm); // Turn off TFT Backlight
-
-      if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
-      {
-         Serial.println("failed to connect and hit timeout");
-         delay(3000);
-         ESP.restart(); // Failed to connect, restart ESP32
-      }
-      ESP.restart();
-      stopBlinking(); // Stop blinking the LED
+      openConfig();
    }
 
    time_t rawtime;
@@ -3586,4 +3577,23 @@ void loadLORA_State()
 #endif
    delay(200);
    Serial.println("LMIC configuration reloaded from RTC Memory.");
+}
+
+void openConfig()
+{
+   startBlinking(); // Start blinking an LED to indicate configuration mode
+
+   setUPWiFi(); // Set up WiFi connection
+
+   backlight_pwm = 200;
+   analogWrite(TFT_BL, backlight_pwm); // Turn off TFT Backlight
+
+   if (!wifiManager.startConfigPortal("TeleAgriCulture Board", "enter123"))
+   {
+      Serial.println("failed to connect and hit timeout");
+      delay(3000);
+      ESP.restart(); // Failed to connect, restart ESP32
+   }
+   ESP.restart();
+   stopBlinking(); // Stop blinking the LED
 }

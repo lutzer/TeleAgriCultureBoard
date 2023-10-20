@@ -5,7 +5,7 @@
 To build the teleAgriCulture Board V2.1 project follow these steps:
 
 1. Clone the repository to your local machine.
-2. Open the project in [VS Code](https://code.visualstudio.com) with the [PlatformIO](https://platformio.org) extension installed.
+2. Open the project folder (community/teleAgriCulture Board V2.1) in [VS Code](https://code.visualstudio.com) with the [PlatformIO](https://platformio.org) extension installed.
 3. Update the board credentials in `/include/board_credentials.h` with your own BoardID, API_KEY and LORA credentials.
 4. make sure that you choose the right lora-region build-flag in `platformio.ini` file
 5. Build and upload the project to your ESP32-S3 board.

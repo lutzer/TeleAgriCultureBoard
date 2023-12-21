@@ -675,6 +675,14 @@ namespace WiFiManagerNS
       }
     }
 
+    // not implemented now
+
+    SPI_con_table[0] = NO;
+    EXTRA_con_table[0] = NO;
+    EXTRA_con_table[1] = NO;
+
+    // not implemented now
+
     save_Connectors();
     save_Config();
 

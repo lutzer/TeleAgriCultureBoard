@@ -6,7 +6,7 @@
 
 int boardID = 1000;
 String version = "Firmware Version " TAC_VERSION;
-String API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+String API_KEY = "XXXxxxxxxxxxxxxxxxxxXXX";
 String lora_fqz = CUSTOM_LORA_FQZ;
 String OTAA_APPEUI = "0000000000000000";                 // TTN --> msb first
 String OTAA_DEVEUI = "0000000000000000";                 // TTN --> msb first

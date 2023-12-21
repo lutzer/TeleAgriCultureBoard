@@ -28,7 +28,7 @@
 #include <board_credentials.h>
 #include <WString.h>
 
-#define SENSORS_NUM 17      // Number of Sensors implemeted
+#define SENSORS_NUM 19      // Number of Sensors implemeted
 #define MEASURMENT_NUM 8    // max. Sensor values / Sensor (Multi Gas Sensor V1 produces 8 measures to send)
 #define MAX_I2C_ADDRESSES 3 // max. stored I2C addresses / Sensor
 #define I2C_NUM 4
@@ -37,7 +37,7 @@
 #define SPI_NUM 1
 #define I2C_5V_NUM 1
 #define EXTRA_NUM 2
-#define JSON_BUFFER 7000 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
+#define JSON_BUFFER 9000 // json buffer for prototype Sensors class ( const char *sensors = R"([.....])" )
 
 // ----- Declare Connectors ----- //
 
@@ -184,7 +184,9 @@ enum ValueOrder
   PH,       // temp encoding
   DBA,      // temp encoding
   RGB,
-  ANGLE
+  ANGLE,
+  DEPTH,
+  UV_I
 };
 
 enum SensorsImplemented
@@ -206,7 +208,9 @@ enum SensorsImplemented
   SERVO,
   BME_280,
   ADS1115,
-  SOUND
+  SOUND,
+  PRE_LVL,
+  UV_DFR
 };
 
 class Measurement
@@ -672,6 +676,34 @@ const char *proto_sensors = R"([
         "valueOrder": "DBA",
         "unit": "dBA",
         "data_name": "Sound lvl"
+      }
+    ]
+  },
+  {
+    "sensor-id": 18,
+    "name": "Pressure LVL",
+    "con_typ": "ADC",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 20,
+        "valueOrder": "DEPTH",
+        "unit": "mm",
+        "data_name": "Pressure lvl"
+      }
+    ]
+  },
+  {
+    "sensor-id": 19,
+    "name": "DFRobot UV",
+    "con_typ": "ADC",
+    "returnCount": 1,
+    "measurements": [
+      {
+        "value": 0.2,
+        "valueOrder": "UV_I",
+        "unit": "mW/cm^2",
+        "data_name": "UV Int."
       }
     ]
   }

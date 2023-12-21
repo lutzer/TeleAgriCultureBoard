@@ -50,6 +50,10 @@
 #define ADC_RES 4095
 #define DHTTYPE DHT22
 #define SEALEVELPRESSURE_HPA (1013.25)
+#define RANGE 5000            // Depth measuring range 5000mm (for water)
+#define CURRENT_INIT 4.00     // Current @ 0mm (uint: mA)
+#define DENSITY_WATER 1       // Pure water density normalized to 1
+#define DENSITY_GASOLINE 0.74 // Gasoline density
 
 // ----- Sensor section ----- //
 
@@ -96,6 +100,7 @@ void readSPI_Connector();
 void readEXTRA_Connectors();
 float getBatteryVoltage();
 void updateDataNames(std::vector<Sensor> &sensorVector);
+float mapfloat(float x, float in_min, float in_max, float out_min, float out_max);
 
 // LevelSensor
 #define NO_TOUCH 0xFE
@@ -228,16 +233,17 @@ void readI2C_Connectors()
 
             bmp280.begin();
             delay(100);
-            bmp280.setConfigTStandby(BMP280::eConfigTStandby_t::eConfigTStandby_500);
-            bmp280.setCtrlMeasSamplingTemp(BMP280::eSampling_t::eSampling_X4);
-            bmp280.setCtrlMeasSamplingPress(BMP280::eSampling_t::eSampling_X4);
-            delay(100);
+            bmp280.setCtrlMeasMode(BMP280::eCtrlMeasMode_t::eCtrlMeasModeForced);
+            bmp280.setConfigTStandby(BMP280::eConfigTStandby_t::eConfigTStandby_1000);
+            bmp280.setCtrlMeasSamplingTemp(BMP280::eSampling_t::eSampling_X16);
+            bmp280.setCtrlMeasSamplingPress(BMP280::eSampling_t::eSampling_X16);
+            delay(1000);
 
             Sensor newSensor = allSensors[BMP_280];
             newSensor.measurements[0].value = bmp280.getTemperature();
             pressure = bmp280.getPressure();
-            newSensor.measurements[1].value = (double)(pressure / 100.00F);
-            newSensor.measurements[2].value = bmp280.calAltitude(pressure, SEALEVELPRESSURE_HPA);
+            newSensor.measurements[1].value = (double)(pressure / 100.00F) + 20;                        // 20 as offset ?!?
+            newSensor.measurements[2].value = bmp280.calAltitude(pressure, SEALEVELPRESSURE_HPA + 21);  // 21 as offset ?!?
 
             sensorVector.push_back(newSensor);
         }
@@ -266,7 +272,7 @@ void readI2C_Connectors()
             newSensor.measurements[1].value = bme.readTemperature();
             newSensor.measurements[2].value = (bme.readPressure() / 100.0F);
             newSensor.measurements[3].value = bme.readAltitude(SEALEVELPRESSURE_HPA);
-            
+
             sensorVector.push_back(newSensor);
         }
         break;
@@ -606,10 +612,90 @@ void readADC_Connectors()
                 millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
             }
 
-            pinMode(soundPin, INPUT);
+            Serial.print("Millivolts: ");
+            Serial.println(millivolts);
 
             Sensor newSensor = allSensors[SOUND];
-            newSensor.measurements[0].value = millivolts * 50; // mV to decibel value by *50
+            newSensor.measurements[0].value = ((float)millivolts / 1000.0) * 50.0; // mV to decibel value by *50.0
+            sensorVector.push_back(newSensor);
+        }
+        break;
+
+        case PRE_LVL:
+        {
+            int depthPin;
+            uint32_t raw;
+            uint32_t millivolts;
+
+            int16_t dataVoltage;
+            float dataCurrent, depth; // unit:mA
+
+            if (i == 0)
+            {
+                depthPin = ANALOG1;
+                raw = adc1_get_raw(ADC1_CHANNEL_4);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 1)
+            {
+                depthPin = ANALOG2;
+                raw = adc1_get_raw(ADC1_CHANNEL_5);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 2)
+            {
+                depthPin = ANALOG3;
+                raw = adc1_get_raw(ADC1_CHANNEL_6);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            Sensor newSensor = allSensors[DEPTH];
+            dataCurrent = (float)millivolts / 120.0;                               // Sense Resistor:120ohm
+            depth = (dataCurrent - CURRENT_INIT) * (RANGE / DENSITY_WATER / 16.0); // Calculate depth from current readings
+            newSensor.measurements[0].value = depth;                               // depth in mm
+            sensorVector.push_back(newSensor);
+        }
+        break;
+
+        case UV_DFR:
+        {
+            int uvPin;
+            uint32_t raw;
+            uint32_t millivolts;
+
+            if (i == 0)
+            {
+                uvPin = ANALOG1;
+                raw = adc1_get_raw(ADC1_CHANNEL_4);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 1)
+            {
+                uvPin = ANALOG2;
+                pinMode(uvPin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_5);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 2)
+            {
+                uvPin = ANALOG3;
+                pinMode(uvPin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_6);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            Sensor newSensor = allSensors[UV_DFR];
+
+            Serial.print("Millivolts: ");
+            Serial.println(millivolts);
+
+            float uvIntensity = mapfloat(((float)millivolts / 1000.0), 0.98, 2.9, 0.0, 15.0);
+
+            newSensor.measurements[0].value = uvIntensity;
             sensorVector.push_back(newSensor);
         }
         break;
@@ -1040,4 +1126,9 @@ void updateDataNames(std::vector<Sensor> &sensorVector)
             }
         }
     }
+}
+
+float mapfloat(float x, float in_min, float in_max, float out_min, float out_max)
+{
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }

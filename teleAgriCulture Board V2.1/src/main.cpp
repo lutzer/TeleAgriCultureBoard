@@ -136,6 +136,8 @@
 #define DOUBLERESETDETECTOR_DEBUG true
 #define DRD_ADDRESS 0
 
+#define DEBUG_PRINT false
+
 #include <ESP_DoubleResetDetector.h>
 #include <Button.h>
 #include <Ticker.h>
@@ -144,7 +146,7 @@
 #include <Fonts/FreeSans9pt7b.h>
 #include <Adafruit_ST7735.h>
 
-#define DEBUG_PRINT 0
+//#define DEBUG_PRINT false
 
 // ----- Deep Sleep related -----//
 #define BUTTON_PIN_BITMASK 0x1      // GPIO 0
@@ -436,11 +438,10 @@ void setup()
    load_Connectors(); // Connectors lookup table
    load_Config();     // load config Data
 
-#ifdef DEBUG_PRINT
+#if DEBUG_PRINT
    delay(2000);
    checkLoadedStuff();
 #endif
-
 
    /* ------------  Test DATA for connected Sensors  --------------------------
 
@@ -635,7 +636,7 @@ void setup()
    {
       WiFi.mode(WIFI_AP_STA);
 
-      WiFi.softAP("TeleAgriCulture Board", "enter123");
+      WiFi.softAP("TeleAgriCulture Dash", "enter123");
       IPAddress IP = WiFi.softAPIP();
       Serial.print("AP IP address: ");
       Serial.println(IP);
@@ -729,6 +730,7 @@ void loop()
       backlight_pwm = 0;            // Turn off the backlight
       tft.fillScreen(ST7735_BLACK); // Fill the TFT screen with black color
       previousMillis_long = currentMillis_long;
+      displayRefresh = true;
       tft.enableSleep(true); // Enable sleep mode for the TFT display
    }
 
@@ -1929,7 +1931,7 @@ void measurementsPage(int page)
       tft.print(show_measurements[i].data_name);
       tft.print(": ");
 
-      tft.setCursor(60, cursor_y);
+      tft.setCursor(65, cursor_y);
       tft.setTextColor(ST7735_YELLOW);
 
       if (!isnan(show_measurements[i].value))
@@ -3171,7 +3173,7 @@ void onEvent(ev_t ev)
       loraJoinFailed = true;
       // upload="WIFI"; // Fallback WIFI
       // save_Config();
-      // ESP.restart();
+      ESP.restart();
       break;
    case EV_REJOIN_FAILED:
       Serial.println(F("EV_REJOIN_FAILED"));
@@ -3610,4 +3612,3 @@ void openConfig()
    ESP.restart();
    stopBlinking(); // Stop blinking the LED
 }
-

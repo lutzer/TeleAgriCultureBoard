@@ -47,7 +47,9 @@ The teleAgriCulture Board V2.1 supports a variety of sensors through its connect
 - WS2812: An RGB LED strip - <mark>not implemented now.<mark>
 - SERVO: A servo motor -<mark>not implemented now.<mark>
 - BME_280: A temperature, humidity and pressure sensor. <mark>BME280_ADDRESS_ALTERNATE (0x76) is used<mark>
-- SOUND: Gravity analog Sound level meter
+- SOUND: Gravity analog Sound level meter https://wiki.dfrobot.com/Gravity__Analog_Sound_Level_Meter_SKU_SEN0232
+- Pressure Level Sensor  https://wiki.dfrobot.com/Throw-in_Type_Liquid_Level_Transmitter_SKU_KIT0139
+- ML8511 UV Sensor https://wiki.dfrobot.com/UV_Sensor_v1.0-ML8511_SKU_SEN0175
 
 - ADS1115: for KlimaOasis aquaponic system a 4-channel ADC is added
 - - ADC0: https://wiki.dfrobot.com/Gravity_Analog_ORP_Sensor_PRO_SKU_SEN0464
@@ -92,6 +94,7 @@ To add new sensors, follow these steps:
 - [x] deep sleep
 - [x] custom NTP server option
 - [x] include CA root certificates
+- [x] EduRoam WPA3 support (tested at Kunstuni Linz and JKU Linz)
 - [ ] support for alternative I2C adresses
 - [x] data upload intervall based on UI
 - [x] display data in the browser (just in NO BATTERY MODE)

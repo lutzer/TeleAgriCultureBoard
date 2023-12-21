@@ -183,10 +183,10 @@ enum ValueOrder
   MSCM,     // temp encoding
   PH,       // temp encoding
   DBA,      // temp encoding
+  DEPTH,    // uint16 encoding
+  UV_I,     // temp encoding
   RGB,
-  ANGLE,
-  DEPTH,
-  UV_I
+  ANGLE
 };
 
 enum SensorsImplemented

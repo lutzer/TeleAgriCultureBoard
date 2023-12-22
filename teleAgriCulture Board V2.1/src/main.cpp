@@ -146,7 +146,7 @@
 #include <Fonts/FreeSans9pt7b.h>
 #include <Adafruit_ST7735.h>
 
-//#define DEBUG_PRINT false
+// #define DEBUG_PRINT false
 
 // ----- Deep Sleep related -----//
 #define BUTTON_PIN_BITMASK 0x1      // GPIO 0
@@ -225,6 +225,7 @@ void initVoltsArray();            //   Copyright (c) 2019 Pangodream   	https://
 int getBatteryChargeLevel();      //   Copyright (c) 2019 Pangodream   	https://github.com/pangodream/18650CL
 int getChargeLevel(double volts); //   Copyright (c) 2019 Pangodream   	https://github.com/pangodream/18650CL
 void drawBattery(int x, int y);
+
 void handleRoot(); // WEBSERVER
 void handleNotFound();
 void drawGraph();
@@ -2431,6 +2432,24 @@ void lora_sendData(void)
                Serial.print(" Value: ");
                Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
                break;
+
+            case DEPTH:
+               message.addRawFloat(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
+
+            case UV_I:
+               message.addTemperature(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               Serial.print(sensorVector[i].measurements[j].data_name);
+               Serial.print(": #");
+               Serial.print(k);
+               Serial.print(" Value: ");
+               Serial.println(static_cast<float>(round(sensorVector[i].measurements[j].value * 100) / 100.0));
+               break;
             }
          }
       }
@@ -3086,6 +3105,14 @@ ValueOrder getValueOrderFromString(String str)
    else if (str == "DBA")
    {
       return DBA;
+   }
+   else if (str == "DEPTH")
+   {
+      return DEPTH;
+   }
+   else if (str == "UV_I")
+   {
+      return UV_I;
    }
    else
    {

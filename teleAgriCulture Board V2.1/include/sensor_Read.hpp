@@ -700,6 +700,84 @@ void readADC_Connectors()
         }
         break;
 
+        case LIGHT_DFR:
+        {
+            int lightPin;
+           uint32_t raw;
+            uint32_t millivolts;
+
+            if (i == 0)
+            {
+                lightPin = ANALOG1;
+                pinMode(lightPin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_4);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 1)
+            {
+                lightPin = ANALOG2;
+                pinMode(lightPin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_5);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 2)
+            {
+                lightPin = ANALOG3;
+                pinMode(lightPin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_6);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            Sensor newSensor = allSensors[LIGHT_DFR];
+
+            int light = mapfloat(((float)millivolts / 1000.0), 0.01, 3.3, 0.0, 1000.0);
+
+            newSensor.measurements[0].value = light;
+            sensorVector.push_back(newSensor);
+        }
+        break;
+
+         case DFR_LM35:
+        {
+            int lm35Pin;
+           uint32_t raw;
+            uint32_t millivolts;
+
+            if (i == 0)
+            {
+                lm35Pin = ANALOG1;
+                pinMode(lm35Pin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_4);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 1)
+            {
+                lm35Pin = ANALOG2;
+                pinMode(lm35Pin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_5);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 2)
+            {
+                lm35Pin = ANALOG3;
+                pinMode(lm35Pin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_6);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            Sensor newSensor = allSensors[DFR_LM35];
+
+            float temp = millivolts/10;
+
+            newSensor.measurements[0].value = temp;
+            sensorVector.push_back(newSensor);
+        }
+        break;
+
         default:
             break;
         }

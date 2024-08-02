@@ -32,6 +32,8 @@ Sensor Value:     `sensorVector[i].measurements[j].value`
 
 The teleAgriCulture Board V2.1 supports a variety of sensors through its connectors. The currently implemented sensors are listed in the `SensorsImplemented` enum in the `include/sensor_Board.hpp` file:
 
+--> VERSION 1.09
+
 - BMP_280: A temperature and pressure sensor. <mark>BMP280_DEFAULT_ADDRESS 0x77 is used<mark>
 - LEVEL: A water level sensor.
 - VEML7700: An ambient light sensor. <mark>VEML7700_I2CADDR_DEFAULT 0x10 is used<mark>
@@ -50,6 +52,8 @@ The teleAgriCulture Board V2.1 supports a variety of sensors through its connect
 - SOUND: Gravity analog Sound level meter https://wiki.dfrobot.com/Gravity__Analog_Sound_Level_Meter_SKU_SEN0232
 - Pressure Level Sensor  https://wiki.dfrobot.com/Throw-in_Type_Liquid_Level_Transmitter_SKU_KIT0139
 - ML8511 UV Sensor https://wiki.dfrobot.com/UV_Sensor_v1.0-ML8511_SKU_SEN0175
+- LM35 temperature sensor https://wiki.dfrobot.com/DFRobot_LM35_Linear_Temperature_Sensor__SKU_DFR0023_   //not tested now
+- DFRobot Analog Ambient Light Sensor https://wiki.dfrobot.com/DFRobot_Ambient_Light_Sensor_SKU_DFR0026   //not tested now
 
 - ADS1115: for KlimaOasis aquaponic system a 4-channel ADC is added
 - - ADC0: https://wiki.dfrobot.com/Gravity_Analog_ORP_Sensor_PRO_SKU_SEN0464

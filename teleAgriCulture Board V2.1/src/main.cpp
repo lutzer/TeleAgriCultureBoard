@@ -35,7 +35,7 @@
 
 //TODO: find a I2C Address solution
 
-/*********************************** VERSION 1.03 ****************************
+/*********************************** VERSION 1.09 ****************************
 /*
  *
  * For defines, GPIOs and implemented Sensors, see /include/sensor_Board.hpp

@@ -29,11 +29,12 @@
 //      WPA Enterprise works without cert and anonym identity at the moment
 
 //TODO: Battery optimation    ---> uses around 3mA without gas sensor and without display
-//TODO: Sensor test
+//TODO: Sensor test --> ongoing
 
 //TODO: Sensor calibration (hardcoded at the moment)
 
 //TODO: find a I2C Address solution
+//TODO: back channel or Webinterface for LEDs / RGB
 
 /*********************************** VERSION 1.09 ****************************
 /*

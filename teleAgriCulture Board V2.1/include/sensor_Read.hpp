@@ -778,7 +778,46 @@ void readADC_Connectors()
         }
         break;
 
-        default:
+        case DFR_FLAME:
+        {
+            int flamePin;
+           uint32_t raw;
+            uint32_t millivolts;
+
+            if (i == 0)
+            {
+                flamePin = ANALOG1;
+                pinMode(flamePin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_4);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 1)
+            {
+                flamePin = ANALOG2;
+                pinMode(flamePin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_5);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            if (i == 2)
+            {
+                flamePin = ANALOG3;
+                pinMode(flamePin, INPUT);
+                raw = adc1_get_raw(ADC1_CHANNEL_6);
+                millivolts = esp_adc_cal_raw_to_voltage(raw, &adc_cal);
+            }
+
+            Sensor newSensor = allSensors[DFR_FLAME];
+
+            float temp = millivolts;
+
+            newSensor.measurements[0].value = temp;
+            sensorVector.push_back(newSensor);
+        }
+        break;
+
+         default:
             break;
         }
     }

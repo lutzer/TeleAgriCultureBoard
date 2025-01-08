@@ -4,13 +4,16 @@
 #define CUSTOM_LORA_FQZ "EU 868 MHz"
 #endif
 
-int boardID = 1000;
+int boardID = 1014;
 String version = "Firmware Version " TAC_VERSION;
-String API_KEY = "XXXxxxxxxxxxxxxxxxxxXXX";
+String API_KEY = "fkYauyaxirkYjSKrzR8lzKuVnak4l2nV";
 String lora_fqz = CUSTOM_LORA_FQZ;
 String OTAA_APPEUI = "0000000000000000";                 // TTN --> msb first
 String OTAA_DEVEUI = "0000000000000000";                 // TTN --> msb first
 String OTAA_APPKEY = "00000000000000000000000000000000"; // TTN --> msb first
+String apn = "0000";
+String gprs_user = "XXXXX";
+String gprs_pass = "XXXXX";
 
 #define LMIC_PRINTF_TO Serial
 

@@ -56,6 +56,7 @@ String customNTPaddress = "129.6.15.28";
 
 bool useBattery = false;
 bool useDisplay = true;
+bool saveDataSDCard = false;
 bool useEnterpriseWPA = false;
 bool useNTP = false;
 bool useCustomNTP = false;
@@ -90,10 +91,11 @@ uint8_t app_key[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #define I2C_SDA 8 // on teleAgriCulture Board V2.0 I2C_5V SDA is GPIO 15
 #define I2C_SCL 9 // on teleAgriCulture Board V2.0 I2C_5V SCL is GPIO 16
 
+#define SPI_CON_CS 38 // used for SD Card
+
 #define TFT_SCLK 36
 #define TFT_MISO 37
 #define TFT_MOSI 35
-#define SPI_CON_CS 38
 #define TFT_CS 15 // on teleAgriCulture Board V2.0 it is I2C_5V SDA pin  CHANGE THIS TO 38(SPI CON CS)
 #define TFT_RST 1 // on teleAgriCulture Board V2.0 it is part of J3 CON
 #define TFT_DC 2  // on teleAgriCulture Board V2.0 it is part of J3 CON

@@ -700,7 +700,7 @@ void setup()
    {
       WiFi.mode(WIFI_AP_STA);
 
-      WiFi.softAP("TeleAgriCulture Dash", "enter123");
+      WiFi.softAP("TeleAgriCulture DB", "enter123");
       IPAddress IP = WiFi.softAPIP();
       Serial.print("AP IP address: ");
       Serial.println(IP);
@@ -718,7 +718,7 @@ void setup()
       server.begin();
       Serial.println("HTTP server started");
    }
-} 
+}
 
 void loop()
 {
@@ -756,6 +756,10 @@ void loop()
    if (currentMillis_upload - previousMillis_upload >= (upload_interval * mS_TO_MIN_FACTOR))
    {
       delay(100);
+
+      if (upload == "NO")
+         no_upload = true; // Set flag to indicate no upload
+
       if (upload == "WIFI")
          sendDataWifi = true; // Set flag to send data via WiFi
 
@@ -766,11 +770,9 @@ void loop()
             sendDataLoRa = true; // Set flag to send data via LoRa
          }
       }
+
       if (saveDataSDCard)
          useSDCard = true; // Set flag to send data via SDCard
-
-      if (upload == "NO_UPLOAD")
-         no_upload = true; // Set flag to indicate no upload
 
       previousMillis_upload = currentMillis_upload;
    }
@@ -1054,6 +1056,11 @@ void loop()
             esp_deep_sleep_start(); // Enter deep sleep mode
          }
       }
+   }
+
+   if (saveDataSDCard)
+   {
+      tft->drawRGBBitmap(145, 2, sdcard_icon, 14, 19);
    }
 
    if (useSDCard)
@@ -1645,26 +1652,26 @@ void mainPage()
    tft->print(boardID);
    tft->setCursor(5, 55);
    tft->print(version);
-   tft->setTextColor(0xCED7);
-   tft->setCursor(5, 65);
-   tft->print("WiFi: ");
-   tft->setTextColor(ST7735_WHITE);
-   tft->print(WiFi.SSID());
-   tft->setCursor(5, 75);
-   tft->setTextColor(0xCED7);
-   tft->print("IP: ");
-   tft->setTextColor(ST7735_WHITE);
-   tft->print(WiFi.localIP());
-   tft->setCursor(5, 85);
-   tft->setTextColor(0xCED7);
-   tft->print("MAC: ");
-   tft->setTextColor(ST7735_WHITE);
-   tft->print(WiFi.macAddress());
 
    if (upload == "WIFI")
    {
       digitalClockDisplay(5, 95, true);
 
+      tft->setTextColor(0xCED7);
+      tft->setCursor(5, 65);
+      tft->print("WiFi: ");
+      tft->setTextColor(ST7735_WHITE);
+      tft->print(WiFi.SSID());
+      tft->setCursor(5, 75);
+      tft->setTextColor(0xCED7);
+      tft->print("IP: ");
+      tft->setTextColor(ST7735_WHITE);
+      tft->print(WiFi.localIP());
+      tft->setCursor(5, 85);
+      tft->print("MAC: ");
+      tft->setTextColor(ST7735_WHITE);
+      tft->print(WiFi.macAddress());
+      tft->setTextColor(0xCED7);
       tft->setCursor(5, 105);
       tft->print("last data UPLOAD: ");
       tft->setTextColor(ST7735_ORANGE);
@@ -1674,8 +1681,50 @@ void mainPage()
       tft->setCursor(5, 115);
       tft->print(lastUpload);
    }
-   else
+   else if (upload == "NO")
    {
+      tft->setTextColor(0xCED7);
+      tft->setCursor(5, 65);
+      tft->print("WiFi: ");
+      tft->setTextColor(ST7735_WHITE);
+      tft->print(WiFi.softAPSSID());
+      tft->setCursor(5, 75);
+      tft->setTextColor(0xCED7);
+      tft->print("IP: ");
+      tft->setTextColor(ST7735_WHITE);
+      tft->print(WiFi.softAPIP());
+      tft->setCursor(5, 85);
+      tft->print("MAC: ");
+      tft->setTextColor(ST7735_WHITE);
+      tft->print(WiFi.softAPmacAddress());
+      tft->setCursor(5, 95);
+      tft->print("no time sync");
+      tft->setTextColor(ST7735_RED);
+      tft->setCursor(5, 105);
+      tft->print("up load:");
+      tft->print("  ");
+      tft->setTextColor(ST7735_ORANGE);
+      tft->print(upload);
+      tft->setTextColor(ST7735_ORANGE);
+      tft->setCursor(5, 115);
+      tft->print(lastUpload);
+   }
+   else if (upload == "LORA")
+   {
+      tft->setTextColor(0xCED7);
+      tft->setCursor(5, 65);
+      tft->print("WiFi: ");
+      tft->setTextColor(ST7735_WHITE);
+      tft->print(WiFi.softAPSSID());
+      tft->setCursor(5, 75);
+      tft->setTextColor(0xCED7);
+      tft->print("IP: ");
+      tft->setTextColor(ST7735_WHITE);
+      tft->print(WiFi.softAPIP());
+      tft->setCursor(5, 85);
+      tft->print("MAC: ");
+      tft->setTextColor(ST7735_WHITE);
+      tft->print(WiFi.softAPmacAddress());
       tft->setTextColor(ST7735_ORANGE);
       tft->setCursor(5, 95);
       tft->print("TTN no time sync");

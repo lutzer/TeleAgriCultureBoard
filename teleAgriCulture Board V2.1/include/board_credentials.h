@@ -4,9 +4,9 @@
 #define CUSTOM_LORA_FQZ "EU 868 MHz"
 #endif
 
-int boardID = 1014;
+int boardID = 1000;
 String version = "Firmware Version " TAC_VERSION;
-String API_KEY = "fkYauyaxirkYjSKrzR8lzKuVnak4l2nV";
+String API_KEY = "XXXXXXXXXXXXXXXXXXX";
 String lora_fqz = CUSTOM_LORA_FQZ;
 String OTAA_APPEUI = "0000000000000000";                 // TTN --> msb first
 String OTAA_DEVEUI = "0000000000000000";                 // TTN --> msb first

@@ -2369,51 +2369,91 @@ void wifi_sendData(void)
          //  WiFiClientSecure client;
          //  client.setCACert(kits_ca);
 
-         WiFiClientSecure *client = new WiFiClientSecure;
-
-         delay(100);
-
-         if (client)
+         /* SEND TO TELEAGRICULTURE SERVER */
          {
-
-            client->setCACertBundle(rootca_bundle_crt_start);
-
-            HTTPClient https;
-
-            // https://gitlab.com/teleagriculture/community/-/blob/main/API.md
-
-            // python example
-            // https://gitlab.com/teleagriculture/community/-/blob/main/RPI/tacserial.py
-
-            // should show up there:
-            // https://kits.teleagriculture.org/kits/10xx
-
-            String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
-            String api_Bearer = "Bearer " + API_KEY;
-
-            https.begin(*client, serverName);
+            WiFiClientSecure *client = new WiFiClientSecure;
 
             delay(100);
 
-            https.addHeader("Content-Type", "application/json");
-            https.addHeader("Authorization", api_Bearer);
+            if (client)
+            {
 
-            int httpResponseCode = https.POST(output);
-            Serial.println();
-            Serial.println(serverName);
-            Serial.println(api_Bearer);
+               client->setCACertBundle(rootca_bundle_crt_start);
 
-            Serial.print("\nHTTP Response code: ");
-            Serial.println(httpResponseCode);
-            Serial.println();
+               HTTPClient https;
 
-            // Free resources
-            https.end();
-            delete client;
+               // https://gitlab.com/teleagriculture/community/-/blob/main/API.md
+
+               // python example
+               // https://gitlab.com/teleagriculture/community/-/blob/main/RPI/tacserial.py
+
+               // should show up there:
+               // https://kits.teleagriculture.org/kits/10xx
+
+               String serverName = "https://kits.teleagriculture.org/api/kits/" + String(boardID) + "/measurements";
+               
+               String api_Bearer = "Bearer " + API_KEY;
+
+               https.begin(*client, serverName);
+
+               delay(100);
+
+               https.addHeader("Content-Type", "application/json");
+               https.addHeader("Authorization", api_Bearer);
+
+               int httpResponseCode = https.POST(output);
+               Serial.println();
+               Serial.println(serverName);
+               Serial.println(api_Bearer);
+
+               Serial.print("\nHTTP Response code: ");
+               Serial.println(httpResponseCode);
+               Serial.println();
+
+               // Free resources
+               https.end();
+               delete client;
+            }
+            else
+            {
+               Serial.printf("\n[HTTPS] Unable to connect\n");
+            }
          }
-         else
+
+         /* SEND TO LOCAL SERVER */
          {
-            Serial.printf("\n[HTTPS] Unable to connect\n");
+            WiFiClient *client = new WiFiClient;
+
+            delay(100);
+
+            if (client)
+            {
+               HTTPClient http;
+
+               String serverName = "http://10.3.141.1:3001/measurements";
+
+               http.begin(*client, serverName);
+
+               delay(100);
+
+               http.addHeader("Content-Type", "application/json");
+
+               int httpResponseCode = http.POST(output);
+               Serial.println();
+               Serial.println(serverName);
+
+               Serial.print("\nHTTP Response code: ");
+               Serial.println(httpResponseCode);
+               Serial.println();
+
+               // Free resources
+               http.end();
+               delete client;
+            }
+            else
+            {
+               Serial.printf("\n[HTTPS] Unable to connect\n");
+            }
          }
       }
       else

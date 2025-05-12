@@ -140,6 +140,8 @@
 
 #define DEBUG_PRINT false
 
+#define WIFI_UPLOAD_URL "http://10.3.141.1:3001/measurements"
+
 #include <ESP_DoubleResetDetector.h>
 #include <Button.h>
 #include <Ticker.h>
@@ -2370,6 +2372,7 @@ void wifi_sendData(void)
          //  client.setCACert(kits_ca);
 
          /* SEND TO TELEAGRICULTURE SERVER */
+#ifdef WIFI_UPLOAD_URL
          {
             WiFiClientSecure *client = new WiFiClientSecure;
 
@@ -2419,7 +2422,7 @@ void wifi_sendData(void)
                Serial.printf("\n[HTTPS] Unable to connect\n");
             }
          }
-
+#else
          /* SEND TO LOCAL SERVER */
          {
             WiFiClient *client = new WiFiClient;
@@ -2430,9 +2433,7 @@ void wifi_sendData(void)
             {
                HTTPClient http;
 
-               String serverName = "http://10.3.141.1:3001/measurements";
-
-               http.begin(*client, serverName);
+               http.begin(*client, WIFI_UPLOAD_URL);
 
                delay(100);
 
@@ -2440,7 +2441,7 @@ void wifi_sendData(void)
 
                int httpResponseCode = http.POST(output);
                Serial.println();
-               Serial.println(serverName);
+               Serial.println(WIFI_UPLOAD_URL);
 
                Serial.print("\nHTTP Response code: ");
                Serial.println(httpResponseCode);
@@ -2455,6 +2456,7 @@ void wifi_sendData(void)
                Serial.printf("\n[HTTPS] Unable to connect\n");
             }
          }
+#endif
       }
       else
       {

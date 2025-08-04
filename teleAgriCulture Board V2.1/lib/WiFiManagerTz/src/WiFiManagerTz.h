@@ -50,6 +50,7 @@ namespace WiFiManagerNS
 
   bool NTPEnabled = false; // overriden by prefs
   bool DSTEnabled = true;
+  bool RTCEnabled = false;
   String TimeConfHTML;
   char systime[64];
 
@@ -70,6 +71,7 @@ namespace WiFiManagerNS
     // _wifiManager->wm.setDarkMode(true);
     TZ::loadPrefs();
     prefs::getBool("NTPEnabled", &NTPEnabled, false);
+    prefs::getBool("RTCEnabled", &RTCEnabled, false);
     if (NTPEnabled)
     {
       NTP::loadPrefs();
@@ -380,6 +382,11 @@ namespace WiFiManagerNS
     TimeConfHTML += "<input style=width:auto name='set-time' id='set-time' type='datetime-local' value='" + systimeStr + "'>";
     TimeConfHTML += "</div>";
 
+    TimeConfHTML += "<div id='use_RTC'>";
+    TimeConfHTML += "<label for='use-rtc-module'>Use RTC</label> ";
+    TimeConfHTML += "<input value='1' type='checkbox' name='use-rtc-module' id='use-rtc-module' " + String(RTCEnabled ? "checked" : "") + ">";
+    TimeConfHTML += "</div>";
+
     TimeConfHTML += "<div id='use_NTP'>";
     TimeConfHTML += "<label for='use-ntp-server'>Enable NTP Client</label> ";
     TimeConfHTML += "<input value='1' type='checkbox' name='use-ntp-server' id='use-ntp-server' " + String(NTPEnabled ? "checked" : "") + " onchange='chooseNTP()'>";
@@ -449,9 +456,10 @@ namespace WiFiManagerNS
       useNTP = false;
     }
 
-    if (_NTPEnabled != NTPEnabled)
+    if (_wifiManager->server->hasArg("use-rtc-module"))
     {
-      prefs::setBool("NTPEnabled", NTPEnabled);
+      RTCEnabled = atoi(_wifiManager->server->arg("use-rtc-module").c_str()) == 1;
+      prefs::setBool("RTCEnabled", RTCEnabled);
     }
 
     if (_wifiManager->server->hasArg("custom_ntp_enable"))

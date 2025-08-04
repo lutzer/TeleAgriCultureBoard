@@ -121,6 +121,7 @@
 
 #include <sensor_Board.hpp> // Board and setup defines
 #include <sensor_Read.hpp>  // Sensor read handling
+#include <rtc_wrapper.hpp>
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -440,6 +441,8 @@ void setup()
    digitalWrite(SW_3V3, HIGH);
    digitalWrite(LORA_CS, HIGH);
 
+   RtcWrapper::getTime();
+
    // print SPIFF files for debugging
    if (!SPIFFS.begin(true))
    {
@@ -452,6 +455,11 @@ void setup()
    load_Sensors();    // Prototypes get loaded
    load_Connectors(); // Connectors lookup table
    load_Config();     // load config Data
+
+   // check rtc clock
+   
+   // RtcWrapper::setTime(DateTime((uint32_t)0));
+   
 
 #if DEBUG_PRINT
    delay(2000);

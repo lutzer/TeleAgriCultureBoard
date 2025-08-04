@@ -47,6 +47,8 @@ namespace WiFiManagerNS
     typedef void (*onTimeAvailable_fn)(struct timeval *t);
 
     void onTimeAvailable(onTimeAvailable_fn fn);
+    void onRtcTimeAvailable(onTimeAvailable_fn fn);
 
+    void updateRtcTime(struct timeval *t);
   };
 }

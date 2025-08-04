@@ -38,6 +38,7 @@ ntp-server-interval: 60
 #include "NTP.hpp"
 #include "TZ.hpp"
 #include <servers.h>
+#include "rtc_wrapper.hpp"
 
 void save_Connectors();
 void save_Config();
@@ -75,6 +76,21 @@ namespace WiFiManagerNS
     if (NTPEnabled)
     {
       NTP::loadPrefs();
+    }
+    if (RTCEnabled)
+    {
+      DateTime time = RtcWrapper::getTime();
+      timeval tv;
+      tv.tv_sec = time.secondstime();
+      tv.tv_usec = 0;
+      NTP::updateRtcTime(&tv);
+    }
+  }
+
+  void setRtcTime(const timeval *t) {
+    if (RTCEnabled) {
+      DateTime dt(t->tv_sec);
+      RtcWrapper::setTime(dt);
     }
   }
 

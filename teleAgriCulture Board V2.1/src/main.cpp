@@ -121,7 +121,6 @@
 
 #include <sensor_Board.hpp> // Board and setup defines
 #include <sensor_Read.hpp>  // Sensor read handling
-#include <rtc_wrapper.hpp>
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -241,6 +240,7 @@ String connectorTable();
 // time functions
 int seconds_to_next_hour();
 void on_time_available(struct timeval *t);
+void on_rtc_time_available(struct timeval *t);
 String get_header();
 String getDateTime(String header);
 time_t convertDateTime(String dateTimeStr);
@@ -459,6 +459,8 @@ void setup()
    // check rtc clock
    
    // RtcWrapper::setTime(DateTime((uint32_t)0));
+
+   WiFiManagerNS::NTP::onRtcTimeAvailable(&on_rtc_time_available);
    
 
 #if DEBUG_PRINT
@@ -1235,6 +1237,13 @@ void listDir(fs::FS &fs, const char *dirname, uint8_t levels)
 void on_time_available(struct timeval *t)
 {
    Serial.println("Received time adjustment from NTP");
+   getLocalTime(&timeInfo, 1000);
+   Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+   WiFiManagerNS::setRtcTime(t);
+}
+
+void on_rtc_time_available(struct timeval *t) {
+   Serial.println("Received time adjustment from RTC");
    getLocalTime(&timeInfo, 1000);
    Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
 }

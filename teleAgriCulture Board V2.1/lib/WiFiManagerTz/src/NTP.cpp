@@ -63,7 +63,7 @@ namespace WiFiManagerNS
     // Callback function (get's called when time adjusts via NTP)
     void timeavailable_default(struct timeval *t)
     {
-      Serial.println("Got time adjustment from NTP!");
+      Serial.println("Got time adjustment from NTP or rtc!");
       struct tm timeInfo;
       getLocalTime(&timeInfo, 1000);
       Serial.println(&timeInfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
@@ -75,6 +75,12 @@ namespace WiFiManagerNS
     {
       log_d("Settting custom time notifier");
       timeavailable = fn;
+    }
+
+    onTimeAvailable_fn rtcavailable = &timeavailable_default;
+
+    void onRtcTimeAvailable(onTimeAvailable_fn fn) {
+      rtcavailable = fn;
     }
 
     bool setServer(uint8_t id)
@@ -118,6 +124,12 @@ namespace WiFiManagerNS
       if (timeavailable)
         sntp_set_time_sync_notification_cb(timeavailable);
       sntp_set_sync_interval(sync_delay * 60 * 1000);
+    }
+
+    void updateRtcTime(struct timeval *t)
+    {
+      settimeofday(t, NULL);
+      rtcavailable(t);
     }
 
   };
